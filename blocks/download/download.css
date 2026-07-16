@@ -52,7 +52,7 @@ body:has(.download-wrap) {
   width: 100%;
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .download-banner-desk { display: block; }
   .download-banner-mobile { display: none; }
 }
