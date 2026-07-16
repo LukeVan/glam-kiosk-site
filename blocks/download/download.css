@@ -6,10 +6,14 @@
   font-style: normal;
 }
 
-/* Hide boilerplate header and footer on the download page */
+/* Hide boilerplate header and footer; prevent scrollbars from 100vw breakout */
 body:has(.download-wrap) header,
 body:has(.download-wrap) footer {
   display: none;
+}
+
+body:has(.download-wrap) {
+  overflow-x: hidden;
 }
 
 /* Break out of EDS section container to go full viewport width */
@@ -68,7 +72,7 @@ body:has(.download-wrap) footer {
 
 .download-preview {
   width: 100%;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
   margin-bottom: 1rem;
 }
 
