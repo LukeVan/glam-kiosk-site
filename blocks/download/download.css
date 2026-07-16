@@ -1,0 +1,90 @@
+.download-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px 64px;
+  text-align: center;
+  min-height: 100vh;
+  background: #fff;
+}
+
+.download-brand {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #333;
+  margin-bottom: 32px;
+}
+
+.download-brand-adobe {
+  color: #fa0f00;
+}
+
+.download-brand-x {
+  margin: 0 6px;
+  color: #999;
+}
+
+.download-heading {
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: #131313;
+}
+
+.download-sub {
+  font-size: 18px;
+  color: #505050;
+  margin: 0 0 32px;
+}
+
+.download-preview {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgb(0 0 0 / 14%);
+  margin-bottom: 32px;
+}
+
+.download-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.download-btn {
+  display: inline-block;
+  background: #fa0f00;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  padding: 16px 40px;
+  border-radius: 4px;
+  margin-bottom: 40px;
+  transition: background 0.15s;
+}
+
+.download-btn:hover {
+  background: #c90c00;
+  color: #fff;
+}
+
+.download-footer {
+  font-size: 13px;
+  color: #999;
+  margin: 0;
+}
+
+.download-footer strong {
+  color: #505050;
+}
+
+.download-error {
+  text-align: center;
+  padding: 80px 24px;
+  color: #505050;
+}
