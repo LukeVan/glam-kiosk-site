@@ -11,13 +11,18 @@ export default function decorate(block) {
   const wrap = document.createElement('div');
   wrap.className = 'download-wrap';
 
-  const brand = document.createElement('div');
-  brand.className = 'download-brand';
-  brand.innerHTML = '<span class="download-brand-adobe">Adobe</span> <span class="download-brand-x">×</span> <span class="download-brand-loreal">L\'Oréal Groupe</span>';
+  const banner = document.createElement('div');
+  banner.className = 'download-banner';
+  banner.innerHTML = `
+    <img src="/blocks/download/banner-desktop.png"
+      alt="Adobe x L'Oréal Groupe" class="download-banner-desk">
+    <img src="/blocks/download/banner-mobile.png"
+      alt="Adobe x L'Oréal Groupe" class="download-banner-mobile">
+  `;
 
-  const heading = document.createElement('h1');
+  const heading = document.createElement('h2');
   heading.className = 'download-heading';
-  heading.textContent = name ? `Looking good, ${name}!` : 'Looking good!';
+  heading.textContent = 'Looking good!';
 
   const sub = document.createElement('p');
   sub.className = 'download-sub';
@@ -27,22 +32,26 @@ export default function decorate(block) {
   preview.className = 'download-preview';
   const img = document.createElement('img');
   img.src = imgUrl;
-  img.alt = 'Your personalized ad';
+  img.alt = name ? `${name}'s personalized ad` : 'Your personalized ad';
+  img.className = 'img-fluid';
   img.loading = 'eager';
   preview.append(img);
+
+  const cta = document.createElement('p');
+  cta.className = 'download-cta';
+  cta.textContent = 'Use the button below to download and share your photos!';
 
   const btn = document.createElement('a');
   btn.className = 'download-btn';
   btn.href = imgUrl;
-  btn.textContent = 'Download & Share';
-  // Content-Disposition: attachment on the blob triggers a native download on navigate
   btn.target = '_blank';
   btn.rel = 'noopener';
+  const btnImg = document.createElement('img');
+  btnImg.src = '/blocks/download/download-icon.png';
+  btnImg.alt = 'Download & Share';
+  btnImg.className = 'img-fluid';
+  btn.append(btnImg);
 
-  const footer = document.createElement('p');
-  footer.className = 'download-footer';
-  footer.innerHTML = 'Made by you. Created with <strong>Adobe Firefly</strong>';
-
-  wrap.append(brand, heading, sub, preview, btn, footer);
+  wrap.append(banner, heading, sub, preview, cta, btn);
   block.replaceChildren(wrap);
 }

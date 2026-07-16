@@ -1,51 +1,65 @@
+@font-face {
+  font-family: 'Adobe Clean';
+  src: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/fonts/AdobeClean-Black.woff2')
+    format('woff2');
+  font-weight: 900;
+  font-style: normal;
+}
+
 .download-wrap {
+  font-family: 'Adobe Clean', sans-serif;
+  font-weight: 900;
+  color: #fff;
+  background: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/assets/marketing-microsite/639166111874360722_page_back_image.jpg')
+    no-repeat top center;
+  background-size: cover;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 24px 64px;
   text-align: center;
-  min-height: 100vh;
-  background: #fff;
+  max-width: 500px;
+  margin: 0 auto;
+  padding-bottom: 2rem;
 }
 
-.download-brand {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #333;
-  margin-bottom: 32px;
+.download-banner {
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
-.download-brand-adobe {
-  color: #fa0f00;
+.download-banner-desk {
+  display: none;
+  width: 100%;
 }
 
-.download-brand-x {
-  margin: 0 6px;
-  color: #999;
+.download-banner-mobile {
+  display: block;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .download-banner-desk { display: block; }
+  .download-banner-mobile { display: none; }
 }
 
 .download-heading {
-  font-size: clamp(28px, 5vw, 42px);
-  font-weight: 700;
-  margin: 0 0 8px;
-  color: #131313;
+  font-size: 2rem;
+  font-weight: 900;
+  margin: 0 0 0.25rem;
+  color: #fff;
 }
 
 .download-sub {
-  font-size: 18px;
-  color: #505050;
-  margin: 0 0 32px;
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: #fff;
 }
 
 .download-preview {
   width: 100%;
-  max-width: 480px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgb(0 0 0 / 14%);
-  margin-bottom: 32px;
+  padding: 0 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .download-preview img {
@@ -54,37 +68,25 @@
   height: auto;
 }
 
+.download-cta {
+  font-size: 1rem;
+  color: #fff;
+  margin: 0 1.5rem 1rem;
+}
+
 .download-btn {
   display: inline-block;
-  background: #fa0f00;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-decoration: none;
-  padding: 16px 40px;
-  border-radius: 4px;
-  margin-bottom: 40px;
-  transition: background 0.15s;
+  margin-top: 0.5rem;
 }
 
-.download-btn:hover {
-  background: #c90c00;
-  color: #fff;
-}
-
-.download-footer {
-  font-size: 13px;
-  color: #999;
-  margin: 0;
-}
-
-.download-footer strong {
-  color: #505050;
+.download-btn img {
+  width: 200px;
+  height: 50px;
+  object-fit: contain;
 }
 
 .download-error {
   text-align: center;
   padding: 80px 24px;
-  color: #505050;
+  color: #fff;
 }
