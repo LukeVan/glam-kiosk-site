@@ -35,7 +35,7 @@ export default function decorate(block) {
   btn.className = 'download-btn';
   btn.href = imgUrl;
   btn.textContent = 'Download & Share';
-  // Content-Disposition: attachment is set on the blob, so the link navigates and triggers a download
+  // Content-Disposition: attachment on the blob triggers a native download on navigate
   btn.target = '_blank';
   btn.rel = 'noopener';
 
