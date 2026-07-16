@@ -52,6 +52,18 @@ export default function decorate(block) {
   btnImg.className = 'img-fluid';
   btn.append(btnImg);
 
-  wrap.append(banner, heading, sub, preview, cta, btn);
+  const links = document.createElement('div');
+  links.className = 'download-links';
+  links.innerHTML = `
+    <p class="download-links-heading">Learn more about Adobe solutions</p>
+    <ul>
+      <li><a href="https://business.adobe.com/solutions/content-supply-chain.html"
+        target="_blank" rel="noopener">Content Supply Chain</a></li>
+      <li><a href="https://business.adobe.com/products/firefly-business.html"
+        target="_blank" rel="noopener">Adobe Firefly for Business</a></li>
+    </ul>
+  `;
+
+  wrap.append(banner, heading, sub, preview, cta, btn, links);
   block.replaceChildren(wrap);
 }
