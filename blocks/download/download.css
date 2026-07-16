@@ -6,6 +6,12 @@
   font-style: normal;
 }
 
+/* Break out of EDS section container to go full viewport width */
+.download {
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+}
+
 .download-wrap {
   font-family: 'Adobe Clean', sans-serif;
   font-weight: 900;
@@ -18,8 +24,6 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 500px;
-  margin: 0 auto;
   padding-bottom: 2rem;
 }
 
