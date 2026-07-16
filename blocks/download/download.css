@@ -6,6 +6,12 @@
   font-style: normal;
 }
 
+/* Hide boilerplate header and footer on the download page */
+body:has(.download-wrap) header,
+body:has(.download-wrap) footer {
+  display: none;
+}
+
 /* Break out of EDS section container to go full viewport width */
 .download {
   margin: 0 calc(50% - 50vw);
