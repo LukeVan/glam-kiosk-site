@@ -174,3 +174,56 @@ body:has(.download-wrap) {
   padding: 80px 24px;
   color: #fff;
 }
+
+/* Multi-image session gallery */
+.download-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  width: 90%;
+  max-width: 900px;
+  margin: 0 auto 1.5rem;
+}
+
+.download-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: calc(50% - 12px);
+  max-width: 400px;
+}
+
+.download-gallery-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.download-gallery-btn {
+  display: inline-block;
+}
+
+.download-gallery-btn img {
+  width: 180px;
+  height: 45px;
+  object-fit: contain;
+}
+
+@media (width < 600px) {
+  .download-gallery {
+    gap: 16px;
+    width: 92%;
+  }
+
+  .download-gallery-item {
+    width: 100%;
+  }
+
+  .download-gallery-btn img {
+    width: 160px;
+    height: 40px;
+  }
+}
