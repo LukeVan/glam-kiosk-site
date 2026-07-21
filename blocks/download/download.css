@@ -26,8 +26,10 @@ body:has(.download-wrap) {
   font-family: 'Adobe Clean', sans-serif;
   font-weight: 900;
   color: #fff;
-  background: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/assets/marketing-microsite/639166111874360722_page_back_image.jpg')
-    no-repeat top center;
+  background-color: #000;
+  background-image: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/assets/marketing-microsite/639166111874360722_page_back_image.jpg');
+  background-repeat: no-repeat;
+  background-position: top center;
   background-size: cover;
   display: flex;
   flex-direction: column;
