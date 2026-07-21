@@ -14,6 +14,7 @@ body:has(.download-wrap) footer {
 
 body:has(.download-wrap) {
   overflow-x: hidden;
+  background-color: #000;
 }
 
 /* Break out of EDS section container to go full viewport width */
