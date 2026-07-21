@@ -1,18 +1,3 @@
-export default function decorate(block) {
-  const params     = new URLSearchParams(window.location.search);
-  const imgUrl     = params.get('img');
-  const sessionUrl = params.get('session');
-  const name       = params.get('name') || '';
-
-  if (sessionUrl) {
-    renderSession(block, sessionUrl, name);
-  } else if (imgUrl) {
-    renderSingle(block, imgUrl, name);
-  } else {
-    block.innerHTML = '<p class="download-error">This download link is invalid or has expired.</p>';
-  }
-}
-
 function buildBanner() {
   const banner = document.createElement('div');
   banner.className = 'download-banner';
@@ -141,4 +126,19 @@ async function renderSession(block, sessionUrl, name) {
     card.append(img, btn);
     gallery.append(card);
   });
+}
+
+export default function decorate(block) {
+  const params = new URLSearchParams(window.location.search);
+  const imgUrl = params.get('img');
+  const sessionUrl = params.get('session');
+  const name = params.get('name') || '';
+
+  if (sessionUrl) {
+    renderSession(block, sessionUrl, name);
+  } else if (imgUrl) {
+    renderSingle(block, imgUrl, name);
+  } else {
+    block.innerHTML = '<p class="download-error">This download link is invalid or has expired.</p>';
+  }
 }
