@@ -1,0 +1,657 @@
+import { readConfig } from './config.js';
+import {
+  initialState, loadState, saveState, storageKey,
+} from './state.js';
+import { createAPI } from './api.js';
+import { coworkerReady, navigation, send } from './integrations.js';
+import copy from './copy.js';
+
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+function picture(url, label) {
+  const image = element('img');
+  image.src = url;
+  image.alt = label;
+  image.loading = 'lazy';
+  return image;
+}
+
+function appendLinkedText(container, value, urlText) {
+  const parts = value.split(urlText);
+  parts.forEach((part, index) => {
+    if (part) container.append(document.createTextNode(part));
+    if (index < parts.length - 1) {
+      const link = element('a', urlText);
+      link.href = 'https://www.adobe.com/privacy/policy.html';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      container.append(link);
+    }
+  });
+}
+
+export default async function decorate(block) {
+  const authoredMode = [...block.children].find((row) => (
+    row.children[0]?.textContent.trim().toLowerCase() === 'mode'
+  ))?.children[1]?.textContent.trim();
+  block.replaceChildren();
+  let config;
+  try {
+    config = readConfig(authoredMode, window.GLAM_KIOSK_CONFIG);
+  } catch (error) {
+    block.append(
+      element('h2', 'Kiosk configuration unavailable / Configuration indisponible'),
+      element('p', error.message),
+    );
+    return;
+  }
+  const api = createAPI(config);
+  const key = storageKey(config);
+  let state = initialState();
+  let storageError;
+  try {
+    state = loadState(window.sessionStorage, key);
+  } catch (error) {
+    storageError = error;
+  }
+  let controller;
+  let render;
+  let timer;
+  let epoch = 0;
+  let manifest;
+  let portrait;
+  let frame;
+  const loadedFrames = new WeakSet();
+  const readyFrames = new WeakSet();
+  let confirmRestart = false;
+  const header = element('div', '', 'kiosk-header');
+  const logo = picture('/blocks/attendee-kiosk/assets/lockup.png', 'Adobe × L’Oréal Groupe');
+  logo.loading = 'eager';
+  header.append(logo);
+  const tools = element('div', '', 'kiosk-tools');
+  const badge = element('div', '', 'kiosk-badge');
+  const panel = element('div', '', 'kiosk-panel');
+  const frameSlot = element('div', '', 'kiosk-frame-slot');
+  block.append(header, tools, badge, panel, frameSlot);
+
+  const text = () => copy[state.language];
+  function button(label, action, disabled = false) {
+    const node = element('button', label);
+    node.type = 'button';
+    node.disabled = disabled;
+    node.addEventListener('click', action);
+    return node;
+  }
+  function persist(next) {
+    saveState(window.sessionStorage, key, next);
+    state = next;
+  }
+  function fail(error) {
+    frameSlot.hidden = true;
+    panel.replaceChildren(
+      element('h2', text().error),
+      element('p', error.message),
+      button(text().retry, () => render()),
+    );
+    panel.setAttribute('role', 'alert');
+  }
+  function move(stage, fields = {}) {
+    try {
+      persist({ ...state, ...fields, stage });
+      render();
+    } catch (error) {
+      fail(error);
+    }
+  }
+  function title(heading, sub) {
+    const h = element('h2', heading);
+    h.tabIndex = -1;
+    panel.append(h);
+    if (sub) panel.append(element('p', sub));
+    h.focus();
+  }
+  function cards(items, selectedId, onSelect, variant = '', target = panel) {
+    const grid = element('div', '', `kiosk-grid ${variant}`);
+    items.forEach((item) => {
+      const card = onSelect ? button('', () => onSelect(item)) : element('figure');
+      card.className = 'kiosk-card';
+      if (onSelect) {
+        card.setAttribute('aria-label', item.label);
+        card.setAttribute('aria-pressed', String(item.id === selectedId));
+      }
+      card.append(
+        picture(item.thumbnailUrl || item.url, onSelect ? '' : item.label),
+        element('span', item.label),
+      );
+      grid.append(card);
+    });
+    target.append(grid);
+  }
+  function sendCoworker(message) {
+    if (frame && (config.coworker.packaged ? readyFrames.has(frame) : loadedFrames.has(frame))) {
+      send(frame, config.coworker, message);
+    }
+  }
+  function notifyCoworker() {
+    if (!frame || !portrait) return;
+    sendCoworker({
+      type: 'KIOSK_SET_NAME',
+      name: state.name,
+      portrait: new URL(portrait.thumbnailUrl, window.location.origin).href,
+    });
+    if (state.stage === 'continued' && manifest) {
+      const index = manifest.ads.findIndex((ad) => ad.id === state.selectedAdId);
+      if (index >= 0) {
+        sendCoworker({
+          type: 'KIOSK_SIMULATE',
+          adIndex: index + 1,
+          adUrl: new URL(manifest.ads[index].url, window.location.origin).href,
+        });
+      }
+    }
+  }
+  async function clearCoworker() {
+    if (!frame) return;
+    const resettingFrame = frame;
+    if (config.coworker.packaged && readyFrames.has(resettingFrame)) {
+      await new Promise((resolve, reject) => {
+        let timeout;
+        const acknowledge = (event) => {
+          if (event.source !== resettingFrame.contentWindow
+            || event.origin !== config.coworker.origin
+            || event.data?.type !== 'KIOSK_RESET_DONE') return;
+          clearTimeout(timeout);
+          window.removeEventListener('message', acknowledge);
+          resolve();
+        };
+        window.addEventListener('message', acknowledge);
+        timeout = setTimeout(() => {
+          window.removeEventListener('message', acknowledge);
+          reject(new Error(text().coworkerResetFailed));
+        }, 5000);
+        sendCoworker({ type: 'KIOSK_RESET' });
+      });
+    } else {
+      sendCoworker({ type: 'KIOSK_RESET' });
+    }
+    resettingFrame.remove();
+    if (frame === resettingFrame) frame = null;
+  }
+  async function reset() {
+    try {
+      await clearCoworker();
+      window.sessionStorage.removeItem(key);
+      manifest = null;
+      portrait = null;
+      storageError = null;
+      state = { ...initialState(), language: state.language };
+      confirmRestart = false;
+      render();
+    } catch (error) {
+      fail(error);
+    }
+  }
+  function renderTools() {
+    tools.replaceChildren();
+    const language = element('div', '', 'kiosk-language');
+    [['en', 'Switch to English'], ['fr', 'Passer en français']]
+      .forEach(([languageCode, label]) => {
+        const toggle = button('', () => {
+          try {
+            persist({ ...state, language: languageCode });
+            render();
+          } catch (error) { fail(error); }
+        });
+        toggle.className = 'kiosk-language-option';
+        toggle.setAttribute('aria-label', label);
+        toggle.setAttribute('aria-pressed', String(state.language === languageCode));
+        toggle.title = label;
+        const flag = picture(
+          `/blocks/attendee-kiosk/assets/flag-${languageCode}.png`,
+          label,
+        );
+        flag.classList.add('kiosk-language-flag');
+        toggle.append(flag);
+        language.append(toggle);
+      });
+    tools.append(language);
+
+    badge.replaceChildren(element('span', text()[config.mode]));
+    if (confirmRestart) {
+      badge.append(
+        element('span', text().confirm),
+        button(text().restart, reset),
+        button(text().cancel, () => { confirmRestart = false; render(); }),
+      );
+    } else {
+      badge.append(button(text().restart, () => {
+        confirmRestart = true;
+        render();
+      }));
+    }
+    if (config.mode === 'demo' && !config.coworker.enabled) {
+      badge.append(button(text().connectCoworker, () => {
+        const dialog = element('dialog', '', 'kiosk-connection-dialog');
+        dialog.setAttribute('aria-label', text().connectCoworker);
+        const form = element('form');
+        const label = element('label', text().coworkerURL);
+        const input = element('input');
+        input.type = 'password';
+        input.required = true;
+        input.autocomplete = 'off';
+        label.append(input);
+        const connect = button(text().connectCoworker, () => {});
+        connect.type = 'submit';
+        const cancel = button(text().cancel, () => dialog.close());
+        form.append(label, connect, cancel);
+        form.addEventListener('submit', (event) => {
+          event.preventDefault();
+          const url = input.value.trim();
+          input.value = '';
+          dialog.close();
+          block.dispatchEvent(new CustomEvent('glam-kiosk-configure-coworker', {
+            detail: { enabled: true, allowInDemo: true, url },
+          }));
+        });
+        dialog.addEventListener('close', () => {
+          input.value = '';
+          dialog.remove();
+        });
+        dialog.append(form);
+        block.append(dialog);
+        dialog.showModal();
+      }));
+    }
+  }
+  async function selectedAssets(snapshot, signal) {
+    const portraits = await api.portraits(signal);
+    const selectedPortrait = portraits.find((item) => item.id === snapshot.portraitId);
+    if (!selectedPortrait) throw new Error(text().changed);
+    let selectedManifest;
+    if (['pacing', 'ads', 'continued', 'banners'].includes(snapshot.stage)) {
+      selectedManifest = await api.manifest(snapshot.portraitId, signal);
+      if (snapshot.selectedAdId
+        && !selectedManifest.ads.some((ad) => ad.id === snapshot.selectedAdId)) {
+        throw new Error(text().changed);
+      }
+    }
+    return { selectedPortrait, selectedManifest };
+  }
+  function welcome() {
+    const hero = element('video');
+    hero.className = 'kiosk-hero';
+    hero.src = '/blocks/attendee-kiosk/assets/welcome-collage.webm';
+    hero.poster = '/blocks/attendee-kiosk/assets/welcome-poster.webp';
+    hero.autoplay = true;
+    hero.loop = true;
+    hero.muted = true;
+    hero.playsInline = true;
+    hero.preload = 'auto';
+    hero.setAttribute('aria-hidden', 'true');
+    const content = element('div', '', 'kiosk-welcome-content');
+    const heading = element('h2', text().welcome);
+    heading.tabIndex = -1;
+    content.append(heading, element('p', text().intro));
+    heading.focus();
+    const consentItems = element('ul', '', 'kiosk-consent-items');
+    const legal = element('dialog', '', 'kiosk-release-dialog');
+    legal.id = 'photo-release';
+    legal.setAttribute('aria-labelledby', 'kiosk-release-title');
+    const legalHeader = element('div', '', 'kiosk-release-header');
+    const legalTitle = element('h2', text().legal);
+    legalTitle.id = 'kiosk-release-title';
+    const closeLegal = button('×', () => legal.close());
+    closeLegal.className = 'kiosk-release-close';
+    closeLegal.setAttribute('aria-label', text().closeRelease);
+    legalHeader.append(legalTitle, closeLegal);
+    const legalBody = element('div', '', 'kiosk-release-body');
+    const releaseCopy = copy[state.language];
+    legalBody.append(element('h3', releaseCopy.releaseTitle, 'kiosk-release-document-title'));
+    releaseCopy.releaseParagraphs.slice(0, 1).forEach((item) => {
+      const paragraph = element('p');
+      appendLinkedText(paragraph, item, 'www.adobe.com/fr/privacy/policy.html');
+      legalBody.append(paragraph);
+    });
+    if (releaseCopy.releaseBulletIntro) {
+      legalBody.append(element('p', releaseCopy.releaseBulletIntro));
+    }
+    const releaseBullets = element('ul');
+    releaseCopy.releaseBullets.forEach((item) => {
+      const listItem = element('li');
+      appendLinkedText(listItem, item, 'www.adobe.com/fr/privacy/policy.html');
+      releaseBullets.append(listItem);
+    });
+    legalBody.append(releaseBullets);
+    releaseCopy.releaseParagraphs.slice(1).forEach((item) => {
+      const paragraph = element('p');
+      appendLinkedText(paragraph, item, 'www.adobe.com/fr/privacy/policy.html');
+      legalBody.append(paragraph);
+    });
+    legal.append(legalHeader, legalBody);
+    legal.addEventListener('click', (event) => {
+      if (event.target === legal) legal.close();
+    });
+    text().releaseItems.forEach((item) => {
+      const listItem = element('li');
+      if (typeof item === 'string') {
+        listItem.textContent = item;
+      } else {
+        listItem.append(document.createTextNode(item.before));
+        const external = Boolean(item.url);
+        const link = element('a', external ? item.linkText : text().legal);
+        link.href = external ? item.url : '#photo-release';
+        link.className = 'kiosk-release-link';
+        if (external) {
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        } else {
+          link.addEventListener('click', (event) => {
+            event.preventDefault();
+            legal.showModal();
+          });
+        }
+        listItem.append(link, document.createTextNode(item.after));
+      }
+      consentItems.append(listItem);
+    });
+    const label = element('label', '', 'kiosk-consent');
+    const checkbox = element('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = state.consent;
+    checkbox.required = true;
+    const start = button(text().start, () => {
+      if (!checkbox.reportValidity()) return;
+      move('portraits');
+    }, config.intakeEnabled);
+    start.className = 'kiosk-start';
+    const print = button(text().print, () => move('portraits'), !state.consent || config.intakeEnabled);
+    print.className = 'kiosk-print';
+    checkbox.addEventListener('change', () => {
+      try {
+        persist({ ...state, consent: checkbox.checked });
+        print.disabled = !checkbox.checked || config.intakeEnabled;
+      } catch (error) { fail(error); }
+    });
+    label.append(checkbox, element('span', text().consent));
+    const actions = element('div', '', 'kiosk-intro-actions');
+    actions.append(print, start);
+    content.append(
+      consentItems,
+      legal,
+      label,
+      actions,
+    );
+    if (config.intakeEnabled) {
+      content.append(element('p', text().intakeBlocked, 'kiosk-intake-note'));
+    }
+    panel.append(hero, content);
+  }
+  function nameEntry() {
+    const copyPane = element('div', '', 'kiosk-name-copy');
+    const heading = element('h2', text().name);
+    heading.tabIndex = -1;
+    copyPane.append(heading, element('p', text().nameSub));
+    heading.focus();
+    const form = element('form', '', 'kiosk-name');
+    const label = element('label', text().nameLabel);
+    const input = element('input');
+    input.type = 'text';
+    input.maxLength = 80;
+    input.required = true;
+    input.autocomplete = 'off';
+    input.value = state.name;
+    input.placeholder = text().namePlaceholder
+      || (state.language === 'fr' ? 'Saisissez votre nom ici' : 'Enter your name here');
+    label.append(input);
+    const next = button(text().next, () => {});
+    next.className = 'kiosk-primary-action';
+    next.type = 'submit';
+    next.disabled = !input.value.trim();
+    input.addEventListener('input', () => {
+      next.disabled = !input.value.trim();
+    });
+    form.append(label, next);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!input.value.trim()) { input.focus(); return; }
+      next.disabled = true;
+      const { signal } = controller;
+      try {
+        persist({
+          ...state, name: input.value.trim(), sessionId: state.sessionId || crypto.randomUUID(),
+        });
+        await api.resume(state, signal);
+        if (!signal.aborted) move('story');
+      } catch (error) {
+        if (!signal.aborted) fail(error);
+      }
+    });
+    copyPane.append(form);
+    panel.append(copyPane, picture(portrait.thumbnailUrl, portrait.label));
+  }
+  function story() {
+    panel.classList.add('kiosk-panel-coworker');
+    const content = element('div', '', 'kiosk-coworker-copy');
+    const heading = element('h2', state.stage === 'story' ? text().coworkerHeading : text().continued);
+    heading.tabIndex = -1;
+    content.append(heading, element('p', text().coworkerSub));
+    const next = button(text().next, () => move(state.stage === 'story' ? 'graph' : 'banners'));
+    next.className = 'kiosk-coworker-next';
+    const exit = button(text().exit, () => {
+      confirmRestart = true;
+      render();
+    });
+    exit.className = 'kiosk-coworker-exit';
+    content.append(next, exit);
+    if (config.coworker.enabled && !config.coworker.packaged) {
+      const authentication = element('a', text().coworkerAuthenticate, 'kiosk-coworker-auth');
+      authentication.href = config.coworker.url;
+      authentication.target = '_blank';
+      authentication.rel = 'noopener noreferrer';
+      authentication.referrerPolicy = 'no-referrer';
+      const retry = button(text().coworkerRetry, () => {
+        frame?.remove();
+        frame = null;
+        render();
+      });
+      retry.className = 'kiosk-coworker-auth';
+      content.append(
+        element('p', text().coworkerAuthHelp, 'kiosk-coworker-auth-help'),
+        authentication,
+        retry,
+      );
+    }
+    panel.append(content);
+    heading.focus();
+    if (!config.coworker.enabled) {
+      panel.append(element('p', text().unavailable, 'kiosk-coworker-unavailable'));
+    } else {
+      if (!frame) {
+        frame = element('iframe');
+        frame.title = 'AI Coworker';
+        frame.referrerPolicy = 'no-referrer';
+        frame.allow = 'camera; microphone';
+        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+        const loadingFrame = frame;
+        frame.addEventListener('load', () => {
+          loadedFrames.add(loadingFrame);
+          if (frame === loadingFrame) notifyCoworker();
+        });
+        frame.src = config.coworker.url;
+        frameSlot.append(frame);
+      }
+      frameSlot.hidden = false;
+      notifyCoworker();
+    }
+  }
+  function graph() {
+    title(text().graph);
+    if (config.mode === 'demo') panel.append(element('p', text().demoGraph));
+    else if (!config.graph.enabled) {
+      panel.append(element('p', text().unavailable));
+    } else {
+      const link = element('a', text().openGraph);
+      link.href = config.graph.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      panel.append(link);
+    }
+    panel.append(button(text().returnGraph, () => move('pacing')));
+  }
+  function ads() {
+    const copyPane = element('div', '', 'kiosk-ad-copy');
+    const heading = element('h2', text().ads);
+    heading.tabIndex = -1;
+    copyPane.append(heading, element('p', text().adsSub));
+    panel.append(copyPane);
+    heading.focus();
+    if (manifest.status !== 'ready') {
+      copyPane.append(
+        element('p', text()[manifest.status]),
+        button(text().refresh, () => render()),
+      );
+      cards(manifest.ads, null, null, 'kiosk-ad-grid');
+      return;
+    }
+    const next = button(text().next, async () => {
+      const { signal } = controller;
+      panel.querySelectorAll('button').forEach((control) => { control.disabled = true; });
+      try {
+        await api.select(state, signal);
+        if (!signal.aborted) move('continued');
+      } catch (error) {
+        if (!signal.aborted) fail(error);
+      }
+    }, !state.selectedAdId);
+    next.className = 'kiosk-primary-action';
+    copyPane.append(next);
+    cards(manifest.ads, state.selectedAdId, (ad) => {
+      try {
+        persist({ ...state, selectedAdId: ad.id });
+        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((card, index) => {
+          card.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
+        });
+        next.disabled = false;
+      } catch (error) { fail(error); }
+    }, 'kiosk-ad-grid');
+  }
+  function banners() {
+    title(text().banners, text().bannersSub);
+    cards(manifest.ads.filter((ad) => ad.id === state.selectedAdId));
+    if (config.mode === 'demo') {
+      panel.append(element('p', text().demoBanners));
+      const ad = manifest.ads.find((item) => item.id === state.selectedAdId);
+      cards(['Wide', 'Square', 'Portrait'].map((label) => ({ ...ad, label })), null, null, 'kiosk-formats');
+    } else if (manifest.status === 'failed') panel.append(element('p', text().failed));
+    else if (manifest.banners.length) cards(manifest.banners);
+    else panel.append(element('p', text().bannerPending));
+    panel.append(element('p', text().endings), button(text().refresh, () => render()));
+  }
+  render = async () => {
+    epoch += 1;
+    const currentEpoch = epoch;
+    controller?.abort();
+    clearTimeout(timer);
+    const operation = new AbortController();
+    controller = operation;
+    const { signal } = operation;
+    const snapshot = { ...state };
+    panel.className = `kiosk-panel kiosk-panel-${snapshot.stage}`;
+    block.lang = state.language;
+    renderTools();
+    panel.replaceChildren();
+    panel.removeAttribute('role');
+    frameSlot.hidden = true;
+    if (storageError) { fail(new Error(`${text().storage} ${storageError.message}`)); return; }
+    try {
+      if (snapshot.stage === 'welcome') { welcome(); return; }
+      title(text().loading);
+      if (snapshot.stage === 'portraits') {
+        const portraits = await api.portraits(signal);
+        if (signal.aborted || epoch !== currentEpoch) return;
+        panel.replaceChildren();
+        const copyPane = element('div', '', 'kiosk-portrait-copy');
+        const heading = element('h2', text().portraits);
+        heading.tabIndex = -1;
+        const subtitle = element('p', text().portraitsSub);
+        copyPane.append(heading, subtitle);
+        if (!portraits.length) copyPane.append(element('p', text().empty));
+        cards(
+          [...portraits].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+          state.portraitId,
+          (item) => move('portraits', {
+            portraitId: item.id,
+            name: '',
+            selectedAdId: null,
+            sessionId: null,
+          }),
+          'kiosk-portrait-grid',
+          panel,
+        );
+        const portraitActions = element('div', '', 'kiosk-portrait-actions');
+        const next = button(
+          text().next,
+          () => move('name', { name: '', selectedAdId: null, sessionId: null }),
+          !state.portraitId,
+        );
+        next.className = 'kiosk-primary-action';
+        portraitActions.append(next);
+        const refresh = button(text().refresh, () => render());
+        refresh.className = 'kiosk-refresh-assets';
+        portraitActions.append(refresh);
+        copyPane.append(portraitActions);
+        const gallery = panel.querySelector('.kiosk-portrait-grid');
+        panel.replaceChildren(copyPane, gallery);
+        return;
+      }
+      const assets = await selectedAssets(snapshot, signal);
+      if (snapshot.sessionId) await api.resume(snapshot, signal);
+      if (signal.aborted || epoch !== currentEpoch) return;
+      portrait = assets.selectedPortrait;
+      manifest = assets.selectedManifest;
+      panel.replaceChildren();
+      if (snapshot.stage === 'name') nameEntry();
+      if (['story', 'continued'].includes(snapshot.stage)) story();
+      if (snapshot.stage === 'graph') graph();
+      if (snapshot.stage === 'pacing') {
+        title(text().pacing, text().pacingSub);
+        timer = setTimeout(() => {
+          if (epoch === currentEpoch) move('ads');
+        }, config.pacingMs);
+      }
+      if (snapshot.stage === 'ads') ads();
+      if (snapshot.stage === 'banners') banners();
+    } catch (error) {
+      if (epoch === currentEpoch) fail(signal.aborted ? new Error(text().error) : error);
+    }
+  };
+  window.addEventListener('message', (event) => {
+    if (coworkerReady(event, frame?.contentWindow, config.coworker)) {
+      readyFrames.add(frame);
+      notifyCoworker();
+      return;
+    }
+    const stage = navigation(event, frame?.contentWindow, config.coworker, state.stage);
+    if (stage) move(stage);
+  });
+  block.addEventListener('glam-kiosk-configure-coworker', async (event) => {
+    try {
+      const updated = readConfig(config.mode, {
+        ...window.GLAM_KIOSK_CONFIG,
+        mode: config.mode,
+        coworker: event.detail,
+      });
+      await clearCoworker();
+      config.coworker = updated.coworker;
+      render();
+    } catch (error) {
+      fail(error);
+    }
+  });
+  await render();
+}
