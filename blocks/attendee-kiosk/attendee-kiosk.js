@@ -189,7 +189,7 @@ export default async function decorate(block) {
       manifest = null;
       portrait = null;
       storageError = null;
-      state = { ...initialState(), language: state.language };
+      state = initialState();
       confirmRestart = false;
       render();
     } catch (error) {
@@ -219,7 +219,7 @@ export default async function decorate(block) {
         toggle.append(flag);
         language.append(toggle);
       });
-    tools.append(language);
+    if (state.stage === 'welcome') tools.append(language);
 
     badge.replaceChildren(element('span', text()[config.mode]));
     if (confirmRestart) {

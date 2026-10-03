@@ -39,7 +39,7 @@ function coworkerIntegration(value, pageOrigin) {
     enabled: true,
     packaged: true,
     origin: origin.origin,
-    url: new URL('/coworker/index.html#/loreal/chats/max-story', origin).href,
+    url: new URL('/coworker/index.html#/loreal/home', origin).href,
   };
 }
 

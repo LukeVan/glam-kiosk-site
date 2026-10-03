@@ -55,6 +55,8 @@ Consent uses native list markers, with the Adobe Privacy Policy linked to
 Adobe's policy page. Each Photo Release link opens a keyboard-dismissible
 modal. The modal displays the supplied English or French release according to
 the selected language, without demo labeling or a second-language duplicate.
+Language flags appear only on the welcome screen. The selected language persists
+through the shell journey and refreshes; attendee restart defaults back to English.
 The text remains subject to owner/legal approval.
 The other shell stages and hosted-app integrations are not a pixel-identical
 port.
@@ -84,7 +86,7 @@ to demo. Supported fields:
   Coworker origin `https://meow-max2026-lor-coworker-demo-a2137.entapp.adproto.com`.
   In demo, `allowInDemo: true` is also required to opt into the external app.
   Alternatively, `packaged: true` uses the fixed same-origin static entry
-  `/coworker/index.html#/loreal/chats/max-story` instead of Awesome hosting.
+  `/coworker/index.html#/loreal/home` instead of Awesome hosting.
   Local HTTP is permitted only for `localhost` and `127.0.0.1`.
 - `graph`: explicit `enabled` flag and supplied HTTPS `url`.
 - `intake.enabled`: optional; when true, welcome progression is blocked because
