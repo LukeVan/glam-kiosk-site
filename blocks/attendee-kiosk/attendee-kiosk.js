@@ -3,6 +3,7 @@ import {
   initialState, loadState, saveState, storageKey,
 } from './state.js';
 import { createAPI } from './api.js';
+import createAzureAPI from './azure.js';
 import { coworkerReady, navigation, send } from './integrations.js';
 import copy from './copy.js';
 
@@ -18,6 +19,8 @@ function picture(url, label) {
   image.src = url;
   image.alt = label;
   image.loading = 'lazy';
+  image.draggable = false;
+  image.referrerPolicy = 'no-referrer';
   return image;
 }
 
@@ -50,8 +53,17 @@ export default async function decorate(block) {
     );
     return;
   }
-  const api = createAPI(config);
-  const key = storageKey(config);
+  let api;
+  try {
+    api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
+      || createAPI(config);
+  } catch (error) {
+    block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
+    return;
+  }
+  if (api.source === 'azure') config.intakeEnabled = api.intakeEnabled;
+  const key = api.source === 'azure'
+    ? `glam-attendee-v1:azure:${api.eventId}` : storageKey(config);
   let state = initialState();
   let storageError;
   try {
@@ -120,10 +132,13 @@ export default async function decorate(block) {
     items.forEach((item) => {
       const card = onSelect ? button('', () => onSelect(item)) : element('figure');
       card.className = 'kiosk-card';
+      card.dataset.assetId = item.id;
       if (onSelect) {
         card.setAttribute('aria-label', item.label);
         card.setAttribute('aria-pressed', String(item.id === selectedId));
       }
+      if (item.demo) card.classList.add('kiosk-demo-card');
+      if (item.demo) card.append(element('strong', text().demoPortrait, 'kiosk-demo-label'));
       card.append(
         picture(item.thumbnailUrl || item.url, onSelect ? '' : item.label),
         element('span', item.label),
@@ -221,7 +236,9 @@ export default async function decorate(block) {
       });
     if (state.stage === 'welcome') tools.append(language);
 
-    badge.replaceChildren(element('span', text()[config.mode]));
+    const demoSelected = state.portraitId?.startsWith('demo_');
+    badge.replaceChildren(element('span', api.source === 'azure'
+      ? text()[demoSelected ? 'demo' : 'azure'] : text()[config.mode]));
     if (confirmRestart) {
       badge.append(
         element('span', text().confirm),
@@ -269,8 +286,9 @@ export default async function decorate(block) {
     }
   }
   async function selectedAssets(snapshot, signal) {
-    const portraits = await api.portraits(signal);
-    const selectedPortrait = portraits.find((item) => item.id === snapshot.portraitId);
+    const selectedPortrait = api.selectedPortrait
+      ? await api.selectedPortrait(snapshot.portraitId, signal)
+      : (await api.portraits(signal)).find((item) => item.id === snapshot.portraitId);
     if (!selectedPortrait) throw new Error(text().changed);
     let selectedManifest;
     if (['pacing', 'ads', 'continued', 'banners'].includes(snapshot.stage)) {
@@ -543,7 +561,7 @@ export default async function decorate(block) {
   function banners() {
     title(text().banners, text().bannersSub);
     cards(manifest.ads.filter((ad) => ad.id === state.selectedAdId));
-    if (config.mode === 'demo') {
+    if (state.portraitId.startsWith('demo_')) {
       panel.append(element('p', text().demoBanners));
       const ad = manifest.ads.find((item) => item.id === state.selectedAdId);
       cards(['Wide', 'Square', 'Portrait'].map((label) => ({ ...ad, label })), null, null, 'kiosk-formats');
@@ -580,26 +598,45 @@ export default async function decorate(block) {
         heading.tabIndex = -1;
         const subtitle = element('p', text().portraitsSub);
         copyPane.append(heading, subtitle);
+        if (api.source === 'azure') {
+          copyPane.append(element('p', text().demoChoices, 'kiosk-azure-notice'));
+          if (api.warning) {
+            const warning = element('p', `${text().azureUnavailable} ${api.warning}`, 'kiosk-azure-notice');
+            warning.setAttribute('role', 'alert');
+            copyPane.append(warning);
+          }
+        }
         if (!portraits.length) copyPane.append(element('p', text().empty));
+        const next = button(
+          text().next,
+          () => move('name', { name: '', selectedAdId: null, sessionId: null }),
+          !portraits.some((item) => item.id === state.portraitId),
+        );
+        next.className = 'kiosk-primary-action';
         cards(
-          [...portraits].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
+          api.source === 'azure' ? portraits
+            : [...portraits].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
           state.portraitId,
-          (item) => move('portraits', {
-            portraitId: item.id,
-            name: '',
-            selectedAdId: null,
-            sessionId: null,
-          }),
+          (item) => {
+            try {
+              persist({
+                ...state,
+                portraitId: item.id,
+                name: '',
+                selectedAdId: null,
+                sessionId: null,
+              });
+              panel.querySelectorAll('.kiosk-portrait-grid .kiosk-card').forEach((card) => {
+                card.setAttribute('aria-pressed', String(card.dataset.assetId === item.id));
+              });
+              next.disabled = false;
+              renderTools();
+            } catch (error) { fail(error); }
+          },
           'kiosk-portrait-grid',
           panel,
         );
         const portraitActions = element('div', '', 'kiosk-portrait-actions');
-        const next = button(
-          text().next,
-          () => move('name', { name: '', selectedAdId: null, sessionId: null }),
-          !state.portraitId,
-        );
-        next.className = 'kiosk-primary-action';
         portraitActions.append(next);
         const refresh = button(text().refresh, () => render());
         refresh.className = 'kiosk-refresh-assets';
@@ -638,6 +675,12 @@ export default async function decorate(block) {
     }
     const stage = navigation(event, frame?.contentWindow, config.coworker, state.stage);
     if (stage) move(stage);
+  });
+  window.addEventListener('storage', (event) => {
+    if (api.source !== 'azure' || (event.key !== 'glam-kiosk-booth-v1' && event.key !== null)) return;
+    controller?.abort();
+    clearTimeout(timer);
+    fail(new Error(text().boothChanged));
   });
   block.addEventListener('glam-kiosk-configure-coworker', async (event) => {
     try {

@@ -58,6 +58,11 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   box-sizing: border-box;
 }
 
+.attendee-kiosk img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .attendee-kiosk [hidden] {
   display: none;
 }
@@ -549,6 +554,23 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   max-width: 700px;
   margin-bottom: 0;
   font-size: 24px;
+}
+
+.attendee-kiosk .kiosk-portrait-copy .kiosk-azure-notice {
+  margin-top: 16px;
+  font-size: 18px;
+}
+
+.attendee-kiosk .kiosk-demo-label {
+  position: absolute;
+  z-index: 1;
+  bottom: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 16px;
 }
 
 .attendee-kiosk .kiosk-panel-portraits .kiosk-portrait-actions {
@@ -1258,7 +1280,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-frame-slot {
   position: absolute;
   z-index: 3;
-  inset: 45px 50px 55px 552px;
+  inset: 45px 50px 55px 577px;
   overflow: hidden;
   border-radius: 24px;
   background: #fff;

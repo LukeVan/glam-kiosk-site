@@ -1,6 +1,11 @@
 const copy = {
   en: {
     demo: 'DEMO · sample content only',
+    azure: 'AZURE · event assets',
+    demoPortrait: 'Demo',
+    demoChoices: 'Event photos appear first. The three labeled demo portraits remain available at the bottom.',
+    azureUnavailable: 'Azure photos unavailable. Demo portraits are still available.',
+    boothChanged: 'Booth settings changed or were cleared. Reload this kiosk page before continuing.',
     live: 'LIVE · authorized assets only',
     restart: 'Restart attendee',
     cancel: 'Cancel',
@@ -103,6 +108,11 @@ const copy = {
   },
   fr: {
     demo: 'DÉMO · contenu exemple uniquement',
+    azure: 'AZURE · contenus de l’événement',
+    demoPortrait: 'Démo',
+    demoChoices: 'Les photos de l’événement apparaissent en premier. Les trois portraits de démonstration restent disponibles en bas.',
+    azureUnavailable: 'Photos Azure indisponibles. Les portraits de démonstration restent disponibles.',
+    boothChanged: 'Les réglages du stand ont changé ou ont été effacés. Rechargez cette page avant de continuer.',
     live: 'DIRECT · contenus autorisés',
     restart: 'Recommencer',
     cancel: 'Annuler',

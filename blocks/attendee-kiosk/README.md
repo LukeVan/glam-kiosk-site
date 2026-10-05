@@ -61,6 +61,62 @@ The text remains subject to owner/legal approval.
 The other shell stages and hosted-app integrations are not a pixel-identical
 port.
 
+## Booth Azure settings
+
+Open `/drafts/kiosk-settings.html` for staff setup (EDS block name:
+`kiosk-settings`). Glam Creator's Kiosk/EDS Access button must generate an HTTPS
+container SAS with exactly read + list permissions and an explicit expiry.
+The approved storage account is `ffservices24`; other account hosts are rejected.
+Paste it into the masked field, test the connection, choose an event, and save.
+The page uses native Blob REST with paginated XML listing; it does not need the
+Azure SDK, an account key, or a build step. Expired/denied/CORS/timeout failures
+are explicit. There is no fallback to demo.
+
+User-approved container-wide access exposes all events and infrastructure
+folders to anyone possessing the SAS. Event dropdown filtering is not an
+authorization boundary. The dropdown excludes the same eight infrastructure
+prefixes as Glam Creator. CORS must permit GET and `x-ms-version` from the exact
+page origin; do not enable write permissions.
+
+Settings are saved under `glam-kiosk-booth-v1` in localStorage on this origin,
+including the SAS, event ID, MAX experience, and lead-capture preference. They
+also retain the ad ending preference (`print`, `qr`, `qr-print`); `introMode`
+is derived from the intake selection, matching the legacy configuration.
+Settings survive browser restarts but are not shared between localhost, preview, live,
+or different browsers. Never put a SAS in Git, DA.live, a page URL, analytics,
+or logs. A shared-origin script can access this browser credential; this is a
+dedicated-booth-machine deployment, not an attendee security boundary.
+Clear SAS and settings requires staff confirmation and removes only the
+namespaced booth configuration; it does not delete Azure assets or revoke the
+token. Attendee restart does not erase booth setup.
+
+When saved booth settings exist, reload the attendee page to use the Azure
+read/list adapter. It retrieves inputs from `{event}/portraits/pending/`,
+excluding hidden files, subfolders, non-image files, and `demo_` inputs. Event
+portraits sort by Blob Last-Modified descending, followed by the three labeled
+static demo portraits. A listing error is displayed, while demo choices remain
+usable. Selecting a real portrait never substitutes a demo portrait or ad.
+
+Portrait IDs are deterministic SHA-256 identifiers of the full input blob name.
+The matching output stem uses the source's Unicode word/dot/hyphen sanitization.
+Duplicate sanitized stems are rejected to avoid ambiguous attendee association.
+Ad reads are restricted to `{event}/4-Output/{stem}/`, with the four canonical
+brand suffixes in 1–4 order. Duplicate brand candidates are rejected. Four
+recognized ads mean ready; `.hub-processed` with missing brands means partial;
+`.hub-all-fallback` means failed, taking precedence over ready; otherwise assets
+are pending. Hidden processing markers never cause writes. Session identity and
+selection are browser-local, not production job requests. Signed URLs are not
+stored in attendee session state; images use no-referrer.
+
+The Azure badge distinguishes event assets from explicitly selected demo content.
+Demo samples can run without Azure connectivity, but a selected real portrait
+requires its own assets. Azure banners, print, and QR remain unavailable. Saved
+Marketo preference explicitly blocks intake until the approved integration is
+available; it does not fake success. Changing or clearing booth settings in
+another tab interrupts the shell and asks for a reload.
+Kiosk shell images cannot be dragged; this prevents accidental dragging, not
+screenshots or retrieving images already delivered to a browser.
+
 The Print button is disabled until the attendee checks consent, then turns blue.
 Clicking it advances to portrait selection; it does not create a print job or
 file. An enabled intake integration continues to block progression until its
