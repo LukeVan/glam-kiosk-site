@@ -82,6 +82,7 @@ export default async function decorate(block) {
   const readyFrames = new WeakSet();
   const homeFocusFrames = new WeakSet();
   let confirmRestart = false;
+  let resetting = false;
   const header = element('div', '', 'kiosk-header');
   const logo = picture('/blocks/attendee-kiosk/assets/lockup.png', 'Adobe × L’Oréal Groupe');
   logo.loading = 'eager';
@@ -105,6 +106,8 @@ export default async function decorate(block) {
     state = next;
   }
   function fail(error) {
+    panel.inert = false;
+    panel.removeAttribute('aria-busy');
     frameSlot.hidden = true;
     panel.replaceChildren(
       element('h2', text().error),
@@ -154,7 +157,7 @@ export default async function decorate(block) {
     }
   }
   function notifyCoworker() {
-    if (!frame || !portrait) return;
+    if (resetting || !frame || !portrait) return;
     sendCoworker({
       type: 'KIOSK_SET_NAME',
       name: state.name,
@@ -204,6 +207,11 @@ export default async function decorate(block) {
     if (frame === resettingFrame) frame = null;
   }
   async function reset() {
+    if (resetting) return;
+    resetting = true;
+    controller?.abort();
+    clearTimeout(timer);
+    epoch += 1;
     try {
       await clearCoworker();
       window.sessionStorage.removeItem(key);
@@ -215,6 +223,8 @@ export default async function decorate(block) {
       render();
     } catch (error) {
       fail(error);
+    } finally {
+      resetting = false;
     }
   }
   function renderTools() {
@@ -479,14 +489,9 @@ export default async function decorate(block) {
       jump.className = 'kiosk-coworker-exit';
       content.append(jump);
     } else {
-      const next = button(text().next, () => move('banners'));
-      next.className = 'kiosk-coworker-next';
-      const exit = button(text().exit, () => {
-        confirmRestart = true;
-        render();
-      });
+      const exit = button(text().exit, reset);
       exit.className = 'kiosk-coworker-exit';
-      content.append(next, exit);
+      content.append(exit);
     }
     if (config.coworker.enabled && !config.coworker.packaged) {
       const authentication = element('a', text().coworkerAuthenticate, 'kiosk-coworker-auth');
@@ -601,20 +606,25 @@ export default async function decorate(block) {
     controller = operation;
     const { signal } = operation;
     const snapshot = { ...state };
-    panel.className = `kiosk-panel kiosk-panel-${snapshot.stage}`;
     block.lang = state.language;
     renderTools();
-    panel.replaceChildren();
     panel.removeAttribute('role');
-    frameSlot.hidden = true;
+    const preparePanel = () => {
+      panel.inert = false;
+      panel.removeAttribute('aria-busy');
+      panel.className = `kiosk-panel kiosk-panel-${snapshot.stage}`;
+      panel.replaceChildren();
+      frameSlot.hidden = true;
+    };
     if (storageError) { fail(new Error(`${text().storage} ${storageError.message}`)); return; }
     try {
-      if (snapshot.stage === 'welcome') { welcome(); return; }
-      title(text().loading);
+      if (snapshot.stage === 'welcome') { preparePanel(); welcome(); return; }
+      panel.inert = true;
+      panel.setAttribute('aria-busy', 'true');
       if (snapshot.stage === 'portraits') {
         const portraits = await api.portraits(signal);
         if (signal.aborted || epoch !== currentEpoch) return;
-        panel.replaceChildren();
+        preparePanel();
         const copyPane = element('div', '', 'kiosk-portrait-copy');
         const heading = element('h2', text().portraits);
         heading.tabIndex = -1;
@@ -681,7 +691,7 @@ export default async function decorate(block) {
       if (signal.aborted || epoch !== currentEpoch) return;
       portrait = assets.selectedPortrait;
       manifest = assets.selectedManifest;
-      panel.replaceChildren();
+      preparePanel();
       if (snapshot.stage === 'name') nameEntry();
       if (['story', 'continued'].includes(snapshot.stage)) story();
       if (snapshot.stage === 'graph') graph();
@@ -698,6 +708,7 @@ export default async function decorate(block) {
     }
   };
   window.addEventListener('message', (event) => {
+    if (resetting) return;
     if (coworkerReady(event, frame?.contentWindow, config.coworker)) {
       readyFrames.add(frame);
       notifyCoworker();

@@ -235,8 +235,12 @@ and acknowledges with `KIOSK_HOME_SEND_FOCUSED`. Attendee interaction cancels
 pending child focus; continued simulation does not receive this request. Native
 Enter sends the first Coworker prompt. The initial story has no shell Next;
 Jump to Ads opens the selected portrait's ad selection directly without resetting
-attendee identity or bypassing asset readiness. Continued story retains its
-Next-to-banners and exit controls.
+attendee identity or bypassing asset readiness. Continued story has no shell Next;
+Exit the experience resets Coworker and returns directly to the activation welcome.
+Reset ignores child navigation and cancels pending shell loads during the handshake.
+Asset retrieval retains the current screen, marking its controls inert and the
+panel busy until the next screen is ready, rather than showing a transient loading
+page. Pending, partial and failed manifests still display their explicit states.
 The shell requires the configured iframe window and exact origin before marking
 it ready and sending identity or selected-ad messages. Awesome mode retains its
 load-event timing because that app's ready handshake is unverified.
