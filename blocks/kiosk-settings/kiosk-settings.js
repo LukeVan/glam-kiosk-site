@@ -12,6 +12,12 @@ function node(tag, text, className) {
 export default function decorate(block) {
   block.replaceChildren();
   const heading = node('h1', 'Kiosk booth settings');
+  const header = node('div', '', 'kiosk-settings-header');
+  const open = node('a', 'Open kiosk window', 'kiosk-settings-open');
+  open.href = '/drafts/attendee-kiosk.html';
+  open.target = '_blank';
+  open.rel = 'noopener noreferrer';
+  header.append(heading, open);
   const help = node('p', 'Staff setup only. Generate “Kiosk/EDS Access” in Glam Creator, paste the read + list container SAS below, then test and choose your event.');
   const warning = node('p', 'This credential permits reading the entire container, including other events and hidden infrastructure folders. It is saved only in this browser on this origin. Do not share it or paste it into page content.', 'kiosk-settings-warning');
   const form = node('form');
@@ -28,7 +34,10 @@ export default function decorate(block) {
     input.id = `kiosk-settings-${fieldIndex}`;
     const label = node('label', labelText);
     label.htmlFor = input.id;
-    form.append(label, input);
+    const group = node('div', '', 'kiosk-settings-field');
+    if (input.tagName === 'INPUT') group.classList.add('kiosk-settings-wide');
+    group.append(label, input);
+    form.append(group);
     return input;
   }
   const sas = node('input');
@@ -39,6 +48,7 @@ export default function decorate(block) {
   field('Container SAS URL', sas);
   const test = node('button', 'Test connection');
   test.type = 'button';
+  test.className = 'kiosk-settings-test';
   form.append(test);
   const event = field('Event', node('select'));
   event.required = true;
@@ -59,7 +69,13 @@ export default function decorate(block) {
   const qr = field('Final screen', node('select'));
   qr.append(new Option('Show QR code and download link', 'qr'));
   qr.append(new Option('Print pickup instructions', 'pickup'));
-  form.append(node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration.'));
+  const details = node('details', '', 'kiosk-settings-wide');
+  details.append(
+    node('summary', 'Access and processing notes'),
+    warning,
+    node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration. Open kiosk window uses saved settings, not unsaved edits.'),
+  );
+  form.append(details);
   const actions = node('div', '', 'kiosk-settings-actions');
   const save = node('button', 'Save booth settings');
   save.type = 'submit';
@@ -78,7 +94,7 @@ export default function decorate(block) {
   cancel.type = 'button';
   clearConfirmation.append(confirm, cancel);
   form.append(clearConfirmation);
-  block.append(heading, help, warning, form, status);
+  block.append(header, help, form, status);
   function report(message, failed = false) {
     status.textContent = message;
     status.setAttribute('role', failed ? 'alert' : 'status');

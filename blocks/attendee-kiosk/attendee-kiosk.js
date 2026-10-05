@@ -553,7 +553,7 @@ export default async function decorate(block) {
       link.rel = 'noopener noreferrer';
       panel.append(link);
     }
-    panel.append(button(text().returnGraph, () => move('pacing')));
+    panel.append(button(text().returnGraph, () => move('ads')));
   }
   function ads() {
     const copyPane = element('div', '', 'kiosk-ad-copy');
@@ -653,6 +653,7 @@ export default async function decorate(block) {
     panel.append(button(text().refresh, () => render()), button(text().exit, reset));
   }
   render = async () => {
+    if (state.stage === 'pacing') persist({ ...state, stage: 'ads' });
     epoch += 1;
     const currentEpoch = epoch;
     controller?.abort();
@@ -758,12 +759,6 @@ export default async function decorate(block) {
       if (snapshot.stage === 'name') nameEntry();
       if (['story', 'continued'].includes(snapshot.stage)) story();
       if (snapshot.stage === 'graph') graph();
-      if (snapshot.stage === 'pacing') {
-        title(text().pacing, text().pacingSub);
-        timer = setTimeout(() => {
-          if (epoch === currentEpoch) move('ads');
-        }, config.pacingMs);
-      }
       if (snapshot.stage === 'ads') ads();
       if (snapshot.stage === 'banners') banners();
     } catch (error) {

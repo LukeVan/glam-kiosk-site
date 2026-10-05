@@ -97,6 +97,12 @@ dedicated-booth-machine deployment, not an attendee security boundary.
 Clear SAS and settings requires staff confirmation and removes only the
 namespaced booth configuration; it does not delete Azure assets or revoke the
 token. Attendee restart does not erase booth setup.
+Settings use a compact two-column layout on wider screens, with access notes
+expandable below the fields. Open kiosk window opens the fixture on the same
+origin in a new tab/window using saved settings, not unsaved form edits.
+The pre-ad timed interstitial is removed: Coworker and Graph return open ad
+selection directly. Sessions previously saved on the pacing stage resume at
+ad selection without a delay. Asset readiness checks remain unchanged.
 
 When saved booth settings exist, reload the attendee page to use the Azure
 read/list adapter. It retrieves inputs from `{event}/portraits/pending/`,

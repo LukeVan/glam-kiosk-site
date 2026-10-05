@@ -17,7 +17,7 @@ export function navigation(event, source, integration, stage) {
     || !event.data || typeof event.data !== 'object'
     || event.data.type !== 'KIOSK_NAV') return null;
   if (!['story', 'continued'].includes(stage)) return null;
-  if (event.data.target === 'view-select' && stage === 'story') return 'pacing';
+  if (event.data.target === 'view-select' && stage === 'story') return 'ads';
   if (['view-processing-max', 'view-variations-max'].includes(event.data.target)
     && stage === 'continued') return 'banners';
   return null;

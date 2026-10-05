@@ -1,40 +1,53 @@
 .kiosk-settings {
-  max-width: 840px;
-  margin: 32px auto;
-  padding: 24px;
-  border-radius: 16px;
+  max-width: 960px;
+  margin: 16px auto;
+  padding: 20px;
+  border-radius: 12px;
   background: #fff;
   color: #222;
+  font-size: 16px;
+}
+
+.kiosk-settings .kiosk-settings-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .kiosk-settings h1 {
-  font-size: 36px;
+  margin: 0;
+  font-size: 28px;
 }
 
 .kiosk-settings p {
-  font-size: 18px;
-  line-height: 1.5;
+  margin: 12px 0;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
-.kiosk-settings .kiosk-settings-warning {
-  padding: 16px;
-  border-left: 4px solid #b87500;
-  background: #fff5df;
+.kiosk-settings form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px 20px;
 }
 
 .kiosk-settings label {
   display: block;
-  margin: 24px 0 12px;
+  margin: 0 0 6px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 .kiosk-settings input,
 .kiosk-settings select {
+  box-sizing: border-box;
   display: block;
   width: 100%;
-  min-height: 48px;
-  margin-top: 8px;
-  padding: 10px;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 10px;
   border: 1px solid #777;
   border-radius: 6px;
   background: #fff;
@@ -42,16 +55,26 @@
   font: inherit;
 }
 
-.kiosk-settings button {
-  min-height: 48px;
-  margin: 8px 8px 8px 0;
-  padding: 10px 20px;
+.kiosk-settings button,
+.kiosk-settings .kiosk-settings-open {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 18px;
   border: 0;
   border-radius: 24px;
   background: #1473e6;
   color: #fff;
   font: inherit;
+  text-decoration: none;
   cursor: pointer;
+}
+
+.kiosk-settings .kiosk-settings-test {
+  justify-self: start;
 }
 
 .kiosk-settings button:disabled {
@@ -64,8 +87,37 @@
   background: #b3261e;
 }
 
+.kiosk-settings .kiosk-settings-actions,
+.kiosk-settings .kiosk-settings-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kiosk-settings .kiosk-settings-confirm p {
+  flex-basis: 100%;
+}
+
+.kiosk-settings .kiosk-settings-wide,
+.kiosk-settings .kiosk-settings-test,
+.kiosk-settings .kiosk-settings-actions,
+.kiosk-settings .kiosk-settings-confirm {
+  grid-column: 1 / -1;
+}
+
+.kiosk-settings summary {
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.kiosk-settings .kiosk-settings-warning {
+  padding: 10px;
+  border-left: 4px solid #b87500;
+  background: #fff5df;
+}
+
 .kiosk-settings .kiosk-settings-status {
-  padding: 16px;
+  padding: 10px;
   border: 1px solid #aaa;
   border-radius: 6px;
 }
@@ -82,4 +134,10 @@
 .kiosk-settings :focus-visible {
   outline: 3px solid #1473e6;
   outline-offset: 3px;
+}
+
+@media (width >= 600px) {
+  .kiosk-settings form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
