@@ -179,7 +179,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   letter-spacing: 0.05em;
 }
 
-.attendee-kiosk .kiosk-badge button {
+.attendee-kiosk .kiosk-badge button,
+.attendee-kiosk .kiosk-badge a {
   min-height: 0;
   padding: 0;
   background: transparent;
@@ -436,7 +437,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-panel-welcome .kiosk-consent-items {
   max-height: 340px;
   margin: 0 0 14px;
-  padding: 0 0 0 20px;
+  padding: 0 0 0 17px;
   overflow-y: auto;
   list-style: disc;
 }
@@ -451,7 +452,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 }
 
 .attendee-kiosk .kiosk-panel-welcome .kiosk-consent-items li::marker {
-  color: #1473e6;
+  color: #1a1a1a;
 }
 
 .attendee-kiosk .kiosk-panel-welcome .kiosk-consent {
@@ -1007,6 +1008,10 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
     font-size: 12px;
   }
 
+  .attendee-kiosk .kiosk-panel-welcome .kiosk-consent-items {
+    padding-left: 11px;
+  }
+
   .attendee-kiosk .kiosk-panel-welcome details {
     margin: 8px 0 12px;
   }
@@ -1173,7 +1178,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   line-height: 1.55;
 }
 
-.attendee-kiosk .kiosk-badge button:hover {
+.attendee-kiosk .kiosk-badge button:hover,
+.attendee-kiosk .kiosk-badge a:hover {
   background: transparent;
   color: #fff;
 }

@@ -57,6 +57,12 @@ modal. The modal displays the supplied English or French release according to
 the selected language, without demo labeling or a second-language duplicate.
 Language flags appear only on the welcome screen. The selected language persists
 through the shell journey and refreshes; attendee restart defaults back to English.
+The welcome screen has one Start your creative workflow action. Checking consent
+enables and focuses it; native Enter advances. Selected portrait Enter advances
+to name entry, whose input autofocuses on entry and refresh. IME composition
+Enter does not submit the name form.
+The lower-right controls show the configured event name (or Demo Content),
+a Settings link to booth configuration, and Reset with attendee-clear confirmation.
 The text remains subject to owner/legal approval.
 The other shell stages and hosted-app integrations are not a pixel-identical
 port.
@@ -223,6 +229,14 @@ browser; it makes no production API mutation.
 ## Hosted shell messages and terminal boundaries
 
 Packaged Coworker must emit `KIOSK_READY` after registering its bridge listeners.
+On initial story entry, the shell sends `KIOSK_FOCUS_HOME_SEND` once per ready
+frame after identity. The child focuses its enabled home Send after rendering
+and acknowledges with `KIOSK_HOME_SEND_FOCUSED`. Attendee interaction cancels
+pending child focus; continued simulation does not receive this request. Native
+Enter sends the first Coworker prompt. The initial story has no shell Next;
+Jump to Ads opens the selected portrait's ad selection directly without resetting
+attendee identity or bypassing asset readiness. Continued story retains its
+Next-to-banners and exit controls.
 The shell requires the configured iframe window and exact origin before marking
 it ready and sending identity or selected-ad messages. Awesome mode retains its
 load-event timing because that app's ready handshake is unverified.

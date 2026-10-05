@@ -80,6 +80,7 @@ export default async function decorate(block) {
   let frame;
   const loadedFrames = new WeakSet();
   const readyFrames = new WeakSet();
+  const homeFocusFrames = new WeakSet();
   let confirmRestart = false;
   const header = element('div', '', 'kiosk-header');
   const logo = picture('/blocks/attendee-kiosk/assets/lockup.png', 'Adobe × L’Oréal Groupe');
@@ -159,6 +160,11 @@ export default async function decorate(block) {
       name: state.name,
       portrait: new URL(portrait.thumbnailUrl, window.location.origin).href,
     });
+    if (state.stage === 'story' && config.coworker.packaged
+      && readyFrames.has(frame) && !homeFocusFrames.has(frame)) {
+      homeFocusFrames.add(frame);
+      sendCoworker({ type: 'KIOSK_FOCUS_HOME_SEND' });
+    }
     if (state.stage === 'continued' && manifest) {
       const index = manifest.ads.findIndex((ad) => ad.id === state.selectedAdId);
       if (index >= 0) {
@@ -236,17 +242,19 @@ export default async function decorate(block) {
       });
     if (state.stage === 'welcome') tools.append(language);
 
-    const demoSelected = state.portraitId?.startsWith('demo_');
-    badge.replaceChildren(element('span', api.source === 'azure'
-      ? text()[demoSelected ? 'demo' : 'azure'] : text()[config.mode]));
+    const eventName = api.source === 'azure' && api.eventId !== 'invalid-settings'
+      ? api.eventId : text().demoContent;
+    const settingsLink = element('a', text().settings);
+    settingsLink.href = '/drafts/kiosk-settings.html';
+    badge.replaceChildren(element('span', eventName), settingsLink);
     if (confirmRestart) {
       badge.append(
         element('span', text().confirm),
-        button(text().restart, reset),
+        button(text().reset, reset),
         button(text().cancel, () => { confirmRestart = false; render(); }),
       );
     } else {
-      badge.append(button(text().restart, () => {
+      badge.append(button(text().reset, () => {
         confirmRestart = true;
         render();
       }));
@@ -382,22 +390,21 @@ export default async function decorate(block) {
     checkbox.type = 'checkbox';
     checkbox.checked = state.consent;
     checkbox.required = true;
-    const start = button(text().start, () => {
-      if (!checkbox.reportValidity()) return;
+    const print = button(text().startWorkflow, () => {
+      if (!checkbox.reportValidity() || config.intakeEnabled) return;
       move('portraits');
-    }, config.intakeEnabled);
-    start.className = 'kiosk-start';
-    const print = button(text().print, () => move('portraits'), !state.consent || config.intakeEnabled);
+    }, !state.consent || config.intakeEnabled);
     print.className = 'kiosk-print';
     checkbox.addEventListener('change', () => {
       try {
         persist({ ...state, consent: checkbox.checked });
         print.disabled = !checkbox.checked || config.intakeEnabled;
+        if (!print.disabled) print.focus();
       } catch (error) { fail(error); }
     });
     label.append(checkbox, element('span', text().consent));
     const actions = element('div', '', 'kiosk-intro-actions');
-    actions.append(print, start);
+    actions.append(print);
     content.append(
       consentItems,
       legal,
@@ -414,7 +421,6 @@ export default async function decorate(block) {
     const heading = element('h2', text().name);
     heading.tabIndex = -1;
     copyPane.append(heading, element('p', text().nameSub));
-    heading.focus();
     const form = element('form', '', 'kiosk-name');
     const label = element('label', text().nameLabel);
     const input = element('input');
@@ -422,6 +428,7 @@ export default async function decorate(block) {
     input.maxLength = 80;
     input.required = true;
     input.autocomplete = 'off';
+    input.autofocus = true;
     input.value = state.name;
     input.placeholder = text().namePlaceholder
       || (state.language === 'fr' ? 'Saisissez votre nom ici' : 'Enter your name here');
@@ -432,6 +439,9 @@ export default async function decorate(block) {
     next.disabled = !input.value.trim();
     input.addEventListener('input', () => {
       next.disabled = !input.value.trim();
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && event.isComposing) event.preventDefault();
     });
     form.append(label, next);
     form.addEventListener('submit', async (event) => {
@@ -451,6 +461,12 @@ export default async function decorate(block) {
     });
     copyPane.append(form);
     panel.append(copyPane, picture(portrait.thumbnailUrl, portrait.label));
+    input.focus();
+    if (document.readyState !== 'complete') {
+      window.addEventListener('load', () => requestAnimationFrame(() => {
+        if (input.isConnected && document.activeElement === document.body) input.focus();
+      }), { once: true });
+    }
   }
   function story() {
     panel.classList.add('kiosk-panel-coworker');
@@ -458,14 +474,20 @@ export default async function decorate(block) {
     const heading = element('h2', state.stage === 'story' ? text().coworkerHeading : text().continued);
     heading.tabIndex = -1;
     content.append(heading, element('p', text().coworkerSub));
-    const next = button(text().next, () => move(state.stage === 'story' ? 'graph' : 'banners'));
-    next.className = 'kiosk-coworker-next';
-    const exit = button(text().exit, () => {
-      confirmRestart = true;
-      render();
-    });
-    exit.className = 'kiosk-coworker-exit';
-    content.append(next, exit);
+    if (state.stage === 'story') {
+      const jump = button(text().jumpAds, () => move('ads'));
+      jump.className = 'kiosk-coworker-exit';
+      content.append(jump);
+    } else {
+      const next = button(text().next, () => move('banners'));
+      next.className = 'kiosk-coworker-next';
+      const exit = button(text().exit, () => {
+        confirmRestart = true;
+        render();
+      });
+      exit.className = 'kiosk-coworker-exit';
+      content.append(next, exit);
+    }
     if (config.coworker.enabled && !config.coworker.packaged) {
       const authentication = element('a', text().coworkerAuthenticate, 'kiosk-coworker-auth');
       authentication.href = config.coworker.url;
@@ -485,7 +507,7 @@ export default async function decorate(block) {
       );
     }
     panel.append(content);
-    heading.focus();
+    if (state.stage !== 'story' || !config.coworker.packaged) heading.focus();
     if (!config.coworker.enabled) {
       panel.append(element('p', text().unavailable, 'kiosk-coworker-unavailable'));
     } else {
@@ -643,6 +665,14 @@ export default async function decorate(block) {
         portraitActions.append(refresh);
         copyPane.append(portraitActions);
         const gallery = panel.querySelector('.kiosk-portrait-grid');
+        gallery.addEventListener('keydown', (event) => {
+          const card = event.target.closest('.kiosk-card');
+          if (event.key !== 'Enter' || !card || card.dataset.assetId !== state.portraitId
+            || event.isComposing || event.altKey || event.ctrlKey || event.metaKey
+            || event.shiftKey || next.disabled) return;
+          event.preventDefault();
+          if (!event.repeat) next.click();
+        });
         panel.replaceChildren(copyPane, gallery);
         return;
       }
