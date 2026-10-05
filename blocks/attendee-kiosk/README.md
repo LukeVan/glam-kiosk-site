@@ -85,9 +85,11 @@ prefixes as Glam Creator. CORS must permit GET and `x-ms-version` from the exact
 page origin; do not enable write permissions.
 
 Settings are saved under `glam-kiosk-booth-v1` in localStorage on this origin,
-including the SAS, event ID, MAX experience, and lead-capture preference. They
-also retain the ad ending preference (`print`, `qr`, `qr-print`); `introMode`
-is derived from the intake selection, matching the legacy configuration.
+including the read/list SAS, optional dedicated create-only request SAS, event ID,
+MAX experience, and lead-capture preference. Print scope is `selected` (MAX default)
+or `all`; `showFinalQR` controls QR versus pickup presentation independently.
+All four templates are always rendered for download. Legacy ending preferences
+migrate to QR visibility; `introMode` remains derived from intake selection.
 Settings survive browser restarts but are not shared between localhost, preview, live,
 or different browsers. Never put a SAS in Git, DA.live, a page URL, analytics,
 or logs. A shared-origin script can access this browser credential; this is a
@@ -116,14 +118,15 @@ stored in attendee session state; images use no-referrer.
 
 The Azure badge distinguishes event assets from explicitly selected demo content.
 Demo samples can run without Azure connectivity, but a selected real portrait
-requires its own assets. Azure banners, print, and QR remain unavailable. Saved
+requires its own assets. Azure banners remain unavailable. Print and QR require
+the new request container and running Glam Creator worker described below. Saved
 Marketo preference explicitly blocks intake until the approved integration is
 available; it does not fake success. Changing or clearing booth settings in
 another tab interrupts the shell and asks for a reload.
 Kiosk shell images cannot be dragged; this prevents accidental dragging, not
 screenshots or retrieving images already delivered to a browser.
 
-The Print button is disabled until the attendee checks consent, then turns blue.
+The welcome button is disabled until the attendee checks consent, then turns blue.
 Clicking it advances to portrait selection; it does not create a print job or
 file. An enabled intake integration continues to block progression until its
 approved adapter is available.
@@ -276,10 +279,77 @@ shell button so a Tampermonkey booth helper may bring the existing tab forward.
 This shell does not read a cross-origin page or close arbitrary windows. Graph
 postMessage return is not enabled.
 
-Print, ordinary QR and QR-print remain unavailable. Eventual print needs the
-QR-capable InDesign JPEG; ordinary QR shares original selected ads; QR-print
-must stay pending until its future template-rendered files exist. This shell
-creates no print jobs, downloads or QR codes.
+The former print/QR/QR-print split is superseded by always rendering four
+personalized templates, with selected/all fulfillment and independent final QR
+visibility. Demo selections never create production print requests.
+
+## Azure print requests and attendee shares
+
+This is a local implementation contract, not a provisioned/live-tested service.
+Generate separate create-only access for `glam-kiosk-requests` in Glam Creator.
+Settings reject photography write access and any request token granting read,
+write, list or delete. Ordinary container SAS has no event-prefix restriction;
+the dedicated container is the isolation boundary. Saving validates token format
+only and does not perform a test write. Blank request access explicitly disables
+live submission. Existing portrait read/list access remains separate.
+
+Confirming a real selected ad creates an immutable schema-version-1 JSON request
+at `{event}/requests/{requestId}.json` in the dedicated container with:
+`requestId` (UUID v4), `eventPrefix`, `portraitId`, `attendeeName`, `selectedBrand`
+(`larocheposay`, `lorealprofessionnel`, `yslbeauty`, `lorealparis`),
+`printScope`, `showFinalQR`, `lang`, and `createdAt`.
+The shell saves the entire unsigned request in sessionStorage before its first
+PUT, using `If-None-Match: *` and `x-ms-blob-type: BlockBlob`. Failed/ambiguous
+submissions retry the same ID/body; selection is locked after an attempt.
+Duplicate responses await worker status, not a fabricated processed result.
+Reset clears local attendee state but does not cancel already submitted work.
+
+Glam Creator resolves portrait IDs from its own canonical inputs and manages
+rendering, leases, restart checkpoints, and fulfillment. It publishes internal
+status to `{event}/requests-status/{requestId}.json` in the asset container.
+Required status: `schemaVersion`, matching `requestId`, `portraitId`,
+`eventPrefix`, `selectedBrand`, full matching `request`, `render.status`
+(`pending`, `running`, `rendering`, `ready`, `partial`, `failed`, `error`), `render.brands`,
+`fulfillment.scope`, `fulfillment.status` (`pending`, `partial`, `submitted`, `failed`),
+and `fulfillment.brands`. Ready templates have per-brand `status: ready` and
+`blob: {event}/7-Share-Output/{requestId}/{brand}.jpg`. Submitted fulfillment
+has per-brand `status: submitted` and
+`blob: {event}/6-Print-Output/{requestId}__{brand}_print.jpg`.
+Only requested print brands enter that existing folder; photographer scripts
+and S3 mirroring remain unchanged. Submitted means fulfillment handoff, not
+confirmed physical printing.
+
+Internal `share` provides `downloadPageUrl`, `expiresAt`, and
+`qrBlob: {event}/7-Share-Output/{requestId}/qr.png`. The worker reserves the
+attendee manifest before rendering and generates this PNG from its stable URL.
+The kiosk uses its read SAS only to display the PNG; the encoded QR contains
+an attendee-specific blob-read SAS, never the kiosk container credential.
+The continued story's personalized-ads control and child completion navigation
+open the ending screen. It polls every five seconds, shows explicit processing/
+failure states, and gates pickup on submitted fulfillment and QR on four ready
+templates. Refresh resumes status lookup without a new submission.
+
+The attendee URL uses existing `/download?session=<encoded manifest URL>`.
+Its manifest at `{event}/7-Share-Output/{requestId}/session.json` has
+`schemaVersion: 1`, `requestId`, `portraitId`, `name`, `status`
+(`pending`, `partial`, `ready`, `failed`), `createdAt`, `expiresAt`, and four
+`images: [{brand, filename, status, url}]`. Image status is `pending`, `ready`,
+or `failed`; unfinished entries have null URLs. Each finished image and the
+manifest have individual blob-read SAS with the same 30-day expiry. No renewal
+service is required: EDS remains available but access expires.
+Download polling stops after five minutes; reload checks again. Expired/invalid
+shares display an explicit error. Legacy `img` links and old session manifests
+remain supported. No browser key, public gallery, or QR encoding service is used.
+
+Azure CORS must separately permit the intended EDS origins to PUT the request
+container using `Content-Type`, `x-ms-blob-type`, `x-ms-version`, and
+`If-None-Match`, and allow GET of attendee manifests/images. This implementation
+does not provision containers, modify CORS, or make real InDesign calls.
+Run `node --experimental-default-type=module tests/kiosk-fulfillment.mjs` for
+request/settings/state/status mock checks and `npm run lint` for repository lint.
+Run `npm exec --yes --package=playwright -c 'node tests/kiosk-fulfillment-browser.cjs "$(command -v playwright)"'`
+with the local fixture server on port 3017 and installed Chrome for mocked browser
+coverage of retries, refresh, status/QR, expiry, legacy downloads and staff settings.
 
 ## Workstation setup and verification
 

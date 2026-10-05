@@ -6,6 +6,8 @@ import { createAPI } from './api.js';
 import createAzureAPI from './azure.js';
 import { coworkerReady, navigation, send } from './integrations.js';
 import copy from './copy.js';
+import { createPrintRequest } from './fulfillment.js';
+import { blobURL } from '../../scripts/kiosk-settings.js';
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -489,6 +491,11 @@ export default async function decorate(block) {
       jump.className = 'kiosk-coworker-exit';
       content.append(jump);
     } else {
+      if (state.printRequest) {
+        const finish = button(text().finish, () => move('ending'));
+        finish.className = 'kiosk-primary-action';
+        content.append(finish);
+      }
       const exit = button(text().exit, reset);
       exit.className = 'kiosk-coworker-exit';
       content.append(exit);
@@ -567,6 +574,10 @@ export default async function decorate(block) {
       const { signal } = controller;
       panel.querySelectorAll('button').forEach((control) => { control.disabled = true; });
       try {
+        if (api.source === 'azure' && !state.portraitId.startsWith('demo_')
+          && !state.printRequest) {
+          persist({ ...state, printRequest: createPrintRequest(state, api.settings()) });
+        }
         await api.select(state, signal);
         if (!signal.aborted) move('continued');
       } catch (error) {
@@ -577,6 +588,9 @@ export default async function decorate(block) {
     copyPane.append(next);
     cards(manifest.ads, state.selectedAdId, (ad) => {
       try {
+        if (state.printRequest) {
+          throw new Error(text().selectionLocked);
+        }
         persist({ ...state, selectedAdId: ad.id });
         panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((card, index) => {
           card.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
@@ -596,6 +610,47 @@ export default async function decorate(block) {
     else if (manifest.banners.length) cards(manifest.banners);
     else panel.append(element('p', text().bannerPending));
     panel.append(element('p', text().endings), button(text().refresh, () => render()));
+  }
+  async function ending(signal, currentEpoch) {
+    if (!panel.children.length) title(text().finish, text().printWaiting);
+    if (!state.printRequest || !api.printStatus) {
+      panel.append(element('p', text().unavailable));
+      return;
+    }
+    const request = state.printRequest;
+    const result = await api.printStatus(request, signal);
+    if (signal.aborted || epoch !== currentEpoch) return;
+    panel.replaceChildren();
+    panel.append(element('h2', text().finish));
+    const ready = result?.render.status === 'ready';
+    const submitted = result?.fulfillment.status === 'submitted';
+    const failed = ['failed', 'error'].includes(result?.render.status)
+      || result?.fulfillment.status === 'failed';
+    panel.append(element('p', failed ? text().printFailed
+      : text()[submitted ? 'printPickup' : 'printWaiting']));
+    if (request.showFinalQR && ready && result.share?.downloadPageUrl) {
+      const qrURL = blobURL(api.settings().containerSAS, result.share.qrBlob);
+      const qr = picture(qrURL, text().scanQR);
+      qr.className = 'kiosk-share-qr';
+      const link = element('a', text().downloadAds);
+      link.href = result.share.downloadPageUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.referrerPolicy = 'no-referrer';
+      panel.append(qr, link);
+    } else if (request.showFinalQR && !failed) {
+      panel.append(element('p', text().shareWaiting));
+    }
+    if (!failed && (!ready || !submitted)) {
+      timer = setTimeout(() => {
+        if (epoch === currentEpoch) {
+          ending(signal, currentEpoch).catch((error) => {
+            if (!signal.aborted && epoch === currentEpoch) fail(error);
+          });
+        }
+      }, 5000);
+    }
+    panel.append(button(text().refresh, () => render()), button(text().exit, reset));
   }
   render = async () => {
     epoch += 1;
@@ -619,6 +674,11 @@ export default async function decorate(block) {
     if (storageError) { fail(new Error(`${text().storage} ${storageError.message}`)); return; }
     try {
       if (snapshot.stage === 'welcome') { preparePanel(); welcome(); return; }
+      if (snapshot.stage === 'ending') {
+        preparePanel();
+        await ending(signal, currentEpoch);
+        return;
+      }
       panel.inert = true;
       panel.setAttribute('aria-busy', 'true');
       if (snapshot.stage === 'portraits') {
@@ -641,7 +701,9 @@ export default async function decorate(block) {
         if (!portraits.length) copyPane.append(element('p', text().empty));
         const next = button(
           text().next,
-          () => move('name', { name: '', selectedAdId: null, sessionId: null }),
+          () => move('name', {
+            name: '', selectedAdId: null, sessionId: null, printRequest: null,
+          }),
           !portraits.some((item) => item.id === state.portraitId),
         );
         next.className = 'kiosk-primary-action';
@@ -657,6 +719,7 @@ export default async function decorate(block) {
                 name: '',
                 selectedAdId: null,
                 sessionId: null,
+                printRequest: null,
               });
               panel.querySelectorAll('.kiosk-portrait-grid .kiosk-card').forEach((card) => {
                 card.setAttribute('aria-pressed', String(card.dataset.assetId === item.id));
@@ -715,7 +778,7 @@ export default async function decorate(block) {
       return;
     }
     const stage = navigation(event, frame?.contentWindow, config.coworker, state.stage);
-    if (stage) move(stage);
+    if (stage) move(stage === 'banners' && state.printRequest ? 'ending' : stage);
   });
   window.addEventListener('storage', (event) => {
     if (api.source !== 'azure' || (event.key !== 'glam-kiosk-booth-v1' && event.key !== null)) return;

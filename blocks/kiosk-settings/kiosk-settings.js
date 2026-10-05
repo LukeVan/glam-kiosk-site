@@ -49,13 +49,17 @@ export default function decorate(block) {
   const intake = field('Lead capture', node('select'));
   intake.append(new Option('None / separate handheld scanners', 'none'));
   intake.append(new Option('Marketo (integration requires owner validation)', 'marketo'));
-  const ending = field('Ad ending preference', node('select'));
-  ending.append(new Option('Choose an ending', ''));
-  ending.append(new Option('Send to Print', 'print'));
-  ending.append(new Option('Generate QR Code', 'qr'));
-  ending.append(new Option('QR + Print Template', 'qr-print'));
-  ending.required = true;
-  form.append(node('p', 'Only the MAX shell is implemented. Marketo and ad endings are saved preferences, not enabled integrations. Live portrait browsing is a separate integration step.'));
+  const requests = field('Request container SAS URL (create only)', node('input'));
+  requests.type = 'password';
+  requests.autocomplete = 'off';
+  requests.spellcheck = false;
+  const scope = field('Print files', node('select'));
+  scope.append(new Option('Selected ad only (MAX default)', 'selected'));
+  scope.append(new Option('All four ads', 'all'));
+  const qr = field('Final screen', node('select'));
+  qr.append(new Option('Show QR code and download link', 'qr'));
+  qr.append(new Option('Print pickup instructions', 'pickup'));
+  form.append(node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration.'));
   const actions = node('div', '', 'kiosk-settings-actions');
   const save = node('button', 'Save booth settings');
   save.type = 'submit';
@@ -133,10 +137,12 @@ export default function decorate(block) {
         eventId: event.value,
         activationProfile: experience.value,
         formType: intake.value,
-        adEnding: ending.value,
+        requestSAS: requests.value.trim(),
+        printScope: scope.value,
+        showFinalQR: qr.value === 'qr',
       });
       savedEvent = event.value;
-      report('Booth settings saved on this browser. Live portrait integration is not enabled yet.');
+      report('Booth settings saved on this browser. Reload the kiosk to apply them. Glam Creator must be running to process print requests.');
     } catch (error) { report(error.message, true); }
   });
   clear.addEventListener('click', () => {
@@ -173,7 +179,9 @@ export default function decorate(block) {
       sas.value = saved.containerSAS;
       savedEvent = saved.eventId;
       intake.value = saved.formType;
-      ending.value = saved.adEnding;
+      requests.value = saved.requestSAS;
+      scope.value = saved.printScope;
+      qr.value = saved.showFinalQR ? 'qr' : 'pickup';
       report(`Saved event: ${saved.eventId}. Access expires ${new Date(saved.expiresAt).toLocaleString()}. Test again to verify access.`);
     } else report('This kiosk is unconfigured.');
   } catch (error) { report(error.message, true); }

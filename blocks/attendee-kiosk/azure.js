@@ -1,6 +1,7 @@
 import {
   SETTINGS_KEY, loadSettings, listBlobs, blobURL,
 } from '../../scripts/kiosk-settings.js';
+import { readPrintStatus, submitPrintRequest } from './fulfillment.js';
 
 const EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i;
 const BRANDS = [
@@ -76,6 +77,10 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     source: 'azure',
     eventId: eventId || 'invalid-settings',
     intakeEnabled,
+    settings,
+    async printStatus(request, signal) {
+      return readPrintStatus(request, settings(), signal, fetcher);
+    },
     get warning() { return warning; },
     selectedPortrait,
     async portraits(signal) {
@@ -130,6 +135,8 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
       if (manifest.status !== 'ready' || !manifest.ads.some((ad) => ad.id === state.selectedAdId)) {
         throw new Error('The selected Azure ad is not ready. Refresh assets or choose a demo portrait.');
       }
+      if (!state.printRequest) throw new Error('The print request is missing. Confirm the ad selection again.');
+      await submitPrintRequest(state.printRequest, settings(), signal, fetcher);
       return undefined;
     },
   };

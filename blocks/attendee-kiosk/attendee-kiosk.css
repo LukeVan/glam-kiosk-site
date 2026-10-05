@@ -32,6 +32,20 @@
   -webkit-font-smoothing: antialiased;
 }
 
+.attendee-kiosk .kiosk-panel-ending {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 16px;
+}
+
+.attendee-kiosk .kiosk-share-qr {
+  width: min(280px, 60vw);
+  height: auto;
+  background: #fff;
+}
+
 body:has(> main > .section:only-child .attendee-kiosk) {
   overflow: hidden;
 }
@@ -472,7 +486,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   min-height: 60px;
   padding: 0 28px;
   font-size: 20px;
-  font-weight: 400;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -1046,7 +1060,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
     min-height: 54px;
     padding: 0 18px;
     font-size: 17px;
-    font-weight: 400;
+    font-weight: 700;
     white-space: nowrap;
   }
 

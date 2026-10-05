@@ -44,6 +44,7 @@ function renderSingle(block, imgUrl, name) {
   img.alt = name ? `${name}'s personalized ad` : 'Your personalized ad';
   img.className = 'img-fluid';
   img.loading = 'eager';
+  img.referrerPolicy = 'no-referrer';
   preview.append(img);
 
   const cta = document.createElement('p');
@@ -55,6 +56,7 @@ function renderSingle(block, imgUrl, name) {
   btn.href = imgUrl;
   btn.target = '_blank';
   btn.rel = 'noopener';
+  btn.referrerPolicy = 'no-referrer';
   const btnImg = document.createElement('img');
   btnImg.src = '/blocks/download/download-icon.png';
   btnImg.alt = 'Download & Share';
@@ -84,26 +86,14 @@ async function renderSession(block, sessionUrl, name) {
   wrap.append(buildBanner(), heading, sub, gallery, buildLinks());
   block.replaceChildren(wrap);
 
-  let images = [];
-  let sessionName = name;
-  try {
-    const res = await fetch(sessionUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const session = await res.json();
-    images = session.images || [];
-    if (session.name && !sessionName) sessionName = session.name;
-  } catch {
-    gallery.textContent = 'Could not load your ads — the link may have expired.';
-    return;
-  }
-
-  if (!images.length) {
-    gallery.textContent = 'No ads found in this session.';
-    return;
-  }
-
-  gallery.textContent = '';
-  images.forEach((item, i) => {
+  const controller = new AbortController();
+  let timer;
+  let polls = 0;
+  window.addEventListener('pagehide', () => {
+    controller.abort();
+    clearTimeout(timer);
+  }, { once: true });
+  function renderImage(item, i, sessionName) {
     const card = document.createElement('div');
     card.className = 'download-gallery-item';
 
@@ -111,6 +101,7 @@ async function renderSession(block, sessionUrl, name) {
     img.src = item.url;
     img.alt = sessionName ? `${sessionName}'s personalized ad ${i + 1}` : `Personalized ad ${i + 1}`;
     img.loading = i === 0 ? 'eager' : 'lazy';
+    img.referrerPolicy = 'no-referrer';
 
     const btn = document.createElement('a');
     btn.className = 'download-gallery-btn';
@@ -118,6 +109,7 @@ async function renderSession(block, sessionUrl, name) {
     btn.download = item.filename || `ad-${i + 1}.jpg`;
     btn.target = '_blank';
     btn.rel = 'noopener';
+    btn.referrerPolicy = 'no-referrer';
     const btnImg = document.createElement('img');
     btnImg.src = '/blocks/download/download-icon.png';
     btnImg.alt = 'Download & Share';
@@ -125,7 +117,88 @@ async function renderSession(block, sessionUrl, name) {
 
     card.append(img, btn);
     gallery.append(card);
+  }
+  async function load() {
+    clearTimeout(timer);
+    let session;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const res = await fetch(sessionUrl, {
+        cache: 'no-store',
+        credentials: 'omit',
+        referrerPolicy: 'no-referrer',
+        redirect: 'error',
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('The link may have expired.');
+      session = await res.json();
+      if (!session || !Array.isArray(session.images)) throw new Error('Invalid download manifest.');
+      if (session.schemaVersion !== undefined) {
+        // eslint-disable-next-line no-use-before-define
+        validateShareManifest(session, sessionUrl);
+      }
+    } catch {
+      gallery.textContent = 'Could not load your ads — the link may have expired. Reload to try again.';
+      return;
+    } finally { clearTimeout(timeout); }
+    if (!block.isConnected || controller.signal.aborted) return;
+    gallery.replaceChildren();
+    const images = session.images.filter((item) => (
+      session.schemaVersion === undefined || item.status === 'ready'
+    ));
+    images.forEach((item, i) => renderImage(item, i, name || session.name || ''));
+    if (session.status === 'pending' || session.status === 'partial') {
+      const message = document.createElement('p');
+      message.textContent = session.status === 'partial'
+        ? 'Some ads are ready. The remaining personalized ads are still being prepared.'
+        : 'Your four personalized ads are being prepared. This page will update automatically.';
+      gallery.append(message);
+      polls += 1;
+      if (polls < 60) timer = setTimeout(load, 5000);
+      else message.textContent += ' Reload to check again.';
+    } else if (session.status === 'failed') {
+      const message = document.createElement('p');
+      message.textContent = 'Some or all ads could not be prepared. Please contact booth staff.';
+      gallery.append(message);
+    } else if (!images.length) gallery.textContent = 'No ads found in this session.';
+  }
+  await load();
+}
+
+function validateShareManifest(session, sessionUrl) {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const brands = ['larocheposay', 'lorealprofessionnel', 'yslbeauty', 'lorealparis'];
+  const manifest = new URL(sessionUrl);
+  const prefix = manifest.pathname.slice(0, -'session.json'.length);
+  const validURL = (value, path) => {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'ffservices24.blob.core.windows.net'
+      && !url.port && !url.username && !url.password && !url.hash
+      && url.pathname === path && url.searchParams.get('sr') === 'b'
+      && url.searchParams.get('sp') === 'r' && !!url.searchParams.get('sig')
+      && Date.parse(url.searchParams.get('se')) === Date.parse(session.expiresAt);
+  };
+  if (session.schemaVersion !== 1 || !uuid.test(session.requestId)
+    || !/^azure_[0-9a-f]{64}$/.test(session.portraitId)
+    || typeof session.name !== 'string' || session.name.length > 80
+    || !['pending', 'partial', 'ready', 'failed'].includes(session.status)
+    || !(Date.parse(session.expiresAt) > Date.now())
+    || !prefix.endsWith(`/7-Share-Output/${session.requestId}/`)
+    || !validURL(sessionUrl, `${prefix}session.json`)
+    || session.images.length !== 4
+    || new Set(session.images.map((item) => item.brand)).size !== 4) {
+    throw new Error('Invalid or expired attendee share manifest.');
+  }
+  session.images.forEach((item) => {
+    if (!brands.includes(item.brand) || !['pending', 'ready', 'failed'].includes(item.status)
+      || item.filename !== `${item.brand}.jpg`
+      || (item.status === 'ready' ? !validURL(item.url, `${prefix}${item.brand}.jpg`) : item.url !== null)) {
+      throw new Error('Invalid attendee image link.');
+    }
   });
+  if (session.status === 'ready' && session.images.some((item) => item.status !== 'ready')) {
+    throw new Error('The share manifest is incomplete.');
+  }
 }
 
 export default function decorate(block) {

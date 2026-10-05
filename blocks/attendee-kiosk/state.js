@@ -1,4 +1,6 @@
-export const STAGES = ['welcome', 'portraits', 'name', 'story', 'graph', 'pacing', 'ads', 'continued', 'banners'];
+import { PRINT_BRANDS, validRequest } from './fulfillment.js';
+
+export const STAGES = ['welcome', 'portraits', 'name', 'story', 'graph', 'pacing', 'ads', 'continued', 'banners', 'ending'];
 export const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
 
 export function initialState() {
@@ -11,6 +13,7 @@ export function initialState() {
     name: '',
     selectedAdId: null,
     sessionId: null,
+    printRequest: null,
   };
 }
 
@@ -21,6 +24,10 @@ export function validState(state) {
   if (['portraitId', 'selectedAdId', 'sessionId'].some((key) => (
     state[key] !== null && (typeof state[key] !== 'string' || !ID_PATTERN.test(state[key]))
   ))) return false;
+  if (state.printRequest != null && (!validRequest(state.printRequest)
+    || state.printRequest.portraitId !== state.portraitId
+    || state.printRequest.attendeeName !== state.name
+    || state.selectedAdId !== `${state.portraitId}_${PRINT_BRANDS.indexOf(state.printRequest.selectedBrand) + 1}`)) return false;
   const index = STAGES.indexOf(state.stage);
   return !(index > 0 && !state.consent)
     && !(index > 1 && !state.portraitId)

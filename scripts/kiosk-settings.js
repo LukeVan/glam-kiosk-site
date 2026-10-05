@@ -4,7 +4,7 @@ export const SYSTEM_PREFIXES = new Set([
   'print-templates', 'product-crop-temp',
 ]);
 
-export function parseContainerSAS(value, now = Date.now()) {
+export function parseContainerSAS(value, now = Date.now(), access = 'read') {
   let url;
   try {
     url = new URL(value);
@@ -26,10 +26,16 @@ export function parseContainerSAS(value, now = Date.now()) {
     ].includes(key))) {
     throw new Error('The SAS contains duplicate or unsupported parameters.');
   }
-  if (params.get('sr') !== 'c' || !['rl', 'lr'].includes(params.get('sp'))
+  const permissions = access === 'create' ? ['c'] : ['rl', 'lr'];
+  if (params.get('sr') !== 'c' || !permissions.includes(params.get('sp'))
     || !params.get('sig') || !params.get('sv')
     || (params.has('spr') && params.get('spr') !== 'https')) {
-    throw new Error('Kiosk access must be a container SAS with read + list only.');
+    throw new Error(access === 'create'
+      ? 'Request access must be a container SAS with create only.'
+      : 'Kiosk access must be a container SAS with read + list only.');
+  }
+  if (access === 'create' && url.pathname !== '/glam-kiosk-requests') {
+    throw new Error('Request access must use the dedicated glam-kiosk-requests container.');
   }
   const expiresAt = Date.parse(params.get('se'));
   if (!Number.isFinite(expiresAt)) throw new Error('The SAS must have an explicit expiry.');
@@ -50,10 +56,13 @@ export function validateSettings(value) {
     || SYSTEM_PREFIXES.has(value.eventId)
     || value.activationProfile !== 'max'
     || !['none', 'marketo'].includes(value.formType)
-    || !['print', 'qr', 'qr-print'].includes(value.adEnding)) {
+    || (value.printScope !== undefined && !['selected', 'all'].includes(value.printScope))
+    || (value.showFinalQR !== undefined && typeof value.showFinalQR !== 'boolean')
+    || (value.requestSAS !== undefined && typeof value.requestSAS !== 'string')) {
     throw new Error('Saved booth settings are invalid. Clear them and configure this kiosk again.');
   }
   const { expiresAt } = parseContainerSAS(value.containerSAS);
+  if (value.requestSAS) parseContainerSAS(value.requestSAS, Date.now(), 'create');
   return {
     version: 1,
     containerSAS: value.containerSAS,
@@ -61,7 +70,9 @@ export function validateSettings(value) {
     activationProfile: 'max',
     formType: value.formType,
     introMode: value.formType === 'none' ? 'normal' : 'registration-form',
-    adEnding: value.adEnding,
+    requestSAS: value.requestSAS || '',
+    printScope: value.printScope || 'selected',
+    showFinalQR: value.showFinalQR ?? value.adEnding !== 'print',
     expiresAt,
   };
 }
