@@ -132,7 +132,9 @@ export function validatePrintStatus(data, request) {
       || !session.searchParams.get('sig') || !Number.isFinite(Date.parse(data.share.expiresAt))
       || Date.parse(session.searchParams.get('se')) !== Date.parse(data.share.expiresAt)
       || Date.parse(data.share.expiresAt) <= Date.now()
-      || data.share.qrBlob !== `${request.eventPrefix}/7-Share-Output/${request.requestId}/qr.png`) {
+      || (data.share.qrBlob != null
+        && data.share.qrBlob !== `${request.eventPrefix}/7-Share-Output/${request.requestId}/qr.png`)
+      || (data.render.status === 'ready' && !data.share.qrBlob)) {
       throw new Error('The attendee share link is invalid or expired.');
     }
   }

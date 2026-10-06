@@ -89,6 +89,19 @@ const result = {
   },
 };
 assert.equal(validatePrintStatus(result, request), result);
+const pendingWithoutQR = {
+  ...result,
+  render: { status: 'rendering', brands: {} },
+  fulfillment: { scope: 'selected', status: 'pending', brands: {} },
+  share: { ...result.share, qrBlob: null },
+};
+assert.equal(validatePrintStatus(pendingWithoutQR, request), pendingWithoutQR);
+assert.throws(() => validatePrintStatus({
+  ...pendingWithoutQR, share: { ...result.share, qrBlob: 'another-request/qr.png' },
+}, request));
+assert.throws(() => validatePrintStatus({
+  ...result, share: { ...result.share, qrBlob: null },
+}, request));
 for (const status of ['pending', 'rendering', 'partial', 'error', 'failed']) {
   assert.equal(validatePrintStatus({
     ...result,

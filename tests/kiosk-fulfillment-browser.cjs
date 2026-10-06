@@ -16,6 +16,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let completed = false;
     let statusPublished = false;
     let previewReady = false;
+    let qrPublished = false;
     const outputURL = (suffix) => sas(`mock-assets/TestEvent/7-Share-Output/${request.requestId}/${suffix}`, 'r', 'b');
     const downloadURL = () => `https://main--glam-kiosk-site--lukevan.aem.live/download?session=${encodeURIComponent(outputURL('session.json'))}`;
     let shareStatus = 'pending';
@@ -76,7 +77,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
             },
             share: {
               expiresAt, downloadPageUrl: downloadURL(),
-              qrBlob: `TestEvent/7-Share-Output/${request.requestId}/qr.png`,
+              qrBlob: qrPublished ? `TestEvent/7-Share-Output/${request.requestId}/qr.png` : null,
             },
           }),
         });
@@ -124,6 +125,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-panel-ending').waitFor();
     assert.equal(writes, 2);
     statusPublished = true;
+    await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.locator('.kiosk-ending-copy h2').waitFor();
+    assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
+    assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
+    assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
+    qrPublished = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
     await page.locator('.kiosk-share-qr').waitFor();
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);

@@ -643,7 +643,7 @@ export default async function decorate(block) {
       preview.className = 'kiosk-print-preview';
       media.append(preview);
     }
-    if (request.showFinalQR && result?.share?.downloadPageUrl) {
+    if (request.showFinalQR && result?.share?.downloadPageUrl && result.share.qrBlob) {
       const qrURL = blobURL(api.settings().containerSAS, result.share.qrBlob);
       const qr = picture(qrURL, text().scanQR);
       qr.className = 'kiosk-share-qr';

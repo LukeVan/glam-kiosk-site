@@ -339,7 +339,10 @@ The continued story's personalized-ads control and child completion navigation
 open the ending screen. It polls every five seconds, shows explicit processing/
 failure states, and gates pickup on submitted fulfillment. The QR appears as
 soon as a valid attendee share link is published, even while templates are
-pending. Its download page shows processing progress and adds images as they
+pending, provided the worker has published its QR image. A null/missing QR during
+processing keeps the thank-you screen polling without requesting a nonexistent
+image; a completed status must include the QR. Its download page shows processing
+progress and adds images as they
 become ready. Refresh resumes status lookup without a new submission.
 The ending screen says Thank you (Merci), with side-by-side Refresh and Exit
 controls. On desktop its right side displays the selected personalized template
