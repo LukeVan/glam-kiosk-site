@@ -119,13 +119,32 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-panel-ending').waitFor();
     assert.equal(writes, 2);
     completed = true;
-    await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh assets', exact: true }).click();
+    await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
     await page.locator('.kiosk-share-qr').waitFor();
-    assert.equal(await page.getByRole('link', { name: 'Download your four ads' }).getAttribute('href'), downloadURL());
+    assert.equal(await page.getByRole('link', { name: 'Scan to download all four personalized ads' }).getAttribute('href'), downloadURL());
+    assert.equal(await page.locator('.kiosk-qr-link').innerText(), '');
+    assert.equal(await page.locator('.kiosk-qr-link').getAttribute('target'), '_blank');
+    assert.equal(await page.locator('.kiosk-qr-link').getAttribute('rel'), 'noopener noreferrer');
+    assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
+    assert((await page.locator('.kiosk-print-preview').getAttribute('src')).includes(`${request.selectedBrand}.jpg`));
+    const copyBox = await page.locator('.kiosk-ending-copy').boundingBox();
+    const mediaBox = await page.locator('.kiosk-ending-media').boundingBox();
+    assert(mediaBox.x > copyBox.x + copyBox.width);
+    const refreshBox = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
+    const exitBox = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
+    assert.equal(refreshBox.y, exitBox.y);
     assert((await page.locator('.kiosk-panel-ending').innerText()).includes('sent to print fulfillment'));
     const imageSource = await page.locator('.kiosk-share-qr').getAttribute('src');
     assert.equal(new URL(imageSource).searchParams.get('sr'), 'c');
     assert.equal(new URL(new URL(downloadURL()).searchParams.get('session')).searchParams.get('sr'), 'b');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileCopy = await page.locator('.kiosk-ending-copy').boundingBox();
+    const mobileMedia = await page.locator('.kiosk-ending-media').boundingBox();
+    assert(mobileMedia.y >= mobileCopy.y + mobileCopy.height);
+    const mobileRefresh = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
+    const mobileExit = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
+    assert.equal(mobileRefresh.y, mobileExit.y);
+    await page.setViewportSize({ width: 1920, height: 1080 });
     const download = await browser.newPage();
     await download.route('https://ffservices24.blob.core.windows.net/**', async (route) => {
       if (route.request().url().includes('session.json')) {
@@ -150,7 +169,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await download.locator('.download-gallery img').first().getAttribute('referrerpolicy'), 'no-referrer');
     shareOverride = { ...share(), expiresAt: new Date(Date.now() - 1000).toISOString() };
     await download.reload();
-    await download.getByText('Could not load your ads', { exact: false }).waitFor();
+    await download.getByText('Your download link has expired.', { exact: true }).waitFor();
     assert.equal(await download.locator('.download-gallery-item').count(), 0);
     shareOverride = { name: 'Legacy Mock', images: [{ url: '/blocks/attendee-kiosk/assets/Person5.jpg', filename: 'legacy.jpg' }] };
     await download.reload();

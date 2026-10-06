@@ -121,6 +121,7 @@ async function renderSession(block, sessionUrl, name) {
   async function load() {
     clearTimeout(timer);
     let session;
+    let failure = 'Could not reach your ads. Check your connection and reload to try again.';
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch(sessionUrl, {
@@ -130,15 +131,25 @@ async function renderSession(block, sessionUrl, name) {
         redirect: 'error',
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error('The link may have expired.');
+      if (!res.ok) {
+        failure = res.status === 403
+          ? 'Access to your ads was denied or has expired.'
+          : `Could not load your ads (HTTP ${res.status}).`;
+        throw new Error('Download request failed.');
+      }
+      failure = 'The download manifest could not be read. Please contact booth staff.';
       session = await res.json();
       if (!session || !Array.isArray(session.images)) throw new Error('Invalid download manifest.');
       if (session.schemaVersion !== undefined) {
+        failure = 'The download manifest does not match its image links. Please contact booth staff.';
+        if (!(Date.parse(session.expiresAt) > Date.now())) {
+          failure = 'Your download link has expired.';
+        }
         // eslint-disable-next-line no-use-before-define
         validateShareManifest(session, sessionUrl);
       }
     } catch {
-      gallery.textContent = 'Could not load your ads — the link may have expired. Reload to try again.';
+      gallery.textContent = failure;
       return;
     } finally { clearTimeout(timeout); }
     if (!block.isConnected || controller.signal.aborted) return;

@@ -83,6 +83,7 @@ export default async function decorate(block) {
   const loadedFrames = new WeakSet();
   const readyFrames = new WeakSet();
   const homeFocusFrames = new WeakSet();
+  const simulatedFrames = new WeakMap();
   let confirmRestart = false;
   let resetting = false;
   const header = element('div', '', 'kiosk-header');
@@ -172,12 +173,17 @@ export default async function decorate(block) {
     }
     if (state.stage === 'continued' && manifest) {
       const index = manifest.ads.findIndex((ad) => ad.id === state.selectedAdId);
-      if (index >= 0) {
+      const canSend = config.coworker.packaged ? readyFrames.has(frame) : loadedFrames.has(frame);
+      if (index >= 0 && canSend && simulatedFrames.get(frame) !== state.selectedAdId) {
+        simulatedFrames.set(frame, state.selectedAdId);
         sendCoworker({
           type: 'KIOSK_SIMULATE',
           adIndex: index + 1,
           adUrl: new URL(manifest.ads[index].url, window.location.origin).href,
         });
+        if (config.coworker.packaged) {
+          sendCoworker({ type: 'KIOSK_FOCUS_SIMULATION_COMPOSER' });
+        }
       }
     }
   }
@@ -519,7 +525,7 @@ export default async function decorate(block) {
       );
     }
     panel.append(content);
-    if (state.stage !== 'story' || !config.coworker.packaged) heading.focus();
+    if (!config.coworker.packaged) heading.focus();
     if (!config.coworker.enabled) {
       panel.append(element('p', text().unavailable, 'kiosk-coworker-unavailable'));
     } else {
@@ -612,7 +618,7 @@ export default async function decorate(block) {
     panel.append(element('p', text().endings), button(text().refresh, () => render()));
   }
   async function ending(signal, currentEpoch) {
-    if (!panel.children.length) title(text().finish, text().printWaiting);
+    if (!panel.children.length) title(text().thankYou, text().printWaiting);
     if (!state.printRequest || !api.printStatus) {
       panel.append(element('p', text().unavailable));
       return;
@@ -621,25 +627,36 @@ export default async function decorate(block) {
     const result = await api.printStatus(request, signal);
     if (signal.aborted || epoch !== currentEpoch) return;
     panel.replaceChildren();
-    panel.append(element('h2', text().finish));
+    const content = element('div', '', 'kiosk-ending-copy');
+    const media = element('div', '', 'kiosk-ending-media');
+    content.append(element('h2', text().thankYou));
     const ready = result?.render.status === 'ready';
     const submitted = result?.fulfillment.status === 'submitted';
     const failed = ['failed', 'error'].includes(result?.render.status)
       || result?.fulfillment.status === 'failed';
-    panel.append(element('p', failed ? text().printFailed
+    content.append(element('p', failed ? text().printFailed
       : text()[submitted ? 'printPickup' : 'printWaiting']));
+    const selected = result?.render.brands?.[request.selectedBrand];
+    if (selected?.status === 'ready') {
+      const previewURL = blobURL(api.settings().containerSAS, selected.blob);
+      const preview = picture(previewURL, text().printPreview);
+      preview.className = 'kiosk-print-preview';
+      media.append(preview);
+    }
     if (request.showFinalQR && ready && result.share?.downloadPageUrl) {
       const qrURL = blobURL(api.settings().containerSAS, result.share.qrBlob);
       const qr = picture(qrURL, text().scanQR);
       qr.className = 'kiosk-share-qr';
-      const link = element('a', text().downloadAds);
+      const link = element('a', '', 'kiosk-qr-link');
+      link.setAttribute('aria-label', text().scanQR);
       link.href = result.share.downloadPageUrl;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
       link.referrerPolicy = 'no-referrer';
-      panel.append(qr, link);
+      link.append(qr);
+      media.append(link);
     } else if (request.showFinalQR && !failed) {
-      panel.append(element('p', text().shareWaiting));
+      content.append(element('p', text().shareWaiting));
     }
     if (!failed && (!ready || !submitted)) {
       timer = setTimeout(() => {
@@ -650,7 +667,10 @@ export default async function decorate(block) {
         }
       }, 5000);
     }
-    panel.append(button(text().refresh, () => render()), button(text().exit, reset));
+    const actions = element('div', '', 'kiosk-ending-actions');
+    actions.append(button(text().refreshShort, () => render()), button(text().exit, reset));
+    content.append(actions);
+    panel.append(content, media);
   }
   render = async () => {
     if (state.stage === 'pacing') persist({ ...state, stage: 'ads' });

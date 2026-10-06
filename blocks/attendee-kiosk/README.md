@@ -242,6 +242,11 @@ On initial story entry, the shell sends `KIOSK_FOCUS_HOME_SEND` once per ready
 frame after identity. The child focuses its enabled home Send after rendering
 and acknowledges with `KIOSK_HOME_SEND_FOCUSED`. Attendee interaction cancels
 pending child focus; continued simulation does not receive this request. Native
+Simulation return instead sends `KIOSK_SIMULATE` followed by
+`KIOSK_FOCUS_SIMULATION_COMPOSER` once per selected-ad/frame pairing.
+The child waits for the guided prompt and enabled editor, focuses it, and emits
+`KIOSK_SIMULATION_COMPOSER_FOCUSED`. Native Enter advances its existing beat;
+shell rerenders do not restart simulation or steal focus.
 Enter sends the first Coworker prompt. The initial story has no shell Next;
 Jump to Ads opens the selected portrait's ad selection directly without resetting
 attendee identity or bypassing asset readiness. Continued story has no shell Next;
@@ -334,6 +339,10 @@ The continued story's personalized-ads control and child completion navigation
 open the ending screen. It polls every five seconds, shows explicit processing/
 failure states, and gates pickup on submitted fulfillment and QR on four ready
 templates. Refresh resumes status lookup without a new submission.
+The ending screen says Thank you (Merci), with side-by-side Refresh and Exit
+controls. On desktop its right side displays the selected personalized template
+and, when enabled/ready, an image-only clickable QR opening the attendee download
+page in a new tab. On smaller screens the preview and QR stack below the copy.
 
 The attendee URL uses existing `/download?session=<encoded manifest URL>`.
 Its manifest at `{event}/7-Share-Output/{requestId}/session.json` has

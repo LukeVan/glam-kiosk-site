@@ -101,6 +101,13 @@ export function validatePrintStatus(data, request) {
     throw new Error('Print status is invalid or belongs to another request.');
   }
   const brands = request.printScope === 'all' ? PRINT_BRANDS : [request.selectedBrand];
+  PRINT_BRANDS.forEach((brand) => {
+    const item = data.render.brands?.[brand];
+    if (item?.status === 'ready'
+      && item.blob !== `${request.eventPrefix}/7-Share-Output/${request.requestId}/${brand}.jpg`) {
+      throw new Error('The personalized template belongs to another request.');
+    }
+  });
   if (data.render.status === 'ready' && PRINT_BRANDS.some((brand) => (
     data.render.brands?.[brand]?.status !== 'ready'
     || data.render.brands[brand].blob !== `${request.eventPrefix}/7-Share-Output/${request.requestId}/${brand}.jpg`
