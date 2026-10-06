@@ -8,6 +8,7 @@ import { coworkerReady, navigation, send } from './integrations.js';
 import copy from './copy.js';
 import { createPrintRequest } from './fulfillment.js';
 import { blobURL } from '../../scripts/kiosk-settings.js';
+import playAdEngulf from './engulf.js';
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -86,6 +87,7 @@ export default async function decorate(block) {
   const simulatedFrames = new WeakMap();
   let confirmRestart = false;
   let resetting = false;
+  let cancelEngulf = () => {};
   const header = element('div', '', 'kiosk-header');
   const logo = picture('/blocks/attendee-kiosk/assets/lockup.png', 'Adobe × L’Oréal Groupe');
   logo.loading = 'eager';
@@ -109,6 +111,7 @@ export default async function decorate(block) {
     state = next;
   }
   function fail(error) {
+    cancelEngulf();
     panel.inert = false;
     panel.removeAttribute('aria-busy');
     frameSlot.hidden = true;
@@ -216,6 +219,7 @@ export default async function decorate(block) {
   }
   async function reset() {
     if (resetting) return;
+    cancelEngulf();
     resetting = true;
     controller?.abort();
     clearTimeout(timer);
@@ -486,6 +490,22 @@ export default async function decorate(block) {
       }), { once: true });
     }
   }
+  function ensureCoworker() {
+    if (config.coworker.enabled && !frame) {
+      frame = element('iframe');
+      frame.title = 'AI Coworker';
+      frame.referrerPolicy = 'no-referrer';
+      frame.allow = 'camera; microphone';
+      frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+      const loadingFrame = frame;
+      frame.addEventListener('load', () => {
+        loadedFrames.add(loadingFrame);
+        if (frame === loadingFrame) notifyCoworker();
+      });
+      frame.src = config.coworker.url;
+      frameSlot.append(frame);
+    }
+  }
   function story() {
     panel.classList.add('kiosk-panel-coworker');
     const content = element('div', '', 'kiosk-coworker-copy');
@@ -529,20 +549,7 @@ export default async function decorate(block) {
     if (!config.coworker.enabled) {
       panel.append(element('p', text().unavailable, 'kiosk-coworker-unavailable'));
     } else {
-      if (!frame) {
-        frame = element('iframe');
-        frame.title = 'AI Coworker';
-        frame.referrerPolicy = 'no-referrer';
-        frame.allow = 'camera; microphone';
-        frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
-        const loadingFrame = frame;
-        frame.addEventListener('load', () => {
-          loadedFrames.add(loadingFrame);
-          if (frame === loadingFrame) notifyCoworker();
-        });
-        frame.src = config.coworker.url;
-        frameSlot.append(frame);
-      }
+      ensureCoworker();
       frameSlot.hidden = false;
       notifyCoworker();
     }
@@ -562,6 +569,7 @@ export default async function decorate(block) {
     panel.append(button(text().returnGraph, () => move('ads')));
   }
   function ads() {
+    ensureCoworker();
     const copyPane = element('div', '', 'kiosk-ad-copy');
     const heading = element('h2', text().ads);
     heading.tabIndex = -1;
@@ -576,7 +584,11 @@ export default async function decorate(block) {
       cards(manifest.ads, null, null, 'kiosk-ad-grid');
       return;
     }
-    const next = button(text().next, async () => {
+    let submitting = false;
+    const transition = new AbortController();
+    const next = button(text().simulateAudience, async () => {
+      if (submitting || !state.selectedAdId) return;
+      submitting = true;
       const { signal } = controller;
       panel.querySelectorAll('button').forEach((control) => { control.disabled = true; });
       try {
@@ -585,25 +597,72 @@ export default async function decorate(block) {
           persist({ ...state, printRequest: createPrintRequest(state, api.settings()) });
         }
         await api.select(state, signal);
-        if (!signal.aborted) move('continued');
+        if (!signal.aborted) {
+          persist({ ...state, stage: 'continued' });
+          notifyCoworker();
+          frameSlot.hidden = !frame;
+          const selectedId = state.selectedAdId;
+          if (frame) {
+            cancelEngulf = playAdEngulf(block, panel, frameSlot, selectedId, transition.signal);
+          }
+          render();
+        }
       } catch (error) {
         if (!signal.aborted) fail(error);
       }
     }, !state.selectedAdId);
-    next.className = 'kiosk-primary-action';
-    copyPane.append(next);
+    next.className = 'kiosk-primary-action kiosk-composer-send';
+    next.textContent = '\u2191';
+    next.setAttribute('aria-label', text().simulateAudience);
+    const dock = element('div', '', 'kiosk-composer');
+    const halo = element('div', '', 'kiosk-composer-halo');
+    const card = element('div', '', 'kiosk-composer-card');
+    const row = element('div', '', 'kiosk-composer-text-row');
+    const attachment = element('div', '', 'kiosk-composer-attachment');
+    const prompt = element('div', text().selectAudienceAd, 'kiosk-composer-text');
+    prompt.setAttribute('aria-live', 'polite');
+    row.append(attachment, prompt);
+    const icons = element('div', '', 'kiosk-composer-icons');
+    const add = element('span', '+', 'kiosk-composer-add');
+    add.setAttribute('aria-hidden', 'true');
+    icons.append(add, next);
+    card.append(row, icons);
+    halo.append(card);
+    const disclaimer = element('p', text().verifyResponses, 'kiosk-composer-disclaimer');
+    dock.append(halo, disclaimer);
+    panel.append(dock);
+    const updateDock = () => {
+      const selected = manifest.ads.find((ad) => ad.id === state.selectedAdId);
+      attachment.replaceChildren();
+      if (selected) {
+        attachment.append(picture(selected.thumbnailUrl || selected.url, selected.label));
+      }
+      dock.classList.toggle('has-selection', !!selected);
+      prompt.textContent = selected ? text().audiencePrompt : text().selectAudienceAd;
+    };
+    dock.addEventListener('click', (event) => {
+      if (!event.target.closest('button') && !next.disabled) next.click();
+    });
+    panel.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || event.isComposing || event.altKey || event.ctrlKey
+        || event.metaKey || event.shiftKey || next.disabled) return;
+      event.preventDefault();
+      if (!event.repeat) next.click();
+    }, { signal: controller.signal });
     cards(manifest.ads, state.selectedAdId, (ad) => {
       try {
         if (state.printRequest) {
           throw new Error(text().selectionLocked);
         }
         persist({ ...state, selectedAdId: ad.id });
-        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((card, index) => {
-          card.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
+        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((tile, index) => {
+          tile.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
         });
         next.disabled = false;
+        updateDock();
       } catch (error) { fail(error); }
     }, 'kiosk-ad-grid');
+    updateDock();
   }
   function banners() {
     title(text().banners, text().bannersSub);
@@ -674,6 +733,7 @@ export default async function decorate(block) {
   }
   render = async () => {
     if (state.stage === 'pacing') persist({ ...state, stage: 'ads' });
+    if (state.stage !== 'continued') cancelEngulf();
     epoch += 1;
     const currentEpoch = epoch;
     controller?.abort();
@@ -801,6 +861,11 @@ export default async function decorate(block) {
     clearTimeout(timer);
     fail(new Error(text().boothChanged));
   });
+  window.addEventListener('scroll', () => {
+    if (block.isConnected && window.innerWidth >= 900 && window.innerHeight > 800
+      && document.querySelector('main > .section:only-child .attendee-kiosk') === block
+      && (window.scrollX !== 0 || window.scrollY !== 0)) window.scrollTo(0, 0);
+  }, { passive: true });
   block.addEventListener('glam-kiosk-configure-coworker', async (event) => {
     try {
       const updated = readConfig(config.mode, {

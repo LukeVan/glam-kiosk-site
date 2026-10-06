@@ -122,7 +122,7 @@ export function validatePrintStatus(data, request) {
   if (data.share?.downloadPageUrl) {
     const download = new URL(data.share.downloadPageUrl);
     const session = new URL(download.searchParams.get('session'));
-    if (download.protocol !== 'https:' || download.pathname !== '/download'
+    if (download.protocol !== 'https:' || !['/max-download.html', '/download'].includes(download.pathname)
       || download.username || download.password || download.port || download.hash
       || !['main--glam-kiosk-site--lukevan.aem.live', 'kiosk-preview--glam-kiosk-site--lukevan.aem.page'].includes(download.hostname)
       || session.protocol !== 'https:' || session.hostname !== 'ffservices24.blob.core.windows.net'

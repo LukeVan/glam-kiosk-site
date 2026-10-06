@@ -1,0 +1,229 @@
+@font-face {
+  font-family: 'Adobe Clean';
+  src: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/fonts/AdobeClean-Black.woff2')
+    format('woff2');
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* Hide boilerplate header and footer; prevent scrollbars from 100vw breakout */
+body:has(.max-download-wrap) header,
+body:has(.max-download-wrap) footer {
+  display: none;
+}
+
+body:has(.max-download-wrap) {
+  overflow-x: hidden;
+  background-color: #000;
+}
+
+/* Break out of EDS section container to go full viewport width */
+.max-download {
+  margin: 0 calc(50% - 50vw);
+  width: 100vw;
+}
+
+.max-download-wrap {
+  font-family: 'Adobe Clean', sans-serif;
+  font-weight: 900;
+  color: #fff;
+  background-color: #000;
+  background-image: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/assets/marketing-microsite/639166111874360722_page_back_image.jpg');
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: cover;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-bottom: 3rem;
+}
+
+.max-download-banner {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.max-download-banner-desk {
+  display: none;
+  width: 100%;
+}
+
+.max-download-banner-mobile {
+  display: block;
+  width: 100%;
+}
+
+@media (width < 768px) {
+  .max-download-wrap {
+    padding-bottom: 1.5rem;
+  }
+
+  .max-download-banner {
+    margin-bottom: 0.5rem;
+  }
+
+  .max-download-heading {
+    font-size: 1.5rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .max-download-sub {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+  }
+
+  .max-download-preview {
+    width: 88%;
+    margin-bottom: 0.75rem;
+  }
+
+  .max-download-cta {
+    margin: 0 1rem 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .max-download-links {
+    margin-top: 1rem;
+  }
+}
+
+@media (width >= 768px) {
+  .max-download-banner-desk { display: block; }
+  .max-download-banner-mobile { display: none; }
+}
+
+.max-download-heading {
+  font-size: 2rem;
+  font-weight: 900;
+  margin: 0 0 0.25rem;
+  color: #fff;
+}
+
+.max-download-sub {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.max-download-preview {
+  width: 70%;
+  margin: 0 auto 1rem;
+}
+
+.max-download-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.max-download-cta {
+  font-size: 1rem;
+  color: #fff;
+  margin: 0 1.5rem 1rem;
+}
+
+.max-download-btn {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.max-download-btn img {
+  width: 200px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.max-download-links {
+  margin-top: 2rem;
+  padding: 0 1.5rem;
+}
+
+.max-download-links-heading {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.max-download-links ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.max-download-links ul li {
+  margin-bottom: 0.4rem;
+}
+
+.max-download-links a {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 400;
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.max-download-links a:hover {
+  opacity: 1;
+}
+
+.max-download-error {
+  text-align: center;
+  padding: 80px 24px;
+  color: #fff;
+}
+
+/* Multi-image session gallery */
+.max-download-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  width: 90%;
+  max-width: 900px;
+  margin: 0 auto 1.5rem;
+}
+
+.max-download-gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: calc(50% - 12px);
+  max-width: 400px;
+}
+
+.max-download-gallery-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.max-download-gallery-btn {
+  display: inline-block;
+}
+
+.max-download-gallery-btn img {
+  width: 180px;
+  height: 45px;
+  object-fit: contain;
+}
+
+@media (width < 600px) {
+  .max-download-gallery {
+    gap: 16px;
+    width: 92%;
+  }
+
+  .max-download-gallery-item {
+    width: 100%;
+  }
+
+  .max-download-gallery-btn img {
+    width: 160px;
+    height: 40px;
+  }
+}

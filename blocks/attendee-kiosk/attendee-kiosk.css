@@ -714,6 +714,19 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   box-shadow: 0 0 0 4px rgb(92 92 224 / 18%);
 }
 
+.attendee-kiosk .kiosk-composer-attachment img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+}
+
+.attendee-kiosk .kiosk-engulf-ghost img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .attendee-kiosk .kiosk-card img {
   display: block;
   width: 100%;
@@ -1224,6 +1237,13 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   }
 }
 
+@media (width <= 800px) {
+  .attendee-kiosk .kiosk-panel-ads .kiosk-composer {
+    order: 3;
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .attendee-kiosk button,
   .attendee-kiosk a {
@@ -1404,5 +1424,198 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 @media (width >= 900px) {
   .attendee-kiosk:has(.kiosk-panel-ads) .kiosk-header img {
     height: 52px;
+  }
+}
+
+.attendee-kiosk .kiosk-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: opacity 460ms ease, transform 460ms ease;
+}
+
+.attendee-kiosk .kiosk-composer-halo {
+  padding: 6px;
+  border-radius: 30px;
+  background: linear-gradient(to right, rgb(201 162 78 / 50%), rgb(201 162 78 / 26%), rgb(201 162 78 / 50%));
+  box-shadow: 0 2px 4px rgb(0 0 0 / 12%), 0 6px 16px -10px rgb(201 162 78 / 45%);
+}
+
+.attendee-kiosk .kiosk-composer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 12px;
+  border-radius: 26px;
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 80%) 0% 37%, rgb(255 255 255 / 20%) 83% 100%),
+    radial-gradient(70% 60% at 40% 100%, rgb(201 162 78 / 22%), transparent 70%), #fbf8f2;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 7%), inset 0 6px 15px rgb(255 255 255 / 60%),
+    0 -3px 10px 1px rgb(201 162 78 / 6%);
+}
+
+.attendee-kiosk .kiosk-composer-text-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.attendee-kiosk .kiosk-composer-attachment {
+  display: none;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #f5f5f5;
+}
+
+.attendee-kiosk .kiosk-composer.has-selection .kiosk-composer-attachment {
+  display: flex;
+}
+
+.attendee-kiosk .kiosk-composer-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #8e8e8e;
+  font-size: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.attendee-kiosk .kiosk-composer.has-selection .kiosk-composer-text {
+  color: #1a1a1a;
+}
+
+.attendee-kiosk .kiosk-composer-icons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.attendee-kiosk .kiosk-composer-add {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.65;
+  font-size: 26px;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-send {
+  display: flex;
+  flex-shrink: 0;
+  width: 36px;
+  min-height: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: #1a1a1a;
+  font-size: 24px;
+  transition: background 200ms ease, transform 100ms ease;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-send:hover {
+  background: #000;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-send:disabled {
+  background: #d3d3d3;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-send:active {
+  transform: scale(0.92);
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-disclaimer {
+  margin: 0;
+  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  text-align: center;
+}
+
+.attendee-kiosk .kiosk-panel.kiosk-engulf-overlay {
+  z-index: 4;
+  pointer-events: none;
+  transition: opacity 520ms ease;
+}
+
+.attendee-kiosk .kiosk-engulf-underlay,
+.attendee-kiosk .kiosk-engulf-overlay.kiosk-engulf-exit {
+  opacity: 0;
+}
+
+.attendee-kiosk .kiosk-engulf-exit .kiosk-ad-copy {
+  opacity: 0;
+  transition: opacity 468ms ease;
+}
+
+.attendee-kiosk .kiosk-engulf-exit .kiosk-composer {
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+}
+
+.attendee-kiosk .kiosk-ad-grid .kiosk-card.kiosk-engulf-tile-exit {
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 494ms ease, transform 494ms ease;
+}
+
+.attendee-kiosk .kiosk-engulf-ghost {
+  position: fixed;
+  z-index: 5;
+  overflow: hidden;
+  border-radius: 20px;
+  box-shadow: 0 0 0 4px #1473e6, 0 8px 32px rgb(20 115 230 / 25%);
+  pointer-events: none;
+  transition:
+    left 806ms cubic-bezier(0.22, 0.88, 0.32, 1),
+    top 806ms cubic-bezier(0.22, 0.88, 0.32, 1),
+    width 806ms cubic-bezier(0.22, 0.88, 0.32, 1),
+    height 806ms cubic-bezier(0.22, 0.88, 0.32, 1),
+    border-radius 624ms ease, box-shadow 624ms ease, opacity 806ms ease;
+}
+
+.attendee-kiosk .kiosk-engulf-ghost.kiosk-engulf-settle {
+  border-radius: 10px;
+  box-shadow: none;
+  opacity: 0;
+}
+
+.attendee-kiosk .kiosk-frame-slot.kiosk-engulf-frame {
+  animation: kiosk-coworker-enter 520ms ease;
+}
+
+@keyframes kiosk-coworker-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (width >= 900px) {
+  .attendee-kiosk .kiosk-panel-ads {
+    padding-bottom: 180px;
+  }
+
+  .attendee-kiosk .kiosk-composer {
+    position: absolute;
+    right: 4%;
+    bottom: 24px;
+    width: 896px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendee-kiosk .kiosk-composer,
+  .attendee-kiosk .kiosk-composer .kiosk-composer-send {
+    transition: none;
   }
 }

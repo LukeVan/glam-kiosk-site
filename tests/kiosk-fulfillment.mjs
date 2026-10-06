@@ -85,10 +85,24 @@ const result = {
   share: {
     expiresAt: expiry,
     qrBlob: `mock-event/7-Share-Output/${request.requestId}/qr.png`,
-    downloadPageUrl: `https://main--glam-kiosk-site--lukevan.aem.live/download?session=${encodeURIComponent(`https://ffservices24.blob.core.windows.net/mock-assets/mock-event/7-Share-Output/${request.requestId}/session.json?sr=b&sp=r&se=${encodeURIComponent(expiry)}&sig=mock`)}`,
+    downloadPageUrl: `https://main--glam-kiosk-site--lukevan.aem.live/max-download.html?session=${encodeURIComponent(`https://ffservices24.blob.core.windows.net/mock-assets/mock-event/7-Share-Output/${request.requestId}/session.json?sr=b&sp=r&se=${encodeURIComponent(expiry)}&sig=mock`)}`,
   },
 };
 assert.equal(validatePrintStatus(result, request), result);
+assert.equal(validatePrintStatus({
+  ...result,
+  share: {
+    ...result.share,
+    downloadPageUrl: result.share.downloadPageUrl.replace('/max-download.html?', '/download?'),
+  },
+}, request).render.status, 'ready');
+assert.throws(() => validatePrintStatus({
+  ...result,
+  share: {
+    ...result.share,
+    downloadPageUrl: result.share.downloadPageUrl.replace('/max-download.html?', '/unrelated?'),
+  },
+}, request));
 const pendingWithoutQR = {
   ...result,
   render: { status: 'rendering', brands: {} },

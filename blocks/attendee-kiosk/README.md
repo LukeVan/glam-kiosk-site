@@ -241,13 +241,25 @@ Packaged Coworker must emit `KIOSK_READY` after registering its bridge listeners
 On initial story entry, the shell sends `KIOSK_FOCUS_HOME_SEND` once per ready
 frame after identity. The child focuses its enabled home Send after rendering
 and acknowledges with `KIOSK_HOME_SEND_FOCUSED`. Attendee interaction cancels
-pending child focus; continued simulation does not receive this request. Native
+pending child focus; continued simulation does not receive this request.
 Simulation return instead sends `KIOSK_SIMULATE` followed by
 `KIOSK_FOCUS_SIMULATION_COMPOSER` once per selected-ad/frame pairing.
 The child waits for the guided prompt and enabled editor, focuses it, and emits
 `KIOSK_SIMULATION_COMPOSER_FOCUSED`. Native Enter advances its existing beat;
 shell rerenders do not restart simulation or steal focus.
-Enter sends the first Coworker prompt. The initial story has no shell Next;
+Ad selection attaches a thumbnail to a two-row visual Coworker composer.
+Its Send button and panel-scoped Enter share one guarded submission path.
+Real requests must be accepted before transitioning; failed submissions retain
+their immutable request for retry and never animate a successful handoff.
+On desktop the handoff uses the prototype's 806 ms floating-image shrink/fade,
+494 ms tile exits staggered by 91 ms, 468 ms headline fade, 460 ms composer exit,
+and 520 ms screen crossfade. The 200 px landing target is relative to the EDS
+iframe's measured bounds rather than the Flask stage's absolute coordinates.
+The same iframe stays mounted, receives the simulation message before animation,
+and animation clones are inaccessible and removed after 850 ms or reset/error.
+Mobile and reduced-motion visitors advance without the animation. Scroll
+correction applies only to the full-page desktop kiosk, not mobile/download pages.
+Native Enter sends the first Coworker prompt. The initial story has no shell Next;
 Jump to Ads opens the selected portrait's ad selection directly without resetting
 attendee identity or bypassing asset readiness. Continued story has no shell Next;
 Exit the experience resets Coworker and returns directly to the activation welcome.
@@ -349,7 +361,16 @@ controls. On desktop its right side displays the selected personalized template
 and, when enabled/ready, an image-only clickable QR opening the attendee download
 page in a new tab. On smaller screens the preview and QR stack below the copy.
 
-The attendee URL uses existing `/download?session=<encoded manifest URL>`.
+New MAX attendee URLs use `/max-download.html?session=<encoded manifest URL>`.
+The static `max-download.html` shell loads the dedicated `max-download` block;
+no DA.live content publication is required. It has isolated MAX classes/styles
+and owns pending/partial/ready processing and strict manifest validation.
+The original `/download` keeps its legacy image/session rendering and fetch
+behavior. Already-issued MAX `/download` links are recognized by schema version 1
+and the `/7-Share-Output/` manifest path and handed to the MAX block, without
+redirecting or rewriting their QR URLs. The kiosk accepts both routes for resume
+compatibility; the worker must use `/max-download.html` for fresh requests and preserve
+persisted URLs for existing requests.
 Its manifest at `{event}/7-Share-Output/{requestId}/session.json` has
 `schemaVersion: 1`, `requestId`, `portraitId`, `name`, `status`
 (`pending`, `partial`, `ready`, `failed`), `createdAt`, `expiresAt`, and four
