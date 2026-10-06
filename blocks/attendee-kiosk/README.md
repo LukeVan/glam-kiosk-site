@@ -337,8 +337,10 @@ The kiosk uses its read SAS only to display the PNG; the encoded QR contains
 an attendee-specific blob-read SAS, never the kiosk container credential.
 The continued story's personalized-ads control and child completion navigation
 open the ending screen. It polls every five seconds, shows explicit processing/
-failure states, and gates pickup on submitted fulfillment and QR on four ready
-templates. Refresh resumes status lookup without a new submission.
+failure states, and gates pickup on submitted fulfillment. The QR appears as
+soon as a valid attendee share link is published, even while templates are
+pending. Its download page shows processing progress and adds images as they
+become ready. Refresh resumes status lookup without a new submission.
 The ending screen says Thank you (Merci), with side-by-side Refresh and Exit
 controls. On desktop its right side displays the selected personalized template
 and, when enabled/ready, an image-only clickable QR opening the attendee download

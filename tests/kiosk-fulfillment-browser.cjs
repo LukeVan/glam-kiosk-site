@@ -14,6 +14,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let writes = 0;
     let failFirstWrite = true;
     let completed = false;
+    let statusPublished = false;
+    let previewReady = false;
     const outputURL = (suffix) => sas(`mock-assets/TestEvent/7-Share-Output/${request.requestId}/${suffix}`, 'r', 'b');
     const downloadURL = () => `https://main--glam-kiosk-site--lukevan.aem.live/download?session=${encodeURIComponent(outputURL('session.json'))}`;
     let shareStatus = 'pending';
@@ -50,23 +52,26 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return;
       }
       if (url.pathname.includes('/requests-status/')) {
-        if (!completed) { await route.fulfill({ status: 404 }); return; }
+        if (!statusPublished) { await route.fulfill({ status: 404 }); return; }
         await route.fulfill({
           contentType: 'application/json',
           body: JSON.stringify({
             schemaVersion: 1, requestId: request.requestId, portraitId: request.portraitId,
             eventPrefix: request.eventPrefix, selectedBrand: request.selectedBrand, request,
             render: {
-              status: 'ready',
+              status: completed ? 'ready' : previewReady ? 'partial' : 'rendering',
               brands: Object.fromEntries(brands.map((brand) => [brand, {
-                status: 'ready', blob: `TestEvent/7-Share-Output/${request.requestId}/${brand}.jpg`,
+                status: completed || (previewReady && brand === request.selectedBrand) ? 'ready' : 'pending',
+                blob: completed || (previewReady && brand === request.selectedBrand)
+                  ? `TestEvent/7-Share-Output/${request.requestId}/${brand}.jpg` : null,
               }])),
             },
             fulfillment: {
-              scope: 'selected', status: 'submitted',
+              scope: 'selected', status: completed ? 'submitted' : 'pending',
               brands: { [request.selectedBrand]: {
-                status: 'submitted',
-                blob: `TestEvent/6-Print-Output/${request.requestId}__${request.selectedBrand}_print.jpg`,
+                status: completed ? 'submitted' : 'pending',
+                blob: completed
+                  ? `TestEvent/6-Print-Output/${request.requestId}__${request.selectedBrand}_print.jpg` : null,
               } },
             },
             share: {
@@ -118,13 +123,32 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.reload();
     await page.locator('.kiosk-panel-ending').waitFor();
     assert.equal(writes, 2);
-    completed = true;
+    statusPublished = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
     await page.locator('.kiosk-share-qr').waitFor();
+    assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
+    assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
+    assert.equal(writes, 2);
+    await page.reload();
+    await page.locator('.kiosk-share-qr').waitFor();
+    assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
+    assert.equal(writes, 2);
+    previewReady = true;
+    await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.locator('.kiosk-print-preview').waitFor();
+    assert.equal(await page.locator('.kiosk-share-qr').count(), 1);
+    completed = true;
+    await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
+    await page.getByText('Your files have been sent to print fulfillment.', { exact: false }).waitFor();
     assert.equal(await page.getByRole('link', { name: 'Scan to download all four personalized ads' }).getAttribute('href'), downloadURL());
     assert.equal(await page.locator('.kiosk-qr-link').innerText(), '');
     assert.equal(await page.locator('.kiosk-qr-link').getAttribute('target'), '_blank');
     assert.equal(await page.locator('.kiosk-qr-link').getAttribute('rel'), 'noopener noreferrer');
+    const qrStyle = await page.locator('.kiosk-qr-link').evaluate((link) => {
+      const style = getComputedStyle(link);
+      return [style.backgroundColor, style.padding, style.borderRadius];
+    });
+    assert.deepEqual(qrStyle, ['rgba(0, 0, 0, 0)', '0px', '0px']);
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
     assert((await page.locator('.kiosk-print-preview').getAttribute('src')).includes(`${request.selectedBrand}.jpg`));
     const copyBox = await page.locator('.kiosk-ending-copy').boundingBox();

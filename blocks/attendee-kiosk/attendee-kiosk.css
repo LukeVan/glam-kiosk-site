@@ -65,8 +65,13 @@
   object-fit: contain;
 }
 
-.attendee-kiosk .kiosk-qr-link {
+.attendee-kiosk .kiosk-qr-link,
+.attendee-kiosk .kiosk-qr-link:hover {
   display: block;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
   line-height: 0;
 }
 
