@@ -281,8 +281,9 @@ build and checks. Rebuild with `pnpm package:eds` in the Coworker source project
 then replace the deployment package as one matching entry/assets set.
 
 Messages to the configured Coworker iframe use exact `targetOrigin`.
-`KIOSK_SET_NAME {name,portrait}` and `KIOSK_SIMULATE {adIndex,adUrl}` use
-absolute image URLs; `adIndex` is 1-based. Incoming `KIOSK_NAV` messages require
+`KIOSK_SET_NAME {name,portrait}` and `KIOSK_SIMULATE {adIndex,adUrl,brand}` use
+absolute image URLs; `adIndex` is 1-based, with `brand` keys `roche`, `keratin`,
+`ysl`, and `paris` in the same canonical ad order. Incoming `KIOSK_NAV` messages require
 the configured iframe's `contentWindow`, exact origin and expected stage:
 `view-select` means request ad selection; `view-processing-max` and
 `view-variations-max` mean continue to the final thumbnail presentation and are

@@ -182,6 +182,7 @@ export default async function decorate(block) {
         sendCoworker({
           type: 'KIOSK_SIMULATE',
           adIndex: index + 1,
+          brand: ['roche', 'keratin', 'ysl', 'paris'][index],
           adUrl: new URL(manifest.ads[index].url, window.location.origin).href,
         });
         if (config.coworker.packaged) {
