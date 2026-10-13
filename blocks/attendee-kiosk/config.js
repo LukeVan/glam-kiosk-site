@@ -43,6 +43,23 @@ function coworkerIntegration(value, pageOrigin) {
   };
 }
 
+function productionWorkflowIntegration(value, pageOrigin) {
+  if (value.packaged !== undefined && typeof value.packaged !== 'boolean') {
+    throw new Error('Production workflow packaged flag must be a boolean.');
+  }
+  if (!value.packaged) return integration(value);
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+    throw new Error('Integration enable flags must be booleans.');
+  }
+  if (!value.enabled) return { enabled: false };
+  const url = new URL('/production-workflow/index.html?preview=eds', pageOrigin);
+  if (url.protocol !== 'https:'
+    && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
+    throw new Error('Packaged workflow requires HTTPS or a local developer origin.');
+  }
+  return { enabled: true, url: url.href };
+}
+
 export function readConfig(authoredMode, runtime = {}, pageOrigin = (
   typeof window === 'undefined' ? undefined : window.location.origin
 )) {
@@ -82,5 +99,6 @@ export function readConfig(authoredMode, runtime = {}, pageOrigin = (
     coworker: mode === 'demo' && !runtime.coworker?.allowInDemo
       ? { enabled: false } : coworkerIntegration(runtime.coworker || {}, pageOrigin),
     graph: mode === 'demo' ? { enabled: false } : integration(runtime.graph || {}),
+    productionWorkflow: productionWorkflowIntegration(runtime.productionWorkflow || {}, pageOrigin),
   };
 }

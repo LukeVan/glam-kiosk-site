@@ -2,6 +2,8 @@ import {
   SETTINGS_KEY, loadSettings, listBlobs, blobURL,
 } from '../../scripts/kiosk-settings.js';
 import { readPrintStatus, submitPrintRequest } from './fulfillment.js';
+import { completedPortraits } from './completed.js';
+import { readBannerManifest } from './banner-assets.js';
 
 const EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i;
 const BRANDS = [
@@ -78,6 +80,9 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     eventId: eventId || 'invalid-settings',
     intakeEnabled,
     settings,
+    async bannerResults(id, signal) {
+      return readBannerManifest(id, settings(), signal, fetcher);
+    },
     async printStatus(request, signal) {
       return readPrintStatus(request, settings(), signal, fetcher);
     },
@@ -85,10 +90,11 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     selectedPortrait,
     async portraits(signal) {
       const samples = (await demo.portraits(signal)).map((item) => ({ ...item, demo: true }));
+      const hidden = settings().showCompletedPortraits ? [] : completedPortraits(storage, eventId);
       try {
         const portraits = await azurePortraits(signal);
         warning = '';
-        return [...portraits, ...samples];
+        return [...portraits.filter((item) => !hidden.includes(item.id)), ...samples];
       } catch (error) {
         if (signal?.aborted) throw error;
         warning = error.message;

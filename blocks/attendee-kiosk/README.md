@@ -1,5 +1,28 @@
 # Hosted attendee kiosk frontend
 
+## Personalized banner results
+
+The Azure showcase reads
+`{eventId}/8-Banner-Output/{portraitId}/manifest.json` every five seconds while
+results are pending, running, partial, or not yet published (404). Retrieval
+errors are displayed and retried; ready/failed manifests stop automatic polling.
+Leaving the screen cancels retrieval and polling. This is read-only: the Creator
+worker owns cutout persistence, workflow execution, retry, and PDF rasterization.
+
+The manifest must identify schema version 1, the selected portrait, and brand
+`4-lorealparis`. Asset IDs are unique and each asset declares its label, status,
+MIME type, and container-relative blob path **including the event prefix**.
+Ready assets must stay within the selected portrait's banner directory.
+Only PNG/JPEG/WebP previews enter the gallery. PDFs have a separate open link.
+An unavailable preview is explicit even when the PDF is ready. Real portraits
+never substitute sample previews for missing production results; demo portraits
+retain the labeled static showcase.
+
+Backend execution and output cardinality remain unverified against the new
+workflow. The current API exposes the cutout only at terminal four-ad batch
+completion. Preview rasterization requires the Creator's optional PyMuPDF
+dependency; installing it or running the live workflow is a separate approval.
+
 This is an EDS-compatible frontend shell, not a deployed or production-ready
 experience. It uses vanilla JavaScript and scoped CSS. `/download`, existing QR
 URLs, the processing app and remote services are unchanged.
@@ -361,6 +384,46 @@ The ending screen says Thank you (Merci), with side-by-side Refresh and Exit
 controls. On desktop its right side displays the selected personalized template
 and, when enabled/ready, an image-only clickable QR opening the attendee download
 page in a new tab. On smaller screens the preview and QR stack below the copy.
+Exiting this screen after a validated share link and published QR are available
+records the event portrait ID in this browser's localStorage. The default picker
+hides those IDs. Settings' Show completed portraits toggle reveals them without
+deleting history or Azure assets. History is scoped by event and browser origin,
+persists through restart/reload/settings clearing, and is not shared across Macs.
+Reset elsewhere or exiting before a share is available does not mark completion.
+This is visibility only: selecting a revealed portrait still creates a new request;
+it is not a replay-without-processing mode.
+
+### Variations showcase and production preview
+
+Coworker's See variation results sends the existing trusted
+`KIOSK_NAV` / `view-variations-max` target from continued story. This now opens
+the refresh-safe `variations` stage, not print completion. View production workflow
+is removed from that Coworker card and placed on this results screen.
+
+The demo showcase contains 18 explicitly labeled sample InDesign outputs,
+optimized from the supplied Sample-indd-Output folder to JPEG previews at up to
+800 px, about 1 MB total. They are not attendee-personalized assets or downloads.
+The viewport automatically scrolls upward at 25 px/second and repeats. Manual
+wheel/touch/keyboard scrolling pauses it until one second after the last interaction
+or manual scroll event; dragging holds the pause until release. Reduced-motion
+preference, hidden tabs, and an open workflow dialog stop automatic movement.
+There are no Pause or Back controls. Images retain their full
+aspect ratio and are not selectable. Noncritical previews are lazy loaded.
+
+Azure portraits use the published banner-results manifest described above,
+without falling back to demo samples. Other protected API integrations can
+provide personalized images through the validated `banners` array.
+The browser does not trigger FFCPE generation or infer another portrait's results.
+Next leads to
+the existing ending only if this attendee already has a print request.
+
+Runtime `productionWorkflow: { enabled: true, packaged: true }` opens
+`/production-workflow/index.html?preview=eds` in a sandboxed, lazy-created iframe
+inside a modal slide-over. Unconfigured workflow shows an explicit unavailable
+state, not a fabricated graph or a live Adobe editor. Escape/Close remove the
+iframe and return focus; stage changes/reset remove the dialog and stop scrolling.
+This preview has no authority to submit jobs; the static package is source-owned
+by Glam's ffe-wfb-design-proto app.
 
 New MAX attendee URLs use `/max-download.html?session=<encoded manifest URL>`.
 The static `max-download.html` shell loads the dedicated `max-download` block;

@@ -1,6 +1,6 @@
 import { PRINT_BRANDS, validRequest } from './fulfillment.js';
 
-export const STAGES = ['welcome', 'portraits', 'name', 'story', 'graph', 'pacing', 'ads', 'continued', 'banners', 'ending'];
+export const STAGES = ['welcome', 'portraits', 'name', 'story', 'graph', 'pacing', 'ads', 'continued', 'banners', 'ending', 'variations'];
 export const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
 
 export function initialState() {

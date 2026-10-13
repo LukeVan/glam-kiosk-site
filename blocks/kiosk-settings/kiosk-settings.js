@@ -69,6 +69,9 @@ export default function decorate(block) {
   const qr = field('Final screen', node('select'));
   qr.append(new Option('Show QR code and download link', 'qr'));
   qr.append(new Option('Print pickup instructions', 'pickup'));
+  const completed = field('Show completed portraits', node('select'));
+  completed.append(new Option('Off — hide completed attendees on this browser', 'hide'));
+  completed.append(new Option('On — include completed attendees', 'show'));
   const details = node('details', '', 'kiosk-settings-wide');
   details.append(
     node('summary', 'Access and processing notes'),
@@ -156,6 +159,7 @@ export default function decorate(block) {
         requestSAS: requests.value.trim(),
         printScope: scope.value,
         showFinalQR: qr.value === 'qr',
+        showCompletedPortraits: completed.value === 'show',
       });
       savedEvent = event.value;
       report('Booth settings saved on this browser. Reload the kiosk to apply them. Glam Creator must be running to process print requests.');
@@ -198,6 +202,7 @@ export default function decorate(block) {
       requests.value = saved.requestSAS;
       scope.value = saved.printScope;
       qr.value = saved.showFinalQR ? 'qr' : 'pickup';
+      completed.value = saved.showCompletedPortraits ? 'show' : 'hide';
       report(`Saved event: ${saved.eventId}. Access expires ${new Date(saved.expiresAt).toLocaleString()}. Test again to verify access.`);
     } else report('This kiosk is unconfigured.');
   } catch (error) { report(error.message, true); }

@@ -58,6 +58,8 @@ export function validateSettings(value) {
     || !['none', 'marketo'].includes(value.formType)
     || (value.printScope !== undefined && !['selected', 'all'].includes(value.printScope))
     || (value.showFinalQR !== undefined && typeof value.showFinalQR !== 'boolean')
+    || (value.showCompletedPortraits !== undefined
+      && typeof value.showCompletedPortraits !== 'boolean')
     || (value.requestSAS !== undefined && typeof value.requestSAS !== 'string')) {
     throw new Error('Saved booth settings are invalid. Clear them and configure this kiosk again.');
   }
@@ -73,6 +75,7 @@ export function validateSettings(value) {
     requestSAS: value.requestSAS || '',
     printScope: value.printScope || 'selected',
     showFinalQR: value.showFinalQR ?? value.adEnding !== 'print',
+    showCompletedPortraits: value.showCompletedPortraits ?? false,
     expiresAt,
   };
 }

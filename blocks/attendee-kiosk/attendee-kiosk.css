@@ -714,6 +714,14 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   box-shadow: 0 0 0 4px rgb(92 92 224 / 18%);
 }
 
+.attendee-kiosk .kiosk-variation img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 380px;
+  object-fit: contain;
+}
+
 .attendee-kiosk .kiosk-composer-attachment img {
   width: 36px;
   height: 36px;
@@ -1295,6 +1303,15 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   margin-top: 48px;
 }
 
+.attendee-kiosk .kiosk-variations-copy h2 {
+  white-space: pre-line;
+}
+
+.attendee-kiosk .kiosk-workflow-bar h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
 .attendee-kiosk .kiosk-panel-coworker {
   display: grid;
   grid-template-columns: 420px 1fr;
@@ -1617,5 +1634,173 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   .attendee-kiosk .kiosk-composer,
   .attendee-kiosk .kiosk-composer .kiosk-composer-send {
     transition: none;
+  }
+}
+
+.attendee-kiosk .kiosk-panel.kiosk-panel-variations {
+  display: flex;
+  gap: 24px;
+  padding: 170px 7% 60px;
+  overflow-y: auto;
+}
+
+.attendee-kiosk .kiosk-variations-copy .kiosk-variations-notice {
+  margin: 24px 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.attendee-kiosk .kiosk-variations-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.attendee-kiosk .kiosk-variations-workflow {
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+
+.attendee-kiosk .kiosk-variations-viewport {
+  min-height: 400px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 24px;
+  scrollbar-width: thin;
+}
+
+.attendee-kiosk .kiosk-variations-grid {
+  columns: 2;
+  column-gap: 16px;
+  padding: 16px;
+}
+
+.attendee-kiosk .kiosk-variation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  margin: 0 0 16px;
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 75%);
+  break-inside: avoid;
+}
+
+.attendee-kiosk .kiosk-variation-failed {
+  border: 2px solid #b53535;
+}
+
+.attendee-kiosk .kiosk-workflow-dialog {
+  position: fixed;
+  inset: 16px 16px 16px auto;
+  width: min(1600px, calc(100vw - 32px));
+  max-width: none;
+  height: calc(100dvh - 32px);
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 24px;
+  background: #f8f8f8;
+  color: #1a1a1a;
+}
+
+.attendee-kiosk .kiosk-workflow-dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: kiosk-workflow-enter 350ms ease;
+}
+
+.attendee-kiosk .kiosk-workflow-dialog::backdrop {
+  background: rgb(0 0 0 / 55%);
+}
+
+.attendee-kiosk .kiosk-workflow-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 24px;
+}
+
+.attendee-kiosk .kiosk-workflow-dialog iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+}
+
+.attendee-kiosk .kiosk-workflow-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #333;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.attendee-kiosk .kiosk-workflow-close:hover {
+  background: transparent;
+  color: #000;
+}
+
+.attendee-kiosk .kiosk-workflow-unavailable {
+  padding: 24px;
+}
+
+@keyframes kiosk-workflow-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (width >= 900px) {
+  .attendee-kiosk .kiosk-variations-workflow {
+    position: absolute;
+    right: 92px;
+    bottom: 92px;
+    z-index: 1;
+  }
+
+  .attendee-kiosk .kiosk-panel.kiosk-panel-variations {
+    display: grid;
+    grid-template-columns: 420px minmax(0, 1fr);
+    align-items: center;
+    gap: 64px;
+    padding: 190px 76px 60px;
+    overflow: hidden;
+  }
+
+  .attendee-kiosk .kiosk-variations-copy h2 {
+    font-size: 68px;
+    line-height: 1;
+  }
+
+  .attendee-kiosk .kiosk-variations-viewport {
+    height: 830px;
+    min-height: 0;
+    align-self: end;
+    mask-image: linear-gradient(transparent, #000 5%, #000 94%, transparent);
+  }
+
+  .attendee-kiosk .kiosk-variations-grid {
+    columns: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendee-kiosk .kiosk-workflow-dialog[open] {
+    animation: none;
   }
 }

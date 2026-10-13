@@ -9,6 +9,8 @@ import copy from './copy.js';
 import { createPrintRequest } from './fulfillment.js';
 import { blobURL } from '../../scripts/kiosk-settings.js';
 import playAdEngulf from './engulf.js';
+import { markCompleted } from './completed.js';
+import renderVariations, { sampleVariations } from './variations.js';
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -322,7 +324,7 @@ export default async function decorate(block) {
       : (await api.portraits(signal)).find((item) => item.id === snapshot.portraitId);
     if (!selectedPortrait) throw new Error(text().changed);
     let selectedManifest;
-    if (['pacing', 'ads', 'continued', 'banners'].includes(snapshot.stage)) {
+    if (['pacing', 'ads', 'continued', 'banners', 'variations'].includes(snapshot.stage)) {
       selectedManifest = await api.manifest(snapshot.portraitId, signal);
       if (snapshot.selectedAdId
         && !selectedManifest.ads.some((ad) => ad.id === snapshot.selectedAdId)) {
@@ -728,7 +730,15 @@ export default async function decorate(block) {
       }, 5000);
     }
     const actions = element('div', '', 'kiosk-ending-actions');
-    actions.append(button(text().refreshShort, () => render()), button(text().exit, reset));
+    const exit = button(text().exit, () => {
+      try {
+        if (api.source === 'azure' && result?.share?.downloadPageUrl && result.share.qrBlob) {
+          markCompleted(window.localStorage, api.eventId, request.portraitId);
+        }
+        reset();
+      } catch (error) { fail(error); }
+    });
+    actions.append(button(text().refreshShort, () => render()), exit);
     content.append(actions);
     panel.append(content, media);
   }
@@ -772,13 +782,10 @@ export default async function decorate(block) {
         heading.tabIndex = -1;
         const subtitle = element('p', text().portraitsSub);
         copyPane.append(heading, subtitle);
-        if (api.source === 'azure') {
-          copyPane.append(element('p', text().demoChoices, 'kiosk-azure-notice'));
-          if (api.warning) {
-            const warning = element('p', `${text().azureUnavailable} ${api.warning}`, 'kiosk-azure-notice');
-            warning.setAttribute('role', 'alert');
-            copyPane.append(warning);
-          }
+        if (api.source === 'azure' && api.warning) {
+          const warning = element('p', text().azureUnavailable, 'kiosk-azure-notice');
+          warning.setAttribute('role', 'alert');
+          copyPane.append(warning);
         }
         if (!portraits.length) copyPane.append(element('p', text().empty));
         const next = button(
@@ -842,6 +849,21 @@ export default async function decorate(block) {
       if (snapshot.stage === 'graph') graph();
       if (snapshot.stage === 'ads') ads();
       if (snapshot.stage === 'banners') banners();
+      if (snapshot.stage === 'variations') {
+        const sample = snapshot.portraitId.startsWith('demo_') && !manifest.banners.length;
+        renderVariations({
+          panel,
+          block,
+          assets: sample ? sampleVariations() : manifest.banners,
+          sample,
+          loadResults: api.bannerResults && !snapshot.portraitId.startsWith('demo_')
+            ? () => api.bannerResults(snapshot.portraitId, signal) : null,
+          text: text(),
+          signal,
+          workflow: config.productionWorkflow,
+          onFinish: state.printRequest ? () => move('ending') : null,
+        });
+      }
     } catch (error) {
       if (epoch === currentEpoch) fail(signal.aborted ? new Error(text().error) : error);
     }

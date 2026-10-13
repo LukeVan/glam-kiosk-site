@@ -18,8 +18,8 @@ export function navigation(event, source, integration, stage) {
     || event.data.type !== 'KIOSK_NAV') return null;
   if (!['story', 'continued'].includes(stage)) return null;
   if (event.data.target === 'view-select' && stage === 'story') return 'ads';
-  if (['view-processing-max', 'view-variations-max'].includes(event.data.target)
-    && stage === 'continued') return 'banners';
+  if (['view-variations-max', 'view-processing-max'].includes(event.data.target)
+    && stage === 'continued') return 'variations';
   return null;
 }
 

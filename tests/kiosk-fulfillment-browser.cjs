@@ -17,6 +17,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let statusPublished = false;
     let previewReady = false;
     let qrPublished = false;
+    let bannerStatus = 'unpublished';
+    let failPortraitListing = false;
     const outputURL = (suffix) => sas(`mock-assets/TestEvent/7-Share-Output/${request.requestId}/${suffix}`, 'r', 'b');
     const downloadURL = () => `https://main--glam-kiosk-site--lukevan.aem.live/max-download.html?session=${encodeURIComponent(outputURL('session.json'))}`;
     let shareStatus = 'pending';
@@ -46,6 +48,31 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
           failFirstWrite = false;
           await route.abort('failed');
         } else await route.fulfill({ status: 412 });
+        return;
+      }
+      if (url.pathname.includes('/8-Banner-Output/') && url.pathname.endsWith('/manifest.json')) {
+        if (bannerStatus === 'unpublished') {
+          await route.fulfill({ status: 404 });
+          return;
+        }
+        const portraitId = url.pathname.split('/').at(-2);
+        const prefix = `TestEvent/8-Banner-Output/${portraitId}/`;
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            schemaVersion: 1, portraitId, brand: '4-lorealparis',
+            status: bannerStatus === 'preview-unavailable' ? 'ready' : bannerStatus,
+            assets: [
+              { id: 'banner_pdf', label: 'Banner PDF', status: 'ready', mimeType: 'application/pdf', blob: `${prefix}banner.pdf` },
+              ...(bannerStatus === 'preview-unavailable' ? [{
+                id: 'preview', label: 'Preview', status: 'unavailable', mimeType: null, blob: null,
+              }] : Array.from({ length: 18 }, (_, i) => ({
+                id: `page_${i + 1}`, label: `Page ${i + 1}`, status: 'ready',
+                mimeType: 'image/png', blob: `${prefix}page_${i + 1}.png`,
+              }))),
+            ],
+          }),
+        });
         return;
       }
       if (url.pathname.endsWith('/session.json')) {
@@ -85,6 +112,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       }
       if (url.searchParams.get('comp') === 'list') {
         const prefix = url.searchParams.get('prefix') || 'TestEvent/portraits/pending/';
+        if (failPortraitListing && prefix.endsWith('/portraits/pending/')) {
+          await route.fulfill({ status: 403 });
+          return;
+        }
         const names = prefix.endsWith('/portraits/pending/') ? ['mock.jpg']
           : brands.map((brand, i) => `mock_${i + 1}-${brand}.jpg`);
         const body = `<EnumerationResults><Blobs>${names.map((name) => `<Blob><Name>${prefix}${name}</Name><Properties><Last-Modified>Mon, 05 Oct 2026 10:00:00 GMT</Last-Modified></Properties></Blob>`).join('')}</Blobs><NextMarker></NextMarker></EnumerationResults>`;
@@ -113,10 +144,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
     await page.locator('.kiosk-composer-send').waitFor();
     assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
-    await page.locator('.kiosk-ad-grid button').nth(1).click();
+    await page.locator('.kiosk-ad-grid button').nth(3).click();
     assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 1);
     assert((await page.locator('.kiosk-composer-attachment img').getAttribute('src'))
-      .includes('lorealprofessionnel'));
+      .includes('lorealparis'));
     const gridBox = await page.locator('.kiosk-ad-grid').boundingBox();
     const dockBox = await page.locator('.kiosk-composer').boundingBox();
     assert(dockBox.y >= gridBox.y + gridBox.height);
@@ -170,7 +201,67 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'engulf-continued.png') });
     }
-    await page.getByRole('button', { name: 'Your personalized ads', exact: true }).click();
+    await page.keyboard.press('Enter');
+    await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
+    await coworker.getByRole('button', { name: 'Send', exact: true }).click();
+    await coworker.getByRole('button', { name: 'See variation results', exact: true }).click();
+    await page.locator('.kiosk-panel-variations').waitFor();
+    assert.equal(await page.locator('.kiosk-variation').count(), 0);
+    assert.equal(await page.getByText('One idea. A whole world of content.', { exact: true }).count(), 0);
+    assert.equal(await page.locator('.kiosk-variations-status').innerText(), '');
+    bannerStatus = 'ready';
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18,
+      null, { timeout: 10000 });
+    assert.equal(await page.locator('.kiosk-variation').count(), 18);
+    await page.locator('.kiosk-variation img').evaluateAll(async (images) => {
+      await Promise.all(images.map((image) => new Promise((resolve, reject) => {
+        const check = new Image();
+        check.onload = resolve;
+        check.onerror = reject;
+        check.src = image.src;
+      })));
+    });
+    assert((await page.locator('.kiosk-variations-notice').innerText()).includes('personalized variations'));
+    assert.equal(await page.locator('.kiosk-banner-download').count(), 1);
+    assert.equal(await page.locator('.kiosk-variation img[src*=".pdf"]').count(), 0);
+    await page.waitForFunction(() => document.querySelector('.kiosk-variations-viewport').scrollTop > 5);
+    assert.equal(await page.getByRole('button', { name: 'Pause showcase', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'Back to Coworker', exact: true }).count(), 0);
+    const workflowBox = await page.locator('.kiosk-variations-workflow').boundingBox();
+    const galleryBox = await page.locator('.kiosk-variations-viewport').boundingBox();
+    assert(workflowBox.x > galleryBox.x + galleryBox.width / 2);
+    assert(workflowBox.y > galleryBox.y + galleryBox.height / 2);
+    await page.locator('.kiosk-variations-viewport').evaluate((view) => {
+      view.scrollTop += 100;
+      view.dispatchEvent(new WheelEvent('wheel', { deltaY: 100 }));
+    });
+    const pausedScroll = await page.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop);
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 750)));
+    assert.equal(await page.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop), pausedScroll);
+    await page.waitForFunction((top) => (
+      document.querySelector('.kiosk-variations-viewport').scrollTop > top + 2
+    ), pausedScroll, { timeout: 2000 });
+    await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
+    await page.getByRole('dialog').waitFor();
+    const closeWorkflow = page.getByRole('button', { name: 'Close window', exact: true });
+    assert.equal(await closeWorkflow.innerText(), '×');
+    await closeWorkflow.click();
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(await page.getByRole('button', { name: 'View production workflow', exact: true }).evaluate((node) => node === document.activeElement), true);
+    await page.reload();
+    await page.locator('.kiosk-panel-variations').waitFor();
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18);
+    assert.equal(await page.locator('.kiosk-variation').count(), 18);
+    assert.equal(writes, 2);
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'variations.png') });
+    }
+    bannerStatus = 'preview-unavailable';
+    await page.reload();
+    await page.getByText('Image previews are unavailable. Open the PDF if available, or ask booth staff.', { exact: true }).waitFor();
+    assert.equal(await page.locator('.kiosk-variation').count(), 0);
+    assert.equal(await page.locator('.kiosk-banner-download').count(), 1);
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
     assert.equal(writes, 2);
     await page.locator('.kiosk-panel-ending').waitFor();
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
@@ -229,6 +320,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const mobileExit = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
     assert.equal(mobileRefresh.y, mobileExit.y);
     await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).click();
+    await page.locator('.kiosk-panel-welcome').waitFor();
+    await page.reload();
+    await page.locator('.kiosk-consent input').check();
+    await page.locator('.kiosk-print').click();
+    await page.locator('.kiosk-portrait-grid').waitFor();
+    assert.equal(await page.locator('.kiosk-portrait-grid .kiosk-card:not(.kiosk-demo-card)').count(), 0);
+    assert.equal(await page.locator('.kiosk-portrait-grid .kiosk-demo-card').count(), 3);
     const download = await browser.newPage();
     await download.addInitScript(() => {
       const originalFetch = window.fetch;
@@ -307,12 +406,26 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByLabel('Request container SAS URL (create only)').waitFor();
     await page.getByLabel('Print files').selectOption('all');
     await page.getByLabel('Final screen').selectOption('pickup');
+    await page.getByLabel('Show completed portraits').selectOption('show');
     await page.getByRole('button', { name: 'Test connection', exact: true }).click();
     await page.getByRole('button', { name: 'Save booth settings', exact: true }).click();
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('glam-kiosk-booth-v1')));
     assert.equal(saved.printScope, 'all');
     assert.equal(saved.showFinalQR, false);
+    assert.equal(saved.showCompletedPortraits, true);
     assert.equal(new URL(saved.requestSAS).searchParams.get('sp'), 'c');
+    await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await page.locator('.kiosk-portrait-grid .kiosk-card:not(.kiosk-demo-card)').waitFor();
+    assert.equal(await page.locator('.kiosk-portrait-grid .kiosk-card:not(.kiosk-demo-card)').count(), 1);
+    assert.equal(await page.getByText('Event photos appear first.', { exact: false }).count(), 0);
+    failPortraitListing = true;
+    await page.reload();
+    await page.getByRole('alert').filter({ hasText: 'Event photos are temporarily unavailable. Please ask booth staff.' }).waitFor();
+    assert.equal(await page.locator('.kiosk-demo-card').count(), 3);
+    assert.equal(await page.getByText('Generate a new SAS', { exact: false }).count(), 0);
+    assert.equal(await page.getByText('Azure denied access', { exact: false }).count(), 0);
+    failPortraitListing = false;
+    assert.equal(writes, 2);
     const demo = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     await demo.emulateMedia({ reducedMotion: 'reduce' });
     await demo.goto('http://localhost:3017/drafts/attendee-kiosk.html');
@@ -333,7 +446,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await demo.locator('.kiosk-panel-continued').waitFor();
     assert.equal(await demo.locator('.kiosk-engulf-ghost').count(), 0);
     assert.equal(await demo.locator('.kiosk-engulf-overlay').count(), 0);
-    await demo.locator('.kiosk-coworker-exit').click();
+    await demo.frameLocator('.kiosk-frame-slot iframe').locator('body').evaluate(() => {
+      window.parent.postMessage({ type: 'KIOSK_NAV', target: 'view-variations-max' }, window.location.origin);
+    });
+    await demo.locator('.kiosk-panel-variations').waitFor();
+    assert.equal(await demo.getByRole('button', { name: 'Resume showcase', exact: true }).count(), 0);
+    assert.equal(await demo.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop), 0);
+    await demo.setViewportSize({ width: 390, height: 844 });
+    assert.equal(await demo.locator('.kiosk-variation').count(), 18);
+    assert.equal(await demo.locator('.kiosk-panel-variations').evaluate((panel) => (
+      panel.scrollWidth <= panel.clientWidth
+    )), true);
+    await demo.getByRole('button', { name: 'Reset', exact: true }).click();
+    await demo.getByText('Clear this attendee on this browser?', { exact: true }).waitFor();
+    await demo.getByRole('button', { name: 'Reset', exact: true }).click();
     await demo.locator('.kiosk-panel-welcome').waitFor();
     assert.equal(await demo.locator('.kiosk-frame-slot iframe').count(), 0);
     await demo.close();

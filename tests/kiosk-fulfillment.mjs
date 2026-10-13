@@ -4,6 +4,10 @@ import {
 } from '../blocks/attendee-kiosk/fulfillment.js';
 import { validateSettings } from '../scripts/kiosk-settings.js';
 import { initialState, validState } from '../blocks/attendee-kiosk/state.js';
+import { completedPortraits, markCompleted } from '../blocks/attendee-kiosk/completed.js';
+import { navigation } from '../blocks/attendee-kiosk/integrations.js';
+import { sampleVariations } from '../blocks/attendee-kiosk/variations.js';
+import { validateBannerManifest, readBannerManifest } from '../blocks/attendee-kiosk/banner-assets.js';
 
 const expiry = new Date(Date.now() + 86400000).toISOString();
 const sas = (container, permissions) => `https://ffservices24.blob.core.windows.net/${container}?sv=2023-11-03&sr=c&sp=${permissions}&se=${encodeURIComponent(expiry)}&sig=mock`;
@@ -18,6 +22,81 @@ const settings = validateSettings({
   showFinalQR: true,
 });
 const portraitId = `azure_${'a'.repeat(64)}`;
+const bannerManifest = {
+  schemaVersion: 1, portraitId, brand: '4-lorealparis', status: 'ready',
+  assets: [
+    {
+      id: 'banner_pdf', label: 'Banner PDF', status: 'ready', mimeType: 'application/pdf',
+      blob: `${settings.eventId}/8-Banner-Output/${portraitId}/banner_output.pdf`,
+    },
+    {
+      id: 'page_1', label: 'Page 1', status: 'ready', mimeType: 'image/png',
+      blob: `${settings.eventId}/8-Banner-Output/${portraitId}/page_1.png`,
+    },
+  ],
+};
+assert.equal(validateBannerManifest(bannerManifest, portraitId, settings).assets.length, 2);
+for (const status of ['pending', 'running', 'partial', 'failed']) {
+  assert.equal(validateBannerManifest({ ...bannerManifest, status, assets: [] },
+    portraitId, settings).status, status);
+}
+assert.throws(() => validateBannerManifest({ ...bannerManifest, portraitId: 'other' }, portraitId, settings));
+assert.throws(() => validateBannerManifest({ ...bannerManifest, assets: [] }, portraitId, settings));
+assert.throws(() => validateBannerManifest({
+  ...bannerManifest, assets: [bannerManifest.assets[0], bannerManifest.assets[0]],
+}, portraitId, settings));
+for (const blob of ['other/page.png', `${settings.eventId}/8-Banner-Output/${portraitId}/../page.png`,
+  `${settings.eventId}/8-Banner-Output/${portraitId}/page.png?secret`,
+  `${settings.eventId}/8-Banner-Output/${portraitId}/page.pdf`]) {
+  assert.throws(() => validateBannerManifest({
+    ...bannerManifest, assets: [{ ...bannerManifest.assets[1], blob }],
+  }, portraitId, settings));
+}
+assert.equal(validateBannerManifest({
+  ...bannerManifest,
+  assets: [bannerManifest.assets[0], {
+    id: 'preview', label: 'Preview', status: 'unavailable', mimeType: null, blob: null,
+  }],
+}, portraitId, settings).assets[1].status, 'unavailable');
+assert.deepEqual(await readBannerManifest(portraitId, settings, null,
+  async () => ({ status: 404 })), { status: 'unavailable', assets: [] });
+await assert.rejects(readBannerManifest(portraitId, settings, null,
+  async () => ({ status: 403, ok: false })), /HTTP 403/);
+const history = new Map();
+const storage = {
+  getItem: (key) => history.get(key) ?? null,
+  setItem: (key, value) => history.set(key, value),
+};
+assert.deepEqual(completedPortraits(storage, 'event-one'), []);
+markCompleted(storage, 'event-one', portraitId);
+markCompleted(storage, 'event-one', portraitId);
+assert.deepEqual(completedPortraits(storage, 'event-one'), [portraitId]);
+assert.deepEqual(completedPortraits(storage, 'event-two'), []);
+assert.deepEqual(completedPortraits({ getItem: () => null }, 'event-one'), []);
+assert.throws(() => markCompleted(storage, 'event-one', 'demo_1'));
+assert.throws(() => completedPortraits({ getItem: () => '{bad' }, 'event-one'));
+assert.throws(() => completedPortraits({ getItem: () => '["invalid"]' }, 'event-one'));
+assert.throws(() => markCompleted({
+  getItem: () => null, setItem: () => { throw new Error('Storage unavailable'); },
+}, 'event-one', portraitId), /Storage unavailable/);
+assert.equal(settings.showCompletedPortraits, false);
+assert.equal(validateSettings({ ...settings, showCompletedPortraits: true }).showCompletedPortraits, true);
+assert.throws(() => validateSettings({ ...settings, showCompletedPortraits: 'true' }));
+const source = {};
+const integration = { enabled: true, origin: 'https://kiosk.example' };
+const variationsEvent = {
+  source, origin: integration.origin,
+  data: { type: 'KIOSK_NAV', target: 'view-variations-max' },
+};
+assert.equal(navigation(variationsEvent, source, integration, 'continued'), 'variations');
+assert.equal(navigation({
+  ...variationsEvent, data: { type: 'KIOSK_NAV', target: 'view-processing-max' },
+}, source, integration, 'continued'), 'variations');
+assert.equal(navigation(variationsEvent, source, integration, 'story'), null);
+assert.equal(navigation({ ...variationsEvent, source: {} }, source, integration, 'continued'), null);
+assert.equal(navigation({ ...variationsEvent, origin: 'https://wrong.example' }, source, integration, 'continued'), null);
+assert.equal(sampleVariations().length, 18);
+assert.equal(new Set(sampleVariations().map((item) => item.id)).size, 18);
 const state = {
   ...initialState(),
   stage: 'ads',
