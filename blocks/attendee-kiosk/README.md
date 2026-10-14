@@ -1,5 +1,36 @@
 # Hosted attendee kiosk frontend
 
+## Adobe Graph cutout handoff
+
+For Azure portraits, story screens read
+`{eventId}/9-Graph-Input/{portraitId}/manifest.json` every five seconds.
+The worker publishes the original shared cutout from
+`node_1791927487544_z177v9idx_35_qblmfu`; this is distinct from the generated
+L'Oréal banner cutout. Missing/failed/expired assets show unavailable status,
+without substituting the original portrait or starting production.
+
+Ready schema-version-1 manifests must match portrait ID, source node, and
+`{eventId}/9-Graph-Input/{portraitId}/portrait.png`. The PNG asset contains
+`url` and `expiresAt` minted by Creator at publication, not browser signing.
+Only the configured account/container/exact blob with `sr=b`, `sp=r`,
+`spr=https`, matching active UTC expiry and at most four hours remaining is
+accepted. Container SAS is used only to read the manifest, never handed to Graph.
+
+The shell sends `KIOSK_SET_GRAPH_PORTRAIT` with selected `portraitId`, validated
+`url` and `expiresAt` (null URL when unavailable) to the exact Coworker origin.
+The credential stays in volatile memory, is cleared on stage abort/reset, and
+must never be logged or placed in browser storage. Coworker rechecks access on
+explicit Graph click before adding a URLSearchParams-encoded `portraitUrl` hash.
+The userscript captures it at document-start and removes it from the address.
+Backend publication remains opt-in; real node output/signing is not live-verified.
+
+`/tools/graph-auto-load.user.js` is the source-owned combined Tampermonkey v1.2
+artifact for manual installation, not an EDS-injected script. Replace the old
+activation userscript with it rather than running duplicate return controls.
+Its upload control selectors have not been verified against live Adobe Graph.
+Publishing this frontend does not enable Creator's `GLAM_GRAPH_INPUT_ENABLED`
+flag or publish cutouts; those backend operations need separate approval.
+
 ## Personalized banner results
 
 The Azure showcase reads

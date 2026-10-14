@@ -50,6 +50,25 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         } else await route.fulfill({ status: 412 });
         return;
       }
+      if (url.pathname.includes('/9-Graph-Input/') && url.pathname.endsWith('/manifest.json')) {
+        const portraitId = url.pathname.split('/').at(-2);
+        const blob = `TestEvent/9-Graph-Input/${portraitId}/portrait.png`;
+        const graphExpiry = new Date(Date.now() + 3600000).toISOString();
+        const image = new URL(`https://ffservices24.blob.core.windows.net/mock-assets/${blob}`);
+        image.search = new URLSearchParams({
+          sv: '2023-11-03', sr: 'b', sp: 'r', spr: 'https',
+          st: new Date(Date.now() - 300000).toISOString(), se: graphExpiry, sig: 'MOCK_GRAPH_ONLY',
+        }).toString();
+        await route.fulfill({
+          contentType: 'application/json',
+          body: JSON.stringify({
+            schemaVersion: 1, portraitId, sourceNodeId: 'node_1791927487544_z177v9idx_35_qblmfu',
+            status: 'ready', errorCode: null,
+            asset: { blob, mimeType: 'image/png', url: image.href, expiresAt: graphExpiry },
+          }),
+        });
+        return;
+      }
       if (url.pathname.includes('/8-Banner-Output/') && url.pathname.endsWith('/manifest.json')) {
         if (bannerStatus === 'unpublished') {
           await route.fulfill({ status: 404 });
@@ -165,10 +184,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await coworker.locator('button').first().waitFor({ state: 'attached' });
     await page.evaluate(() => {
       window.simulationMessages = [];
+      window.graphMessages = [];
       const child = document.querySelector('.kiosk-frame-slot iframe').contentWindow;
       const post = child.postMessage.bind(child);
       child.postMessage = (message, ...args) => {
         if (message.type === 'KIOSK_SIMULATE') window.simulationMessages.push(message);
+        if (message.type === 'KIOSK_SET_GRAPH_PORTRAIT') window.graphMessages.push(message);
         post(message, ...args);
       };
     });
@@ -190,6 +211,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-engulf-overlay').count(), 0);
     await page.waitForFunction(() => window.simulationMessages.length === 1);
     assert.equal((await page.evaluate(() => window.simulationMessages)).length, 1);
+    await page.waitForFunction(() => window.graphMessages.some((message) => message.url));
+    const graph = await page.evaluate(() => window.graphMessages.find((message) => message.url));
+    assert.equal(new URL(graph.url).searchParams.get('sr'), 'b');
+    assert.equal(new URL(graph.url).searchParams.get('sp'), 'r');
+    assert.equal(graph.portraitId, request.portraitId);
+    assert.equal(await page.evaluate(() => (
+      [localStorage, sessionStorage].some((storage) => Object.keys(storage)
+        .some((key) => storage.getItem(key).includes('MOCK_GRAPH_ONLY')))
+    )), false);
     assert.equal(writes, 2);
     await coworker.locator('[contenteditable="true"]').waitFor();
     await coworker.getByRole('button', { name: 'Send', exact: true }).waitFor();
@@ -203,6 +233,21 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await page.keyboard.press('Enter');
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
+    await coworker.locator('body').evaluate(() => {
+      window.graphOpened = [];
+      window.open = (url) => {
+        window.graphOpened.push(url);
+        return { focus() {} };
+      };
+    });
+    await coworker.getByRole('button', { name: 'Open in Adobe Graph', exact: true }).click();
+    const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
+    const launchedURL = new URL(graphLaunch);
+    assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
+    assert(launchedURL.pathname.endsWith('18457238-a929-52e2-8273-c6104bef6c6a'));
+    const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
+    assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
+    assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
     await coworker.getByRole('button', { name: 'Send', exact: true }).click();
     await coworker.getByRole('button', { name: 'See variation results', exact: true }).click();
     await page.locator('.kiosk-panel-variations').waitFor();

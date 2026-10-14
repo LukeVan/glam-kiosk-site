@@ -8,6 +8,7 @@ import { completedPortraits, markCompleted } from '../blocks/attendee-kiosk/comp
 import { navigation } from '../blocks/attendee-kiosk/integrations.js';
 import { sampleVariations } from '../blocks/attendee-kiosk/variations.js';
 import { validateBannerManifest, readBannerManifest } from '../blocks/attendee-kiosk/banner-assets.js';
+import { validateGraphInput, readGraphInput, GRAPH_SOURCE_NODE } from '../blocks/attendee-kiosk/graph-input.js';
 
 const expiry = new Date(Date.now() + 86400000).toISOString();
 const sas = (container, permissions) => `https://ffservices24.blob.core.windows.net/${container}?sv=2023-11-03&sr=c&sp=${permissions}&se=${encodeURIComponent(expiry)}&sig=mock`;
@@ -22,6 +23,38 @@ const settings = validateSettings({
   showFinalQR: true,
 });
 const portraitId = `azure_${'a'.repeat(64)}`;
+const graphExpiry = new Date(Date.now() + 3600000).toISOString();
+const graphBlob = `${settings.eventId}/9-Graph-Input/${portraitId}/portrait.png`;
+const graphStart = new Date(Date.now() - 300000).toISOString();
+const graphURL = `https://ffservices24.blob.core.windows.net/mock-assets/${graphBlob}?sv=2023-11-03&sr=b&sp=r&spr=https&st=${encodeURIComponent(graphStart)}&se=${encodeURIComponent(graphExpiry)}&sig=MOCK_ONLY`;
+const graphManifest = {
+  schemaVersion: 1, portraitId, sourceNodeId: GRAPH_SOURCE_NODE, status: 'ready',
+  errorCode: null,
+  asset: { blob: graphBlob, mimeType: 'image/png', url: graphURL, expiresAt: graphExpiry },
+};
+assert.equal(validateGraphInput(graphManifest, portraitId, settings).url, graphURL);
+for (const url of [
+  graphURL.replace('sr=b', 'sr=c'), graphURL.replace('sp=r', 'sp=rl'),
+  graphURL.replace('spr=https', 'spr=http'), graphURL.replace('/portrait.png', '/other.png'),
+  graphURL.replace('ffservices24', 'other'), `${graphURL}&sp=r`, `${graphURL}#secret`,
+  `${graphURL}&unknown=1`, graphURL.replace('https:', 'http:'),
+]) {
+  assert.throws(() => validateGraphInput({
+    ...graphManifest, asset: { ...graphManifest.asset, url },
+  }, portraitId, settings));
+}
+assert.throws(() => validateGraphInput(graphManifest, portraitId, settings, Date.parse(graphExpiry)));
+assert.throws(() => validateGraphInput(graphManifest, portraitId, settings,
+  Date.parse(graphExpiry) - 5 * 3600000));
+assert.throws(() => validateGraphInput({ ...graphManifest, sourceNodeId: 'other' }, portraitId, settings));
+assert.throws(() => validateGraphInput(graphManifest, `azure_${'b'.repeat(64)}`, settings));
+assert.equal(validateGraphInput({
+  ...graphManifest, status: 'failed', asset: null, errorCode: 'cutout_signing_failed',
+}, portraitId, settings).status, 'failed');
+assert.deepEqual(await readGraphInput(portraitId, settings, null,
+  async () => ({ status: 404 })), { status: 'unavailable', portraitId });
+await assert.rejects(readGraphInput(portraitId, settings, null,
+  async () => ({ status: 403, ok: false })), /HTTP 403/);
 const bannerManifest = {
   schemaVersion: 1, portraitId, brand: '4-lorealparis', status: 'ready',
   assets: [

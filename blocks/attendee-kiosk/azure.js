@@ -4,6 +4,7 @@ import {
 import { readPrintStatus, submitPrintRequest } from './fulfillment.js';
 import { completedPortraits } from './completed.js';
 import { readBannerManifest } from './banner-assets.js';
+import { readGraphInput } from './graph-input.js';
 
 const EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i;
 const BRANDS = [
@@ -80,6 +81,9 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     eventId: eventId || 'invalid-settings',
     intakeEnabled,
     settings,
+    async graphInput(id, signal) {
+      return readGraphInput(id, settings(), signal, fetcher);
+    },
     async bannerResults(id, signal) {
       return readBannerManifest(id, settings(), signal, fetcher);
     },

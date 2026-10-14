@@ -82,6 +82,8 @@ export default async function decorate(block) {
   let epoch = 0;
   let manifest;
   let portrait;
+  let graphPortrait = null;
+  let graphTimer;
   let frame;
   const loadedFrames = new WeakSet();
   const readyFrames = new WeakSet();
@@ -171,6 +173,14 @@ export default async function decorate(block) {
       name: state.name,
       portrait: new URL(portrait.thumbnailUrl, window.location.origin).href,
     });
+    sendCoworker({
+      type: 'KIOSK_SET_GRAPH_PORTRAIT',
+      portraitId: state.portraitId,
+      url: graphPortrait?.portraitId === state.portraitId
+        && Date.parse(graphPortrait.expiresAt) > Date.now() ? graphPortrait.url : null,
+      expiresAt: graphPortrait?.portraitId === state.portraitId
+        ? graphPortrait.expiresAt : null,
+    });
     if (state.stage === 'story' && config.coworker.packaged
       && readyFrames.has(frame) && !homeFocusFrames.has(frame)) {
       homeFocusFrames.add(frame);
@@ -192,6 +202,34 @@ export default async function decorate(block) {
         }
       }
     }
+  }
+  function loadGraphPortrait(signal, currentEpoch) {
+    clearTimeout(graphTimer);
+    graphPortrait = null;
+    const id = state.portraitId;
+    if (!api.graphInput || id.startsWith('demo_')) return;
+    const warning = element('p', '', 'kiosk-graph-input-status');
+    warning.setAttribute('role', 'status');
+    panel.append(warning);
+    const refresh = async () => {
+      try {
+        const result = await api.graphInput(id, signal);
+        if (signal.aborted || epoch !== currentEpoch || state.portraitId !== id) return;
+        graphPortrait = result.status === 'ready' ? result : null;
+        warning.textContent = graphPortrait ? '' : text().graphPortraitUnavailable;
+      } catch {
+        if (signal.aborted || epoch !== currentEpoch) return;
+        graphPortrait = null;
+        warning.textContent = text().graphPortraitReadFailed;
+      }
+      notifyCoworker();
+      graphTimer = setTimeout(refresh, 5000);
+    };
+    refresh();
+    signal.addEventListener('abort', () => {
+      clearTimeout(graphTimer);
+      graphPortrait = null;
+    }, { once: true });
   }
   async function clearCoworker() {
     if (!frame) return;
@@ -846,6 +884,7 @@ export default async function decorate(block) {
       preparePanel();
       if (snapshot.stage === 'name') nameEntry();
       if (['story', 'continued'].includes(snapshot.stage)) story();
+      if (['story', 'continued'].includes(snapshot.stage)) loadGraphPortrait(signal, currentEpoch);
       if (snapshot.stage === 'graph') graph();
       if (snapshot.stage === 'ads') ads();
       if (snapshot.stage === 'banners') banners();
