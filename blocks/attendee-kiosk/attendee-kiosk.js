@@ -555,7 +555,7 @@ export default async function decorate(block) {
     content.append(heading, element('p', text().coworkerSub));
     if (state.stage === 'story') {
       const jump = button(text().jumpAds, () => move('ads'));
-      jump.className = 'kiosk-coworker-exit';
+      jump.className = 'kiosk-coworker-jump';
       content.append(jump);
     } else {
       if (state.printRequest) {
