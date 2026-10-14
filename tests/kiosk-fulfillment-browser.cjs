@@ -252,7 +252,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
     const launchedURL = new URL(graphLaunch);
     assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
-    assert(launchedURL.pathname.endsWith('18457238-a929-52e2-8273-c6104bef6c6a'));
+    assert(launchedURL.pathname.endsWith('08944592-9145-526f-8b43-75400178e5ee'));
     const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
     assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
     assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
