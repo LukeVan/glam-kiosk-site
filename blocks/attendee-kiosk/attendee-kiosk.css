@@ -1333,6 +1333,11 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   line-height: 1.25;
 }
 
+.attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-copy .kiosk-graph-input-status {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-next {
   width: 344px;
   min-height: 64px;

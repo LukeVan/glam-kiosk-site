@@ -4,6 +4,7 @@ export const GRAPH_SOURCE_NODE = 'node_1791927487544_z177v9idx_35_qblmfu';
 const ERRORS = [
   'cutout_missing', 'cutout_incomplete', 'cutout_invalid_metadata',
   'cutout_download_failed', 'cutout_invalid_image', 'cutout_upload_failed', 'cutout_signing_failed',
+  'cutout_resolve_failed',
 ];
 const SAS_KEYS = [
   'sv', 'st', 'se', 'sr', 'sp', 'sig', 'spr',

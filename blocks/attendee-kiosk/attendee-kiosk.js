@@ -210,7 +210,7 @@ export default async function decorate(block) {
     if (!api.graphInput || id.startsWith('demo_')) return;
     const warning = element('p', '', 'kiosk-graph-input-status');
     warning.setAttribute('role', 'status');
-    panel.append(warning);
+    panel.querySelector('.kiosk-coworker-copy').append(warning);
     const refresh = async () => {
       try {
         const result = await api.graphInput(id, signal);

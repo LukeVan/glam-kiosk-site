@@ -51,6 +51,9 @@ assert.throws(() => validateGraphInput(graphManifest, `azure_${'b'.repeat(64)}`,
 assert.equal(validateGraphInput({
   ...graphManifest, status: 'failed', asset: null, errorCode: 'cutout_signing_failed',
 }, portraitId, settings).status, 'failed');
+assert.equal(validateGraphInput({
+  ...graphManifest, status: 'failed', asset: null, errorCode: 'cutout_resolve_failed',
+}, portraitId, settings).status, 'failed');
 assert.deepEqual(await readGraphInput(portraitId, settings, null,
   async () => ({ status: 404 })), { status: 'unavailable', portraitId });
 await assert.rejects(readGraphInput(portraitId, settings, null,
