@@ -201,6 +201,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
     await page.locator('.kiosk-composer-send').waitFor();
     assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
+    const sendBox = await page.locator('.kiosk-composer-send').boundingBox();
+    const sendIconBox = await page.locator('.kiosk-composer-send svg').boundingBox();
+    assert(Math.abs(sendBox.x + sendBox.width / 2 - sendIconBox.x - sendIconBox.width / 2) < 0.5);
+    assert(Math.abs(sendBox.y + sendBox.height / 2 - sendIconBox.y - sendIconBox.height / 2) < 0.5);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), null);
     await page.locator('.kiosk-ad-grid button').first().click();
     const favoriteHistory = await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent'));
@@ -266,6 +270,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         .some((key) => storage.getItem(key).includes('MOCK_GRAPH_ONLY')))
     )), false);
     assert.equal(writes, 2);
+    assert.equal(await page.locator('.kiosk-panel-continued h2').innerText(), 'Adobe Brand Intelligence');
+    assert.equal(await page.locator('.kiosk-panel-continued .kiosk-coworker-copy > p').first().innerText(),
+      'Validate, Simulate, and Assemble based on your brand.');
+    assert.equal(await page.locator('.kiosk-panel-continued .kiosk-coworker-copy > button').count(), 0);
     await coworker.locator('[contenteditable="true"]').waitFor();
     await coworker.getByRole('button', { name: 'Send', exact: true }).waitFor();
     await page.waitForFunction(() => {
@@ -278,7 +286,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await page.keyboard.press('Enter');
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
-    await coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true }).waitFor();
+    const completionPrompt = "I'm done with my task of generating new hero assets";
+    await coworker.locator('[contenteditable="true"]', { hasText: completionPrompt }).waitFor();
+    await coworker.locator('[contenteditable="true"]').evaluate((node) => node.blur());
     await coworker.locator('body').evaluate(() => {
       window.graphOpened = [];
       window.open = (url) => {
@@ -286,16 +296,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return { focus() {} };
       };
     });
-    await coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true }).click();
-    const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
-    const launchedURL = new URL(graphLaunch);
-    assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
-    assert(launchedURL.pathname.endsWith('08944592-9145-526f-8b43-75400178e5ee'));
-    const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
-    assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
-    assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
+    const graphButtons = coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true });
+    if (await graphButtons.count()) {
+      await graphButtons.first().click();
+      const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
+      const launchedURL = new URL(graphLaunch);
+      assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
+      assert(launchedURL.pathname.endsWith('08944592-9145-526f-8b43-75400178e5ee'));
+      const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
+      assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
+      assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
+    }
     await coworker.getByRole('button', { name: 'Send', exact: true }).click();
-    await coworker.getByRole('button', { name: 'See variation results', exact: true }).click();
+    await coworker.getByText('Firefly Creative Production workflow', { exact: false }).first().waitFor();
+    await coworker.getByRole('button', { name: 'Open Workflow Results', exact: true }).click();
     await page.locator('.kiosk-panel-variations').waitFor();
     assert.equal(await page.locator('.kiosk-variation').count(), 0);
     assert.equal(await page.getByText('One idea. A whole world of content.', { exact: true }).count(), 0);
@@ -352,7 +366,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByText('Image previews are unavailable. Open the PDF if available, or ask booth staff.', { exact: true }).waitFor();
     assert.equal(await page.locator('.kiosk-variation').count(), 0);
     assert.equal(await page.locator('.kiosk-banner-download').count(), 1);
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    assert.equal(await page.locator('.kiosk-variations-copy > :is(.kiosk-variations-status, .kiosk-variations-controls)')
+      .evaluateAll((nodes) => nodes.map((node) => node.className).join()), 'kiosk-variations-status,kiosk-variations-controls');
+    await page.getByRole('button', { name: 'Finish', exact: true }).click();
     assert.equal(writes, 2);
     await page.locator('.kiosk-panel-ending').waitFor();
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);

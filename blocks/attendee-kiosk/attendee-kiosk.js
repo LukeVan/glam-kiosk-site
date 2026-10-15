@@ -556,20 +556,12 @@ export default async function decorate(block) {
     const content = element('div', '', 'kiosk-coworker-copy');
     const heading = element('h2', state.stage === 'story' ? text().coworkerHeading : text().continued);
     heading.tabIndex = -1;
-    content.append(heading, element('p', text().coworkerSub));
+    content.append(heading, element('p', state.stage === 'story'
+      ? text().coworkerSub : text().continuedSub));
     if (state.stage === 'story') {
       const jump = button(text().jumpAds, () => move('ads'));
       jump.className = 'kiosk-coworker-jump';
       content.append(jump);
-    } else {
-      if (state.printRequest) {
-        const finish = button(text().finish, () => move('ending'));
-        finish.className = 'kiosk-primary-action';
-        content.append(finish);
-      }
-      const exit = button(text().exit, reset);
-      exit.className = 'kiosk-coworker-exit';
-      content.append(exit);
     }
     if (config.coworker.enabled && !config.coworker.packaged) {
       const authentication = element('a', text().coworkerAuthenticate, 'kiosk-coworker-auth');
@@ -657,7 +649,14 @@ export default async function decorate(block) {
       }
     }, !state.selectedAdId);
     next.className = 'kiosk-primary-action kiosk-composer-send';
-    next.textContent = '\u2191';
+    const sendIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    sendIcon.setAttribute('viewBox', '0 0 24 24');
+    sendIcon.setAttribute('aria-hidden', 'true');
+    sendIcon.setAttribute('focusable', 'false');
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    arrow.setAttribute('d', 'M6 12 12 6 18 12 M12 6V18');
+    sendIcon.append(arrow);
+    next.replaceChildren(sendIcon);
     next.setAttribute('aria-label', text().simulateAudience);
     const dock = element('div', '', 'kiosk-composer');
     const halo = element('div', '', 'kiosk-composer-halo');

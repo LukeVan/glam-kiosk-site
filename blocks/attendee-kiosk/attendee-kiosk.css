@@ -1575,6 +1575,17 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   background: #000;
 }
 
+.attendee-kiosk .kiosk-composer-send svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .attendee-kiosk .kiosk-composer .kiosk-composer-send:disabled {
   background: #d3d3d3;
   color: #fff;
@@ -1682,6 +1693,10 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   margin: 24px 0;
   font-size: 16px;
   line-height: 1.4;
+}
+
+.attendee-kiosk .kiosk-variations-copy .kiosk-variations-status:not(:empty) {
+  margin: 0 0 24px;
 }
 
 .attendee-kiosk .kiosk-variations-controls {

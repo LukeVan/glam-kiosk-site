@@ -161,8 +161,8 @@ export default function renderVariations({
     close.focus();
   });
   openWorkflow.className = 'kiosk-variations-workflow';
-  if (onFinish) controls.append(button(text.next, onFinish));
-  copy.append(controls, status);
+  if (onFinish) controls.append(button(text.finishVariations, onFinish));
+  copy.append(status, controls);
   panel.append(copy, viewport, openWorkflow);
   if (loadResults) refreshResults();
   const scroll = (now) => {
