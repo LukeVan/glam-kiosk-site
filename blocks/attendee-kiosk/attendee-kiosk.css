@@ -1342,6 +1342,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   margin-bottom: 32px;
   font-size: 28px;
   line-height: 1.25;
+  white-space: pre-line;
 }
 
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-copy .kiosk-graph-input-status {

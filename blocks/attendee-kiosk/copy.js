@@ -98,7 +98,7 @@ const copy = {
     namePlaceholder: 'Enter your name here',
     story: 'Your story with AI Coworker',
     coworkerHeading: 'Ask CX Coworker.',
-    coworkerSub: "Don't hunt through endless project data that isn't relevant — to you. Get straight to the point.",
+    coworkerSub: "Don't hunt through endless project data that isn't relevant — to you.\nGet straight to the point.",
     exit: 'Exit the experience',
     jumpAds: 'Jump to Ads',
     finish: 'Your personalized ads',

@@ -178,7 +178,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-coworker-copy .kiosk-graph-input-status').waitFor({ state: 'attached' });
     assert.equal(await page.locator('.kiosk-coworker-copy h2').innerText(), 'Ask CX Coworker.');
     assert.equal(await page.locator('.kiosk-coworker-copy > p').first().innerText(),
-      "Don't hunt through endless project data that isn't relevant — to you. Get straight to the point.");
+      "Don't hunt through endless project data that isn't relevant — to you.\nGet straight to the point.");
+    assert.equal(await page.locator('.kiosk-coworker-copy > p').first().evaluate((node) => (
+      getComputedStyle(node).whiteSpace
+    )), 'pre-line');
     assert.equal(await page.locator('.kiosk-panel-coworker > .kiosk-graph-input-status').count(), 0);
     const shellCopyBox = await page.locator('.kiosk-coworker-copy').boundingBox();
     const shellFrameBox = await page.locator('.kiosk-frame-slot').boundingBox();
