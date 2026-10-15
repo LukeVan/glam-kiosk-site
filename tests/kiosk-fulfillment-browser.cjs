@@ -278,6 +278,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await page.keyboard.press('Enter');
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
+    await coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true }).waitFor();
     await coworker.locator('body').evaluate(() => {
       window.graphOpened = [];
       window.open = (url) => {
@@ -285,7 +286,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return { focus() {} };
       };
     });
-    await coworker.getByRole('button', { name: 'Open in Adobe Graph', exact: true }).click();
+    await coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true }).click();
     const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
     const launchedURL = new URL(graphLaunch);
     assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
