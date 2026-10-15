@@ -13,7 +13,7 @@ Ready schema-version-1 manifests must match portrait ID, source node, and
 `{eventId}/9-Graph-Input/{portraitId}/portrait.png`. The PNG asset contains
 `url` and `expiresAt` minted by Creator at publication, not browser signing.
 Only the configured account/container/exact blob with `sr=b`, `sp=r`,
-`spr=https`, matching active UTC expiry and at most four hours remaining is
+`spr=https`, matching active UTC expiry and at most nine hours remaining is
 accepted. Container SAS is used only to read the manifest, never handed to Graph.
 
 The shell sends `KIOSK_SET_GRAPH_PORTRAIT` with selected `portraitId`, validated
@@ -24,10 +24,15 @@ explicit Graph click before adding a URLSearchParams-encoded `portraitUrl` hash.
 The userscript captures it at document-start and removes it from the address.
 Backend publication remains opt-in; real node output/signing is not live-verified.
 
-`/tools/graph-auto-load.user.js` is the source-owned combined Tampermonkey v1.2
+`/tools/graph-auto-load.user.js` is the source-owned combined Tampermonkey v1.6
 artifact for manual installation, not an EDS-injected script. Replace the old
 activation userscript with it rather than running duplicate return controls.
 Its upload control selectors have not been verified against live Adobe Graph.
+
+The ending screen checks render and fulfillment status every five seconds until
+rendering is ready and fulfillment is submitted, or either reports failure.
+The bottom-left Refresh control repeats the same status read; Exit resets the
+attendee session. Submitted fulfillment does not confirm physical printer readiness.
 Publishing this frontend does not enable Creator's `GLAM_GRAPH_INPUT_ENABLED`
 flag or publish cutouts; those backend operations need separate approval.
 

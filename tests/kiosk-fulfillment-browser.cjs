@@ -372,18 +372,33 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert(mediaBox.x > copyBox.x + copyBox.width);
     const refreshBox = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
     const exitBox = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
-    assert.equal(refreshBox.y, exitBox.y);
+    const endingBox = await page.locator('.kiosk-panel-ending').boundingBox();
+    assert(Math.abs(refreshBox.x - endingBox.x - 20) < 1);
+    assert(Math.abs(endingBox.y + endingBox.height - refreshBox.y - refreshBox.height - 14) < 1);
+    assert(refreshBox.y > exitBox.y + exitBox.height);
+    const refreshStyle = await page.locator('.kiosk-ending-refresh').evaluate((control) => {
+      const style = getComputedStyle(control);
+      return [style.fontSize, style.fontWeight, style.color, style.backgroundColor];
+    });
+    assert.deepEqual(refreshStyle, ['11px', '600', 'rgba(255, 255, 255, 0.42)', 'rgba(0, 0, 0, 0)']);
     assert((await page.locator('.kiosk-panel-ending').innerText()).includes('sent to print fulfillment'));
     const imageSource = await page.locator('.kiosk-share-qr').getAttribute('src');
     assert.equal(new URL(imageSource).searchParams.get('sr'), 'c');
     assert.equal(new URL(new URL(downloadURL()).searchParams.get('session')).searchParams.get('sr'), 'b');
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    }));
     const mobileCopy = await page.locator('.kiosk-ending-copy').boundingBox();
     const mobileMedia = await page.locator('.kiosk-ending-media').boundingBox();
     assert(mobileMedia.y >= mobileCopy.y + mobileCopy.height);
     const mobileRefresh = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
     const mobileExit = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
-    assert.equal(mobileRefresh.y, mobileExit.y);
+    const mobilePanel = await page.locator('.kiosk-panel-ending').boundingBox();
+    assert(Math.abs(mobileRefresh.x - mobilePanel.x - mobilePanel.width * 0.04) < 1,
+      JSON.stringify({ mobileRefresh, mobilePanel }));
+    assert(Math.abs(mobilePanel.y + mobilePanel.height - mobileRefresh.y - mobileRefresh.height - 46) < 1);
+    assert(mobileRefresh.y > mobileExit.y + mobileExit.height);
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).click();
     await page.locator('.kiosk-panel-welcome').waitFor();

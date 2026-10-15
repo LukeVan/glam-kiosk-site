@@ -44,7 +44,7 @@ export function validateGraphInput(data, portraitId, settings, now = Date.now())
     || !url.searchParams.get('sig') || !url.searchParams.get('sv') || !url.searchParams.get('st')
     || url.searchParams.get('spr') !== 'https'
     || !Number.isFinite(expiry) || expiry !== Date.parse(url.searchParams.get('se'))
-    || expiry <= now || expiry > now + 4 * 3600000
+    || expiry <= now || expiry > now + 9 * 3600000
     || !Number.isFinite(start) || start > now) {
     throw new Error('Graph portrait requires unexpired image-only read access.');
   }

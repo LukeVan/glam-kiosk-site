@@ -776,7 +776,9 @@ export default async function decorate(block) {
         reset();
       } catch (error) { fail(error); }
     });
-    actions.append(button(text().refreshShort, () => render()), exit);
+    const refresh = button(text().refreshShort, () => render());
+    refresh.className = 'kiosk-ending-refresh';
+    actions.append(refresh, exit);
     content.append(actions);
     panel.append(content, media);
   }

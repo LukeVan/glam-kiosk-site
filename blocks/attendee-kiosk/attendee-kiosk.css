@@ -1333,7 +1333,9 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 }
 
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump,
-.attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump:hover {
+.attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump:hover,
+.attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh,
+.attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh:hover {
   position: absolute;
   bottom: 14px;
   left: 20px;
@@ -1462,7 +1464,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
     font-size: clamp(24px, 7vw, 46px);
   }
 
-  .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump {
+  .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump,
+  .attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh {
     bottom: 46px;
     left: 4%;
   }

@@ -45,7 +45,19 @@ for (const url of [
 }
 assert.throws(() => validateGraphInput(graphManifest, portraitId, settings, Date.parse(graphExpiry)));
 assert.throws(() => validateGraphInput(graphManifest, portraitId, settings,
-  Date.parse(graphExpiry) - 5 * 3600000));
+  Date.parse(graphExpiry) - 10 * 3600000));
+const nineHourNow = Date.now();
+const nineHourExpiry = new Date(nineHourNow + 9 * 3600000).toISOString();
+const nineHourURL = new URL(graphURL);
+nineHourURL.searchParams.set('se', nineHourExpiry);
+assert.equal(validateGraphInput({
+  ...graphManifest,
+  asset: { ...graphManifest.asset, url: nineHourURL.href, expiresAt: nineHourExpiry },
+}, portraitId, settings, nineHourNow).status, 'ready');
+assert.throws(() => validateGraphInput({
+  ...graphManifest,
+  asset: { ...graphManifest.asset, url: nineHourURL.href, expiresAt: nineHourExpiry },
+}, portraitId, settings, nineHourNow - 1));
 assert.throws(() => validateGraphInput({ ...graphManifest, sourceNodeId: 'other' }, portraitId, settings));
 assert.throws(() => validateGraphInput(graphManifest, `azure_${'b'.repeat(64)}`, settings));
 assert.equal(validateGraphInput({

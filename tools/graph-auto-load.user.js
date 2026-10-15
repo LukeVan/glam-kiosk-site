@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @author       Luke Vanderberg
 // @description  Loads the kiosk cutout, adds See your Ads, and hides the demo edit-access notice
-// @version      1.2
+// @version      1.6
 // @match        https://firefly.adobe.com/graph/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -76,7 +76,7 @@
     const starts = Date.parse(start);
     if (!utc.test(start || "") || !utc.test(end || "") ||
         !Number.isFinite(starts) || !Number.isFinite(expiry) ||
-        starts > now || expiry <= now || expiry - now > 4 * 60 * 60 * 1000) {
+        starts > now || expiry <= now || expiry - now > 9 * 60 * 60 * 1000) {
       throw new Error("Portrait access is expired or not active.");
     }
     return url.href;
@@ -115,7 +115,10 @@
             if (![137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => signature[i] === byte)) {
               throw new Error("Invalid PNG portrait.");
             }
-            resolve(new File([blob], "portrait.png", { type: "image/png" }));
+            // Graph's uploader may check against its own window.File.
+            // A userscript-sandbox File can fail that check despite valid bytes.
+            const bytes = new unsafeWindow.Uint8Array(await blob.arrayBuffer());
+            resolve(new unsafeWindow.File([bytes], "portrait.png", { type: "image/png" }));
           } catch {
             reject(new Error("Portrait download was not a valid PNG."));
           }
@@ -134,12 +137,42 @@
     }
   }
   const findByText = text => {
+    const normalize = value => (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const expected = normalize(text);
     for (const el of walk(document)) {
-      const own = [...el.childNodes].filter(node => node.nodeType === 3)
-        .map(node => node.textContent.trim()).join(" ");
-      if (own === text) return el;
+      const rect = el.getBoundingClientRect();
+      if (!rect.width || !rect.height || getComputedStyle(el).visibility === "hidden") continue;
+      const editableTitle = (el.tagName === "INPUT" || el.tagName === "TEXTAREA")
+        && normalize(el.value) === expected;
+      const exactText = normalize(el.textContent) === expected;
+      if (editableTitle || (exactText && ![...el.children].some(
+        child => normalize(child.textContent) === expected
+      ))) return el;
     }
   };
+  function enclosingGraphNode(element) {
+    for (let current = element; current;
+      current = current.parentElement || current.getRootNode().host) {
+      if (current.localName === "pg-node") return current;
+    }
+    throw new Error("Input image title is not inside a Graph node.");
+  }
+
+  function findUploadArea(node) {
+    const areas = [];
+    for (const element of walk(node)) {
+      if (!element.localName.startsWith("adobe-widget-image-") || !element.shadowRoot) continue;
+      const area = element.shadowRoot.querySelector(".dropzone.empty");
+      if (!area) continue;
+      const rect = area.getBoundingClientRect();
+      const style = getComputedStyle(area);
+      if (rect.width > 0 && rect.height > 0 &&
+          style.visibility !== "hidden" && style.display !== "none") areas.push(area);
+    }
+    if (areas.length > 1) throw new Error("Input image node has multiple upload areas.");
+    return areas[0];
+  }
+
   const poll = (fn, ms = 400, timeout = 60000) => new Promise((resolve, reject) => {
     const started = Date.now();
     const id = setInterval(() => {
@@ -180,14 +213,19 @@
       const file = await fetchFile();
       await new Promise(resolve => setTimeout(resolve, 5000));
       log("Looking for Input image node.");
-      const title = await poll(() => findByText("Input image"));
-      const bounds = title.getBoundingClientRect();
-      const area = await poll(() => [...walk(document)].filter(el => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 150 && rect.height > 150 && rect.top >= bounds.top &&
-          Math.abs(rect.left - bounds.left) < 300 &&
-          /dashed/.test(getComputedStyle(el).borderStyle);
-      }).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0]);
+      let title;
+      try {
+        title = await poll(() => findByText("Input image"));
+      } catch {
+        throw new Error("Input image title was not found. Check that its node is visible.");
+      }
+      log("Input image title found. Looking for its upload area.");
+      const node = enclosingGraphNode(title);
+      const area = await poll(() => findUploadArea(node))
+        .catch(() => {
+          throw new Error("Input image node needs one visible, empty image dropzone.");
+        });
+      log("Input image upload area found.");
       clickEl(area);
       const device = await poll(() => findByText("Your device"));
       if (typeof originalPicker !== "function") {
