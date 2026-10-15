@@ -641,21 +641,6 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   margin-top: 48px;
 }
 
-.attendee-kiosk .kiosk-portrait-actions .kiosk-refresh-assets {
-  min-height: 0;
-  padding: 6px 0;
-  background: transparent;
-  color: #1473e6;
-  font-size: 16px;
-  font-weight: 400;
-  text-decoration: underline;
-}
-
-.attendee-kiosk .kiosk-portrait-actions .kiosk-refresh-assets:hover {
-  background: transparent;
-  color: #0d66d0;
-}
-
 .attendee-kiosk .kiosk-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1335,7 +1320,9 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump,
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump:hover,
 .attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh,
-.attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh:hover {
+.attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh:hover,
+.attendee-kiosk .kiosk-panel-portraits .kiosk-refresh-assets,
+.attendee-kiosk .kiosk-panel-portraits .kiosk-refresh-assets:hover {
   position: absolute;
   bottom: 14px;
   left: 20px;
@@ -1465,7 +1452,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   }
 
   .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump,
-  .attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh {
+  .attendee-kiosk .kiosk-panel-ending .kiosk-ending-refresh,
+  .attendee-kiosk .kiosk-panel-portraits .kiosk-refresh-assets {
     bottom: 46px;
     left: 4%;
   }

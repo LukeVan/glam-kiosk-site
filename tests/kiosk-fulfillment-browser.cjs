@@ -156,6 +156,21 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.reload();
     await page.locator('.kiosk-consent input').check();
     await page.locator('.kiosk-print').click();
+    await page.locator('.kiosk-demo-card').first().waitFor();
+    assert.equal(await page.locator('.kiosk-demo-card').count(), 3);
+    assert.equal(await page.locator('.kiosk-demo-label').count(), 0);
+    const portraitRefresh = await page.locator('.kiosk-refresh-assets').boundingBox();
+    assert(portraitRefresh.x < 30 && portraitRefresh.y > 1030);
+    const portraitRefreshStyle = await page.locator('.kiosk-refresh-assets').evaluate((node) => {
+      const style = getComputedStyle(node);
+      return [style.fontSize, style.fontWeight, style.color];
+    });
+    assert.deepEqual(portraitRefreshStyle, ['11px', '600', 'rgba(255, 255, 255, 0.42)']);
+    await page.locator('.kiosk-refresh-assets').click();
+    await page.locator('.kiosk-portrait-grid button').first().waitFor();
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'portrait-picker.png') });
+    }
     await page.locator('.kiosk-portrait-grid button').first().click();
     await page.keyboard.press('Enter');
     await page.locator('.kiosk-name input').fill('Mock Print');
@@ -183,7 +198,13 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
     await page.locator('.kiosk-composer-send').waitFor();
     assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
+    assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), null);
+    await page.locator('.kiosk-ad-grid button').first().click();
+    const favoriteHistory = await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent'));
+    assert.equal(JSON.parse(favoriteHistory).length, 1);
+    assert.equal(writes, 0);
     await page.locator('.kiosk-ad-grid button').nth(3).click();
+    assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
     assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 1);
     assert((await page.locator('.kiosk-composer-attachment img').getAttribute('src'))
       .includes('lorealparis'));
@@ -197,6 +218,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-composer-send').click();
     await page.getByRole('alert').waitFor();
     assert.equal(writes, 1);
+    assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
     assert.equal(await page.locator('.kiosk-engulf-ghost').count(), 0);
     await page.reload();
     const coworker = page.frameLocator('.kiosk-frame-slot iframe');
@@ -408,6 +430,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-portrait-grid').waitFor();
     assert.equal(await page.locator('.kiosk-portrait-grid .kiosk-card:not(.kiosk-demo-card)').count(), 0);
     assert.equal(await page.locator('.kiosk-portrait-grid .kiosk-demo-card').count(), 3);
+    assert.equal(await page.locator('.kiosk-demo-label').count(), 0);
     const download = await browser.newPage();
     await download.addInitScript(() => {
       const originalFetch = window.fetch;
@@ -502,15 +525,35 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.reload();
     await page.getByRole('alert').filter({ hasText: 'Event photos are temporarily unavailable. Please ask booth staff.' }).waitFor();
     assert.equal(await page.locator('.kiosk-demo-card').count(), 3);
+    assert.equal(await page.locator('.kiosk-demo-label').count(), 0);
     assert.equal(await page.getByText('Generate a new SAS', { exact: false }).count(), 0);
     assert.equal(await page.getByText('Azure denied access', { exact: false }).count(), 0);
     failPortraitListing = false;
+    await page.locator('.kiosk-demo-card').first().click();
+    await page.locator('.kiosk-portrait-actions .kiosk-primary-action').click();
+    await page.locator('.kiosk-name input').fill('Configured Demo');
+    await page.locator('.kiosk-name .kiosk-primary-action').click();
+    await page.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
+    await page.locator('.kiosk-ad-grid button').first().click();
+    assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
+    await page.getByRole('button', { name: 'Reset', exact: true }).click();
+    await page.getByText('Clear this attendee on this browser?', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Reset', exact: true }).click();
+    await page.locator('.kiosk-panel-welcome').waitFor();
+    await page.locator('.kiosk-consent input').check();
+    await page.locator('.kiosk-print').click();
+    await page.locator('.kiosk-demo-card').first().waitFor();
+    assert.equal(await page.locator('.kiosk-demo-card').count(), 3);
+    assert.equal(await page.locator('.kiosk-demo-label').count(), 0);
     assert.equal(writes, 2);
     const demo = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     await demo.emulateMedia({ reducedMotion: 'reduce' });
     await demo.goto('http://localhost:3017/drafts/attendee-kiosk.html');
     await demo.locator('.kiosk-consent input').check();
     await demo.locator('.kiosk-print').click();
+    await demo.locator('.kiosk-demo-card').first().waitFor();
+    assert.equal(await demo.locator('.kiosk-demo-card').count(), 3);
+    assert.equal(await demo.locator('.kiosk-demo-label').count(), 3);
     await demo.locator('.kiosk-portrait-grid button').first().click();
     await demo.keyboard.press('Enter');
     await demo.locator('.kiosk-name input').fill('Demo Animation');
@@ -542,6 +585,26 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await demo.getByRole('button', { name: 'Reset', exact: true }).click();
     await demo.locator('.kiosk-panel-welcome').waitFor();
     assert.equal(await demo.locator('.kiosk-frame-slot iframe').count(), 0);
+    await demo.setViewportSize({ width: 1920, height: 1080 });
+    for (let index = 0; index < 3; index += 1) {
+      await demo.locator('.kiosk-consent input').check();
+      await demo.locator('.kiosk-print').click();
+      await demo.locator('.kiosk-demo-card').first().waitFor();
+      assert.equal(await demo.locator('.kiosk-demo-card').count(), 3);
+      assert.equal(await demo.locator('.kiosk-demo-label').count(), 3);
+      await demo.locator('.kiosk-demo-card').nth(index).click();
+      await demo.locator('.kiosk-portrait-actions .kiosk-primary-action').click();
+      await demo.locator('.kiosk-name input').fill('Demo Favorite');
+      await demo.locator('.kiosk-name .kiosk-primary-action').click();
+      await demo.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
+      await demo.locator('.kiosk-ad-grid button').first().click();
+      assert.equal(await demo.evaluate(() => Object.keys(localStorage)
+        .some((key) => key.startsWith('glam-kiosk-completed-v1:'))), false);
+      await demo.getByRole('button', { name: 'Reset', exact: true }).click();
+      await demo.getByText('Clear this attendee on this browser?', { exact: true }).waitFor();
+      await demo.getByRole('button', { name: 'Reset', exact: true }).click();
+      await demo.locator('.kiosk-panel-welcome').waitFor();
+    }
     await demo.close();
     console.log('PASS mocked immutable retry/reload, pending/ready ending, partial/ready/expired shares, legacy downloads, selected/all and QR/pickup settings.');
   } finally { await browser.close(); }

@@ -151,8 +151,12 @@ export default async function decorate(block) {
         card.setAttribute('aria-label', item.label);
         card.setAttribute('aria-pressed', String(item.id === selectedId));
       }
-      if (item.demo) card.classList.add('kiosk-demo-card');
-      if (item.demo) card.append(element('strong', text().demoPortrait, 'kiosk-demo-label'));
+      const demoPortrait = item.demo
+        || (variant === 'kiosk-portrait-grid' && item.id.startsWith('demo_'));
+      if (demoPortrait) card.classList.add('kiosk-demo-card');
+      if (demoPortrait && api.source !== 'azure') {
+        card.append(element('strong', text().demoPortrait, 'kiosk-demo-label'));
+      }
       card.append(
         picture(item.thumbnailUrl || item.url, onSelect ? '' : item.label),
         element('span', item.label),
@@ -696,6 +700,9 @@ export default async function decorate(block) {
           throw new Error(text().selectionLocked);
         }
         persist({ ...state, selectedAdId: ad.id });
+        if (api.source === 'azure' && !state.portraitId.startsWith('demo_')) {
+          markCompleted(window.localStorage, api.eventId, state.portraitId);
+        }
         panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((tile, index) => {
           tile.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
         });
@@ -768,14 +775,7 @@ export default async function decorate(block) {
       }, 5000);
     }
     const actions = element('div', '', 'kiosk-ending-actions');
-    const exit = button(text().exit, () => {
-      try {
-        if (api.source === 'azure' && result?.share?.downloadPageUrl && result.share.qrBlob) {
-          markCompleted(window.localStorage, api.eventId, request.portraitId);
-        }
-        reset();
-      } catch (error) { fail(error); }
-    });
+    const exit = button(text().exit, reset);
     const refresh = button(text().refreshShort, () => render());
     refresh.className = 'kiosk-ending-refresh';
     actions.append(refresh, exit);
@@ -864,7 +864,6 @@ export default async function decorate(block) {
         portraitActions.append(next);
         const refresh = button(text().refresh, () => render());
         refresh.className = 'kiosk-refresh-assets';
-        portraitActions.append(refresh);
         copyPane.append(portraitActions);
         const gallery = panel.querySelector('.kiosk-portrait-grid');
         gallery.addEventListener('keydown', (event) => {
@@ -875,7 +874,7 @@ export default async function decorate(block) {
           event.preventDefault();
           if (!event.repeat) next.click();
         });
-        panel.replaceChildren(copyPane, gallery);
+        panel.replaceChildren(copyPane, gallery, refresh);
         return;
       }
       const assets = await selectedAssets(snapshot, signal);

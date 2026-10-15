@@ -80,8 +80,8 @@ EDS scripts and block assets but does not emulate AEM content delivery.
 
 Demo uses only source `demo-people` and
 `demo-outputs` Person2/Person3/Person5, resized and JPEG-compressed into
-`blocks/attendee-kiosk/assets/`. The visible demo badge and legal copy
-distinguish examples from production. No attendee photos or source application
+`blocks/attendee-kiosk/assets/`. Demo badges appear without Azure booth settings;
+the samples retain demo semantics when those badges are hidden. No attendee photos or source application
 code are copied. Demo never calls the portrait API or starts generation.
 Coworker is disabled in demo by default. Explicitly connecting the hosted app
 contacts that external service and sends the sample portrait URL and entered name.
@@ -166,7 +166,7 @@ ad selection without a delay. Asset readiness checks remain unchanged.
 When saved booth settings exist, reload the attendee page to use the Azure
 read/list adapter. It retrieves inputs from `{event}/portraits/pending/`,
 excluding hidden files, subfolders, non-image files, and `demo_` inputs. Event
-portraits sort by Blob Last-Modified descending, followed by the three labeled
+portraits sort by Blob Last-Modified descending, followed by the three
 static demo portraits. A listing error is displayed, while demo choices remain
 usable. Selecting a real portrait never substitutes a demo portrait or ad.
 
@@ -181,7 +181,7 @@ are pending. Hidden processing markers never cause writes. Session identity and
 selection are browser-local, not production job requests. Signed URLs are not
 stored in attendee session state; images use no-referrer.
 
-The Azure badge distinguishes event assets from explicitly selected demo content.
+The footer identifies the configured event; demo portrait badges are hidden in this mode.
 Demo samples can run without Azure connectivity, but a selected real portrait
 requires its own assets. Azure banners remain unavailable. Print and QR require
 the new request container and running Glam Creator worker described below. Saved
@@ -416,16 +416,22 @@ processing keeps the thank-you screen polling without requesting a nonexistent
 image; a completed status must include the QR. Its download page shows processing
 progress and adds images as they
 become ready. Refresh resumes status lookup without a new submission.
-The ending screen says Thank you (Merci), with side-by-side Refresh and Exit
-controls. On desktop its right side displays the selected personalized template
+The ending screen says Thank you (Merci), with Refresh at the bottom left and
+Exit beneath the copy. On desktop its right side displays the selected personalized template
 and, when enabled/ready, an image-only clickable QR opening the attendee download
 page in a new tab. On smaller screens the preview and QR stack below the copy.
-Exiting this screen after a validated share link and published QR are available
-records the event portrait ID in this browser's localStorage. The default picker
+Selecting a favorite ad records the live event portrait ID in this browser's
+localStorage immediately, before Send, fulfillment, or Exit. Reselecting an ad
+does not duplicate or clear that record. The default picker
 hides those IDs. Settings' Show completed portraits toggle reveals them without
 deleting history or Azure assets. History is scoped by event and browser origin,
 persists through restart/reload/settings clearing, and is not shared across Macs.
-Reset elsewhere or exiting before a share is available does not mark completion.
+Reset before favorite-ad selection does not mark completion; reset afterward
+does not undo it. All three demo portraits remain available and are never recorded
+as completed. Their Demo badges appear only without configured Azure booth
+settings, including when a configured Azure listing is empty or temporarily fails.
+This changes only badge presentation, not their demo data or processing semantics.
+Refresh assets sits at the picker's bottom left and repeats the portrait listing.
 This is visibility only: selecting a revealed portrait still creates a new request;
 it is not a replay-without-processing mode.
 
