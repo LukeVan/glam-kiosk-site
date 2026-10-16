@@ -1294,6 +1294,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-workflow-bar h2 {
   margin: 0;
+  font-family: adobe-clean, 'Adobe Clean', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 24px;
 }
 
@@ -1778,9 +1779,11 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-workflow-dialog iframe {
   flex: 1;
-  width: 100%;
+  width: auto;
   min-height: 0;
+  margin: 0 24px 24px;
   border: 0;
+  border-radius: 16px;
 }
 
 .attendee-kiosk .kiosk-workflow-close {

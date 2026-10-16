@@ -45,19 +45,19 @@ for (const url of [
 }
 assert.throws(() => validateGraphInput(graphManifest, portraitId, settings, Date.parse(graphExpiry)));
 assert.throws(() => validateGraphInput(graphManifest, portraitId, settings,
-  Date.parse(graphExpiry) - 10 * 3600000));
-const nineHourNow = Date.now();
-const nineHourExpiry = new Date(nineHourNow + 9 * 3600000).toISOString();
-const nineHourURL = new URL(graphURL);
-nineHourURL.searchParams.set('se', nineHourExpiry);
+  Date.parse(graphExpiry) - 8 * 24 * 3600000));
+const sevenDayNow = Date.now();
+const sevenDayExpiry = new Date(sevenDayNow + 7 * 24 * 3600000).toISOString();
+const sevenDayURL = new URL(graphURL);
+sevenDayURL.searchParams.set('se', sevenDayExpiry);
 assert.equal(validateGraphInput({
   ...graphManifest,
-  asset: { ...graphManifest.asset, url: nineHourURL.href, expiresAt: nineHourExpiry },
-}, portraitId, settings, nineHourNow).status, 'ready');
+  asset: { ...graphManifest.asset, url: sevenDayURL.href, expiresAt: sevenDayExpiry },
+}, portraitId, settings, sevenDayNow).status, 'ready');
 assert.throws(() => validateGraphInput({
   ...graphManifest,
-  asset: { ...graphManifest.asset, url: nineHourURL.href, expiresAt: nineHourExpiry },
-}, portraitId, settings, nineHourNow - 1));
+  asset: { ...graphManifest.asset, url: sevenDayURL.href, expiresAt: sevenDayExpiry },
+}, portraitId, settings, sevenDayNow - 1));
 assert.throws(() => validateGraphInput({ ...graphManifest, sourceNodeId: 'other' }, portraitId, settings));
 assert.throws(() => validateGraphInput(graphManifest, `azure_${'b'.repeat(64)}`, settings));
 assert.equal(validateGraphInput({

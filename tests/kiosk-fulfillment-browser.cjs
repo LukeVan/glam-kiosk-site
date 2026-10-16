@@ -346,13 +346,100 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.waitForFunction((top) => (
       document.querySelector('.kiosk-variations-viewport').scrollTop > top + 2
     ), pausedScroll, { timeout: 2000 });
+    const workflowRequests = [];
+    const trackWorkflow = (request) => {
+      if (/\/api\/|\/production-workflow\//.test(request.url())) workflowRequests.push(request.url());
+    };
+    page.on('request', trackWorkflow);
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     await page.getByRole('dialog').waitFor();
+    const workflowFrame = page.locator('.kiosk-workflow-dialog iframe');
+    assert.equal(await workflowFrame.getAttribute('src'), 'http://localhost:3017/production-workflow/index.html?workflow=banners&preview=eds');
+    assert.equal(await workflowFrame.getAttribute('sandbox'), 'allow-scripts allow-same-origin');
+    const canvas = page.frameLocator('.kiosk-workflow-dialog iframe');
+    await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
+    assert.equal(await canvas.locator('.react-flow__node').count(), 9);
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 10);
+    assert.equal(await page.locator('.kiosk-workflow-bar h2').innerText(), 'Firefly Creative Production for Enterprise');
+    assert.equal(await page.locator('.kiosk-workflow-bar h2').evaluate((node) => getComputedStyle(node).fontFamily.includes('condensed')), false);
+    await canvas.getByText('Loreal-ads-atscale-simple.csv', { exact: true }).waitFor();
+    for (const asset of ['portrait-cutout-mC8QcXpn.webp', 'banner-1080x1920-CZJgfZ-N.jpg']) {
+      const image = canvas.locator(`img[src$="${asset}"]`);
+      await image.waitFor();
+      await image.evaluate((node) => {
+        if (node.complete) return;
+        return new Promise((resolve, reject) => {
+          node.addEventListener('load', resolve, { once: true });
+          node.addEventListener('error', () => reject(new Error('Workflow image failed to load')), { once: true });
+        });
+      });
+      assert.ok(await image.evaluate((node) => node.naturalWidth > 0));
+    }
+    const frameBox = await workflowFrame.boundingBox();
+    assert.ok(frameBox.width > 400 && frameBox.height > 300);
+    await page.waitForFunction(() => document.querySelector('.kiosk-workflow-dialog').getAnimations().every((a) => a.playState === 'finished'));
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: `${process.env.KIOSK_SCREENSHOT_DIR}/production-workflow-modal.png` });
+    }
+    const workflowNode = (id) => canvas.locator(`.react-flow__node[data-id="${id}"]`);
+    const previewNode = workflowNode('node-1791265273787-sqjsvf0ys');
+    const previewTransform = await previewNode.evaluate((node) => node.style.transform);
+    const previewTitle = await previewNode.getByText('Preview', { exact: true }).first().boundingBox();
+    await page.mouse.move(previewTitle.x + 5, previewTitle.y + 5);
+    await page.mouse.down();
+    await page.mouse.move(previewTitle.x - 40, previewTitle.y + 30, { steps: 8 });
+    await page.mouse.up();
+    assert.notEqual(await previewNode.evaluate((node) => node.style.transform), previewTransform);
+    const renditionEdge = canvas.locator('.react-flow__edge[aria-label="Edge from node-1791265250852-8q4474svr to banner-validate-brand"]');
+    await renditionEdge.focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Delete');
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 9);
+    const connectPorts = async (sourceId, sourcePort, targetId, targetPort) => {
+      const source = await workflowNode(sourceId).locator(`.react-flow__handle.source[data-handleid="${sourcePort}"]`).boundingBox();
+      const target = await workflowNode(targetId).locator(`.react-flow__handle.target[data-handleid="${targetPort}"]`).boundingBox();
+      assert.ok(source && target);
+      await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 15 });
+      await page.mouse.up();
+    };
+    await connectPorts('node-1791265250852-8q4474svr', 'output', 'banner-validate-brand', 'input-image');
+    await renditionEdge.waitFor();
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 10);
+    await connectPorts('node_1791265169277_gd94ntsb7_0_nkvua7', 'outputs', 'banner-validate-brand', 'input-image');
+    await canvas.locator('.react-flow__edge[aria-label="Edge from node_1791265169277_gd94ntsb7_0_nkvua7 to banner-validate-brand"]').waitFor();
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 11);
+    await connectPorts('node-1791265265414-jy1s43s8r', 'output', 'banner-validate-brand', 'input-image');
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 11);
+    assert.equal(await canvas.locator('.react-flow__edge[aria-label="Edge from node-1791265265414-jy1s43s8r to banner-validate-brand"]').count(), 0);
+    const quality = canvas.getByLabel('Quality');
+    await quality.fill('Medium');
+    assert.equal(await quality.inputValue(), 'Medium');
+    await workflowNode('node_1791555727515_npd3yw2qa_7_9a2dst').getByText('Push assets to Workfront', { exact: true }).click();
+    await page.keyboard.press('Delete');
+    assert.equal(await canvas.locator('.react-flow__node').count(), 8);
+    await canvas.getByPlaceholder('Search and add nodes').click();
+    await page.keyboard.type('Preview');
+    await canvas.locator('.search-result-item.selected').waitFor();
+    await page.keyboard.press('Enter');
+    assert.equal(await canvas.locator('.react-flow__node').count(), 9);
+    assert.ok(workflowRequests.some((url) => url.includes('/production-workflow/assets/')));
     const closeWorkflow = page.getByRole('button', { name: 'Close window', exact: true });
     assert.equal(await closeWorkflow.innerText(), '×');
     await closeWorkflow.click();
     assert.equal(await page.getByRole('dialog').count(), 0);
     assert.equal(await page.getByRole('button', { name: 'View production workflow', exact: true }).evaluate((node) => node === document.activeElement), true);
+    await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
+    await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
+    assert.equal(await canvas.locator('.react-flow__node').count(), 9);
+    assert.equal(await canvas.locator('.react-flow__edge').count(), 10);
+    assert.equal(await canvas.locator('.react-flow__node[data-id="node_1791555727515_npd3yw2qa_7_9a2dst"]').count(), 1);
+    assert.equal(await canvas.getByLabel('Quality').inputValue(), 'High');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    page.off('request', trackWorkflow);
+    assert.equal(workflowRequests.some((url) => url.includes('/api/')), false);
     await page.reload();
     await page.locator('.kiosk-panel-variations').waitFor();
     await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18);

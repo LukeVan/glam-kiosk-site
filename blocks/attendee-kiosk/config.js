@@ -52,7 +52,7 @@ function productionWorkflowIntegration(value, pageOrigin) {
     throw new Error('Integration enable flags must be booleans.');
   }
   if (!value.enabled) return { enabled: false };
-  const url = new URL('/production-workflow/index.html?preview=eds', pageOrigin);
+  const url = new URL('/production-workflow/index.html?workflow=banners&preview=eds', pageOrigin);
   if (url.protocol !== 'https:'
     && !(url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname))) {
     throw new Error('Packaged workflow requires HTTPS or a local developer origin.');

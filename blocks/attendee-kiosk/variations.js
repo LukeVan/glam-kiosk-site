@@ -130,18 +130,18 @@ export default function renderVariations({
   }, { passive: true, signal });
   const openWorkflow = button(text.viewProduction, () => {
     const dialog = make('dialog', '', 'kiosk-workflow-dialog');
-    dialog.setAttribute('aria-label', text.viewProduction);
+    dialog.setAttribute('aria-label', text.productionWorkflowTitle);
     const bar = make('div', '', 'kiosk-workflow-bar');
     const close = make('button', '', 'kiosk-workflow-close');
     close.textContent = '×';
     close.setAttribute('aria-label', text.closeWorkflow);
     close.type = 'button';
     close.addEventListener('click', () => dialog.close());
-    bar.append(make('h2', text.viewProduction, ''), close);
+    bar.append(make('h2', text.productionWorkflowTitle, ''), close);
     dialog.append(bar);
     if (workflow?.enabled) {
       const iframe = document.createElement('iframe');
-      iframe.title = text.viewProduction;
+      iframe.title = text.productionWorkflowTitle;
       iframe.referrerPolicy = 'no-referrer';
       iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
       iframe.src = workflow.url;

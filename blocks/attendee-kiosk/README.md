@@ -13,7 +13,7 @@ Ready schema-version-1 manifests must match portrait ID, source node, and
 `{eventId}/9-Graph-Input/{portraitId}/portrait.png`. The PNG asset contains
 `url` and `expiresAt` minted by Creator at publication, not browser signing.
 Only the configured account/container/exact blob with `sr=b`, `sp=r`,
-`spr=https`, matching active UTC expiry and at most nine hours remaining is
+`spr=https`, matching active UTC expiry and at most seven days remaining is
 accepted. Container SAS is used only to read the manifest, never handed to Graph.
 
 The shell sends `KIOSK_SET_GRAPH_PORTRAIT` with selected `portraitId`, validated
@@ -460,12 +460,19 @@ Next leads to
 the existing ending only if this attendee already has a print request.
 
 Runtime `productionWorkflow: { enabled: true, packaged: true }` opens
-`/production-workflow/index.html?preview=eds` in a sandboxed, lazy-created iframe
+`/production-workflow/index.html?workflow=banners&preview=eds` in a sandboxed, lazy-created iframe
 inside a modal slide-over. Unconfigured workflow shows an explicit unavailable
 state, not a fabricated graph or a live Adobe editor. Escape/Close remove the
 iframe and return focus; stage changes/reset remove the dialog and stop scrolling.
 This preview has no authority to submit jobs; the static package is source-owned
-by Glam's ffe-wfb-design-proto app.
+by Glam's ffe-wfb-design-proto app. Its `workflow=banners` mode embeds the editable
+FFCPE interface with nine initial nodes and ten edges, including CSV parsing,
+InDesign merge/rendition, brand validation, preview and simulated delivery nodes.
+Attendees can add, delete, move and connect nodes and edit settings; these edits
+reset when the iframe closes. Run and import/export are disabled, Publish is
+hidden, and there are no job hooks, polling or processing results. Deploy it by
+syncing the built bundle into `/production-workflow/` with relative asset paths,
+like `/coworker/`.
 
 New MAX attendee URLs use `/max-download.html?session=<encoded manifest URL>`.
 The static `max-download.html` shell loads the dedicated `max-download` block;
