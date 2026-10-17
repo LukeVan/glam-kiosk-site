@@ -18,6 +18,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let previewReady = false;
     let qrPublished = false;
     let bannerStatus = 'unpublished';
+    let graphUnavailable = false;
     let failPortraitListing = false;
     const outputURL = (suffix) => sas(`mock-assets/TestEvent/7-Share-Output/${request.requestId}/${suffix}`, 'r', 'b');
     const downloadURL = () => `https://main--glam-kiosk-site--lukevan.aem.live/max-download.html?session=${encodeURIComponent(outputURL('session.json'))}`;
@@ -51,6 +52,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return;
       }
       if (url.pathname.includes('/9-Graph-Input/') && url.pathname.endsWith('/manifest.json')) {
+        if (graphUnavailable) {
+          await route.fulfill({ status: 404 });
+          return;
+        }
         const portraitId = url.pathname.split('/').at(-2);
         const blob = `TestEvent/9-Graph-Input/${portraitId}/portrait.png`;
         const graphExpiry = new Date(Date.now() + 3600000).toISOString();
@@ -176,10 +181,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-name input').fill('Mock Print');
     await page.locator('.kiosk-name .kiosk-primary-action').click();
     await page.locator('.kiosk-coworker-copy .kiosk-graph-input-status').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('.kiosk-coworker-copy h2').innerText(), 'Ask CX Coworker.');
-    assert.equal(await page.locator('.kiosk-coworker-copy > p').first().innerText(),
-      "Don't hunt through endless project data that isn't relevant — to you.\nGet straight to the point.");
-    assert.equal(await page.locator('.kiosk-coworker-copy > p').first().evaluate((node) => (
+    assert.equal(await page.locator('.kiosk-coworker-copy h2').innerText(), 'CX Enterprise Coworker');
+    assert.equal(await page.locator('.kiosk-story-subcopy').innerText(),
+      'Find the work and information you need all in one place. No hunting through projects, folders, or tools.');
+    assert.equal(await page.locator('.kiosk-story-subcopy').evaluate((node) => (
       getComputedStyle(node).whiteSpace
     )), 'pre-line');
     assert.equal(await page.locator('.kiosk-panel-coworker > .kiosk-graph-input-status').count(), 0);
@@ -198,11 +203,107 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const jumpBox = await page.getByRole('button', { name: 'Jump to Ads', exact: true }).boundingBox();
     assert(jumpBox.x < 30 && jumpBox.y > 1030);
     assert.equal(await page.locator('.kiosk-graph-input-status').evaluate((node) => getComputedStyle(node).clipPath), 'inset(50%)');
-    await page.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
+    const storyFrame = page.frameLocator('.kiosk-frame-slot iframe');
+    await storyFrame.locator('[contenteditable="true"]').waitFor();
+    const emitBeat = (beat) => storyFrame.locator('body').evaluate((body, value) => {
+      window.parent.postMessage({ type: 'KIOSK_STORY_BEAT', beat: value }, window.location.origin);
+    }, beat);
+    const currentHeading = page.locator('.kiosk-story-text:not([aria-hidden]) h2');
+    const beats = [
+      ['overview', 'Step back in', "See what's in motion, what's next, and where to jump back in."],
+      ['brief', 'Get up to speed', 'Receive the context you need to move forward.'],
+      ['performance', 'Build on what worked', 'Understand past performance without digging through dashboards.'],
+      ['creative', 'Take creative control', 'Step into Firefly Graph to explore the direction of your hero assets.'],
+    ];
+    await storyFrame.locator('[contenteditable="true"]').focus();
+    const copyFrameBefore = await page.locator('.kiosk-frame-slot').boundingBox();
+    for (const [beat, heading, sub] of beats) {
+      await emitBeat(beat);
+      await currentHeading.getByText(heading, { exact: true }).waitFor();
+      assert.equal(await currentHeading.evaluate((node) => getComputedStyle(node).fontSize), '80px');
+      assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden]) p').innerText(), sub);
+      assert.equal(await page.locator('.kiosk-story-copy').evaluate((node) => getComputedStyle(node).overflowY), 'clip');
+      assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden])').evaluate((node) => (
+        node.getAnimations()[0]?.effect.getKeyframes()[0].transform
+      )), 'translateY(100%)');
+      await page.waitForFunction(() => document.querySelectorAll('.kiosk-story-text[aria-hidden]').length === 0);
+      assert.equal(await page.locator('.kiosk-story-text').count(), 1);
+      assert.deepEqual(await page.locator('.kiosk-frame-slot').boundingBox(), copyFrameBefore);
+      assert.equal(await storyFrame.locator('[contenteditable="true"]').evaluate((node) => (
+        node === document.activeElement
+      )), true);
+      if (process.env.KIOSK_SCREENSHOT_DIR) {
+        await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, `story-${beat}.png`) });
+      }
+    }
+    await emitBeat('creative');
+    assert.equal(await page.locator('.kiosk-story-text').count(), 1);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await emitBeat('brief');
+    await currentHeading.getByText('Get up to speed', { exact: true }).waitFor();
+    assert.equal(await page.locator('.kiosk-story-text').count(), 1);
+    assert.equal(await page.locator('.kiosk-story-text').evaluate((node) => node.getAnimations().length), 0);
+    await emitBeat('home');
+    await currentHeading.getByText('CX Enterprise Coworker', { exact: true }).waitFor();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await storyFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await currentHeading.getByText('Step back in', { exact: true }).waitFor();
+    await storyFrame.getByRole('button', { name: 'Select L’Oréal Paris campaign brief', exact: true }).click();
+    await currentHeading.getByText('Get up to speed', { exact: true }).waitFor();
+    await storyFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await currentHeading.getByText('Build on what worked', { exact: true }).waitFor();
+    await storyFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await currentHeading.getByText('Take creative control', { exact: true }).waitFor();
+    await page.evaluate(() => {
+      window.graphReturns = 0;
+      window.addEventListener('message', (event) => {
+        if (event.data?.type === 'KIOSK_NAV' && event.data.target === 'view-graph-return') window.graphReturns += 1;
+      });
+    });
+    await storyFrame.locator('body').evaluate(() => {
+      const original = window.open.bind(window);
+      window.open = () => original('about:blank', '_blank');
+    });
+    const popupPromise = page.waitForEvent('popup');
+    await storyFrame.getByRole('button', { name: 'Open Firefly Graph', exact: true }).click();
+    const popup = await popupPromise;
+    await popup.close();
+    await page.locator('.kiosk-graph-video').waitFor();
+    assert.equal(await page.locator('.kiosk-ad-intro-copy h2').innerText(), 'Scaling your heros.\nBuilding your ads');
+    assert.equal(await page.locator('.kiosk-ad-intro-copy p').innerText(), 'Still your creative, just faster.');
+    assert.equal(await page.locator('.kiosk-ad-grid').evaluate((node) => node.inert), true);
+    const videoBox = await page.locator('.kiosk-graph-video').boundingBox();
+    const hiddenAdsBox = await page.locator('.kiosk-ad-grid').boundingBox();
+    assert(Math.abs(videoBox.width - videoBox.height) < 1);
+    assert(Math.abs(videoBox.x - hiddenAdsBox.x) < 1 && Math.abs(videoBox.y - hiddenAdsBox.y) < 1);
+    assert(Math.abs(videoBox.width - hiddenAdsBox.width) < 1 && Math.abs(videoBox.height - hiddenAdsBox.height) < 1);
+    await storyFrame.locator('body').evaluate(() => {
+      window.postMessage({ type: 'ADOBE_GRAPH_DONE' }, window.location.origin);
+    });
+    assert.equal(await page.evaluate(() => window.graphReturns), 1);
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'graph-return-video.png') });
+    }
+    await page.locator('.kiosk-graph-video').waitFor({ state: 'detached', timeout: 20000 });
+    assert.equal(await page.locator('.kiosk-ad-grid').evaluate((node) => node.inert), false);
+    assert.equal(await page.evaluate(() => window.graphReturns), 1);
+    assert.deepEqual(await page.locator('.kiosk-ad-grid').boundingBox(), hiddenAdsBox);
+    assert.equal(writes, 0);
     await page.locator('.kiosk-composer-send').waitFor();
+    assert.equal(await page.locator('.kiosk-ad-copy h2').evaluate((node) => (
+      node === document.activeElement
+    )), true);
+    assert.equal(await page.locator('.kiosk-ad-copy h2').evaluate((node) => (
+      getComputedStyle(node).outlineStyle
+    )), 'none');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.evaluate(() => (
+      document.activeElement.matches('button:focus-visible')
+        && getComputedStyle(document.activeElement).outlineStyle === 'solid'
+    )), true);
     assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
     const sendBox = await page.locator('.kiosk-composer-send').boundingBox();
-    const sendIconBox = await page.locator('.kiosk-composer-send svg').boundingBox();
+    const sendIconBox = await page.locator('.kiosk-composer-send-icon').boundingBox();
     assert(Math.abs(sendBox.x + sendBox.width / 2 - sendIconBox.x - sendIconBox.width / 2) < 0.5);
     assert(Math.abs(sendBox.y + sendBox.height / 2 - sendIconBox.y - sendIconBox.height / 2) < 0.5);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), null);
@@ -213,12 +314,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-ad-grid button').nth(3).click();
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
     assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 1);
-    assert((await page.locator('.kiosk-composer-attachment img').getAttribute('src'))
+    assert((await page.locator('.kiosk-composer-thumbnail-image').getAttribute('src'))
       .includes('lorealparis'));
     const gridBox = await page.locator('.kiosk-ad-grid').boundingBox();
     const dockBox = await page.locator('.kiosk-composer').boundingBox();
-    assert(dockBox.y >= gridBox.y + gridBox.height);
-    assert.equal(Math.round(dockBox.x + dockBox.width), Math.round(gridBox.x + gridBox.width));
+    const adCopyBox = await page.locator('.kiosk-ad-copy').boundingBox();
+    assert(dockBox.x + dockBox.width < gridBox.x);
+    assert(dockBox.y >= adCopyBox.y + adCopyBox.height);
+    assert.equal(Math.round(dockBox.width), 540);
+    assert(gridBox.width > 800);
+    await page.getByRole('button', { name: 'Remove selected ad', exact: true }).click();
+    assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 0);
+    assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
+    assert.equal(await page.locator('.kiosk-ad-grid [aria-pressed="true"]').count(), 0);
+    await page.locator('.kiosk-ad-grid button').nth(3).click();
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'engulf-ads.png') });
     }
@@ -270,9 +379,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         .some((key) => storage.getItem(key).includes('MOCK_GRAPH_ONLY')))
     )), false);
     assert.equal(writes, 2);
-    assert.equal(await page.locator('.kiosk-panel-continued h2').innerText(), 'Adobe Brand Intelligence');
-    assert.equal(await page.locator('.kiosk-panel-continued .kiosk-coworker-copy > p').first().innerText(),
-      'Validate, Simulate, and Assemble based on your brand.');
+    assert.equal(await page.locator('.kiosk-panel-continued h2').innerText(), 'Test your thinking');
+    assert.equal(await page.locator('.kiosk-panel-continued h2').evaluate((node) => getComputedStyle(node).fontSize), '80px');
+    assert.equal(await page.locator('.kiosk-panel-continued .kiosk-story-subcopy').innerText(),
+      'See how your creative might resonate in market before you move forward.');
+    const continuedCopyFrame = await page.locator('.kiosk-frame-slot').boundingBox();
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'story-simulate.png') });
+    }
     assert.equal(await page.locator('.kiosk-panel-continued .kiosk-coworker-copy > button').count(), 0);
     await coworker.locator('[contenteditable="true"]').waitFor();
     await coworker.getByRole('button', { name: 'Send', exact: true }).waitFor();
@@ -286,6 +400,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await page.keyboard.press('Enter');
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
+    await page.locator('.kiosk-story-text:not([aria-hidden]) h2').getByText('See what resonates', { exact: true }).waitFor();
+    assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden]) p').innerText(),
+      'Turn what you learn into creative direction.');
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-story-text[aria-hidden]').length === 0);
+    assert.deepEqual(await page.locator('.kiosk-frame-slot').boundingBox(), continuedCopyFrame);
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'story-results.png') });
+    }
     const completionPrompt = "I'm done with my task of generating new hero assets";
     await coworker.locator('[contenteditable="true"]', { hasText: completionPrompt }).waitFor();
     await coworker.locator('[contenteditable="true"]').evaluate((node) => node.blur());
@@ -296,7 +418,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return { focus() {} };
       };
     });
-    const graphButtons = coworker.getByRole('button', { name: 'Open Adobe Graph', exact: true });
+    const graphButtons = coworker.getByRole('button', { name: 'Open Firefly Graph', exact: true });
     if (await graphButtons.count()) {
       await graphButtons.first().click();
       const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
@@ -309,8 +431,21 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await coworker.getByRole('button', { name: 'Send', exact: true }).click();
     await coworker.getByText('Firefly Creative Production workflow', { exact: false }).first().waitFor();
+    await page.evaluate(() => {
+      window.handoffAnimations = [];
+      const animate = Element.prototype.animate;
+      Element.prototype.animate = function record(frames, options) {
+        window.handoffAnimations.push({
+          className: this.className, frames, duration: options.duration, delay: options.delay || 0,
+        });
+        return animate.call(this, frames, options);
+      };
+    });
     await coworker.getByRole('button', { name: 'Open Workflow Results', exact: true }).click();
     await page.locator('.kiosk-panel-variations').waitFor();
+    const reveal = await page.evaluate(() => window.handoffAnimations);
+    assert(reveal.some((animation) => animation.className.includes('kiosk-frame-slot')
+      && animation.duration === 1000));
     assert.equal(await page.locator('.kiosk-variation').count(), 0);
     assert.equal(await page.getByText('One idea. A whole world of content.', { exact: true }).count(), 0);
     assert.equal(await page.locator('.kiosk-variations-status').innerText(), '');
@@ -326,10 +461,13 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         check.src = image.src;
       })));
     });
-    assert((await page.locator('.kiosk-variations-notice').innerText()).includes('personalized variations'));
+    assert.equal(await page.locator('.kiosk-variations-notice').count(), 0);
+    assert.equal(await page.locator('.kiosk-variations-status').innerText(), '');
     assert.equal(await page.locator('.kiosk-banner-download').count(), 1);
     assert.equal(await page.locator('.kiosk-variation img[src*=".pdf"]').count(), 0);
-    await page.waitForFunction(() => document.querySelector('.kiosk-variations-viewport').scrollTop > 5);
+    await page.waitForFunction(() => new DOMMatrix(getComputedStyle(
+      document.querySelector('.kiosk-variations-track'),
+    ).transform).m42 < -5);
     assert.equal(await page.getByRole('button', { name: 'Pause showcase', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Back to Coworker', exact: true }).count(), 0);
     const workflowBox = await page.locator('.kiosk-variations-workflow').boundingBox();
@@ -341,12 +479,18 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       view.dispatchEvent(new WheelEvent('wheel', { deltaY: 100 }));
     });
     const pausedScroll = await page.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const pausedTransform = await page.locator('.kiosk-variations-track').first().evaluate((node) => node.style.transform);
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 750)));
     assert.equal(await page.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop), pausedScroll);
-    await page.waitForFunction((top) => (
-      document.querySelector('.kiosk-variations-viewport').scrollTop > top + 2
-    ), pausedScroll, { timeout: 2000 });
+    assert.equal(await page.locator('.kiosk-variations-track').first().evaluate((node) => node.style.transform), pausedTransform);
+    await page.waitForFunction((transform) => (
+      document.querySelector('.kiosk-variations-track').style.transform !== transform
+    ), pausedTransform, { timeout: 2000 });
     const workflowRequests = [];
+    assert.equal(await page.locator('.kiosk-variations-copy h2').innerText(), 'Beauty, amplified');
+    assert.equal(await page.locator('.kiosk-variations-intro p').innerText(),
+      'Scale your initial hero assets into the variations your campaign needs.');
     const trackWorkflow = (request) => {
       if (/\/api\/|\/production-workflow\//.test(request.url())) workflowRequests.push(request.url());
     };
@@ -363,8 +507,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-workflow-bar h2').innerText(), 'Firefly Creative Production for Enterprise');
     assert.equal(await page.locator('.kiosk-workflow-bar h2').evaluate((node) => getComputedStyle(node).fontFamily.includes('condensed')), false);
     await canvas.getByText('Loreal-ads-atscale-simple.csv', { exact: true }).waitFor();
-    for (const asset of ['portrait-cutout-mC8QcXpn.webp', 'banner-1080x1920-CZJgfZ-N.jpg']) {
-      const image = canvas.locator(`img[src$="${asset}"]`);
+    const attendeePreview = await page.locator('.kiosk-variation img').first().getAttribute('src');
+    const workflowImages = [
+      canvas.locator(`img[src*="/9-Graph-Input/${request.portraitId}/portrait.png"]`),
+      canvas.locator(`img[src="${attendeePreview}"]`),
+    ];
+    for (const image of workflowImages) {
       await image.waitFor();
       await image.evaluate((node) => {
         if (node.complete) return;
@@ -375,6 +523,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       });
       assert.ok(await image.evaluate((node) => node.naturalWidth > 0));
     }
+    assert.equal(await canvas.locator('img[src*="portrait-cutout-"], img[src*="banner-1080x1920-"]').count(), 0);
     const frameBox = await workflowFrame.boundingBox();
     assert.ok(frameBox.width > 400 && frameBox.height > 300);
     await page.waitForFunction(() => document.querySelector('.kiosk-workflow-dialog').getAnimations().every((a) => a.playState === 'finished'));
@@ -413,9 +562,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await connectPorts('node-1791265265414-jy1s43s8r', 'output', 'banner-validate-brand', 'input-image');
     assert.equal(await canvas.locator('.react-flow__edge').count(), 11);
     assert.equal(await canvas.locator('.react-flow__edge[aria-label="Edge from node-1791265265414-jy1s43s8r to banner-validate-brand"]').count(), 0);
-    const quality = canvas.getByLabel('Quality');
-    await quality.fill('Medium');
-    assert.equal(await quality.inputValue(), 'Medium');
+    const quality = canvas.getByRole('button', { name: 'High Quality', exact: true });
+    await quality.click();
+    await canvas.getByRole('option', { name: 'Medium', exact: true }).click();
+    await canvas.getByRole('button', { name: 'Medium Quality', exact: true }).waitFor();
     await workflowNode('node_1791555727515_npd3yw2qa_7_9a2dst').getByText('Push assets to Workfront', { exact: true }).click();
     await page.keyboard.press('Delete');
     assert.equal(await canvas.locator('.react-flow__node').count(), 8);
@@ -432,12 +582,36 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.getByRole('button', { name: 'View production workflow', exact: true }).evaluate((node) => node === document.activeElement), true);
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
+    await workflowImages[0].waitFor();
+    assert.equal(await workflowImages[1].count(), 1);
     assert.equal(await canvas.locator('.react-flow__node').count(), 9);
     assert.equal(await canvas.locator('.react-flow__edge').count(), 10);
     assert.equal(await canvas.locator('.react-flow__node[data-id="node_1791555727515_npd3yw2qa_7_9a2dst"]').count(), 1);
-    assert.equal(await canvas.getByLabel('Quality').inputValue(), 'High');
+    await canvas.getByRole('button', { name: 'High Quality', exact: true }).waitFor();
+    await page.waitForFunction(() => document.querySelector('.kiosk-workflow-dialog').getAnimations().every((animation) => animation.playState === 'finished'));
+    const dialogBounds = await page.getByRole('dialog').boundingBox();
+    await page.mouse.click(dialogBounds.x + 8, dialogBounds.y + 8);
+    assert.equal(await page.getByRole('dialog').count(), 1);
+    await page.mouse.move(dialogBounds.x + 8, dialogBounds.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(dialogBounds.x - 10, dialogBounds.y + 8);
+    await page.mouse.up();
+    assert.equal(await page.getByRole('dialog').count(), 1);
+    await page.mouse.click(dialogBounds.x - 10, dialogBounds.y + 8);
+    await page.waitForFunction(() => !document.querySelector('.kiosk-workflow-dialog'));
+    assert.equal(await page.getByRole('button', { name: 'View production workflow', exact: true }).evaluate((node) => node === document.activeElement), true);
+    await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
+    await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('dialog').count(), 0);
+    graphUnavailable = true;
+    await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
+    await page.getByText('The attendee cutout is unavailable or expired. No sample portrait is substituted.', { exact: true }).waitFor();
+    await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
+    assert.equal(await canvas.locator('img[src*="/9-Graph-Input/"], img[src*="portrait-cutout-"]').count(), 0);
+    await workflowImages[1].waitFor();
+    await page.keyboard.press('Escape');
+    graphUnavailable = false;
     page.off('request', trackWorkflow);
     assert.equal(workflowRequests.some((url) => url.includes('/api/')), false);
     await page.reload();
@@ -446,6 +620,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-variation').count(), 18);
     assert.equal(writes, 2);
     if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.waitForFunction(() => document.querySelector('.kiosk-variations-intro').getAnimations().every((animation) => animation.playState === 'finished'));
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'variations.png') });
     }
     bannerStatus = 'preview-unavailable';
@@ -455,9 +630,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-banner-download').count(), 1);
     assert.equal(await page.locator('.kiosk-variations-copy > :is(.kiosk-variations-status, .kiosk-variations-controls)')
       .evaluateAll((nodes) => nodes.map((node) => node.className).join()), 'kiosk-variations-status,kiosk-variations-controls');
+    await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
+    await workflowImages[0].waitFor();
+    assert.equal(await canvas.locator('.react-flow__node[data-id="node-1791265273787-sqjsvf0ys"] img').count(), 0);
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Finish', exact: true }).click();
     assert.equal(writes, 2);
     await page.locator('.kiosk-panel-ending').waitFor();
+    await page.locator('.kiosk-ending-outgoing').waitFor({ state: 'detached' });
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     await page.reload();
     await page.locator('.kiosk-panel-ending').waitFor();
@@ -470,48 +650,51 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
     qrPublished = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
-    await page.locator('.kiosk-share-qr').waitFor();
+    await page.locator('.kiosk-ending-copy h2').waitFor();
+    assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
     assert.equal(writes, 2);
     await page.reload();
-    await page.locator('.kiosk-share-qr').waitFor();
+    await page.locator('.kiosk-ending-copy h2').waitFor();
+    assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
     assert.equal(writes, 2);
     previewReady = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
     await page.locator('.kiosk-print-preview').waitFor();
-    assert.equal(await page.locator('.kiosk-share-qr').count(), 1);
+    assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     completed = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
-    await page.getByText('Your files have been sent to print fulfillment.', { exact: false }).waitFor();
-    assert.equal(await page.getByRole('link', { name: 'Scan to download all four personalized ads' }).getAttribute('href'), downloadURL());
-    assert.equal(await page.locator('.kiosk-qr-link').innerText(), '');
-    assert.equal(await page.locator('.kiosk-qr-link').getAttribute('target'), '_blank');
-    assert.equal(await page.locator('.kiosk-qr-link').getAttribute('rel'), 'noopener noreferrer');
-    const qrStyle = await page.locator('.kiosk-qr-link').evaluate((link) => {
-      const style = getComputedStyle(link);
-      return [style.backgroundColor, style.padding, style.borderRadius];
-    });
-    assert.deepEqual(qrStyle, ['rgba(0, 0, 0, 0)', '0px', '0px']);
+    await page.getByText('I hope your enjoyed this enterprise content supply chain journey.', { exact: false }).waitFor();
+    assert.equal(await page.locator('.kiosk-qr-link').count(), 0);
+    assert.equal(await page.locator('.kiosk-ending-media img').count(), 1);
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
     assert((await page.locator('.kiosk-print-preview').getAttribute('src')).includes(`${request.selectedBrand}.jpg`));
     const copyBox = await page.locator('.kiosk-ending-copy').boundingBox();
     const mediaBox = await page.locator('.kiosk-ending-media').boundingBox();
     assert(mediaBox.x > copyBox.x + copyBox.width);
+    assert(Math.abs(mediaBox.x - 785) < 1);
+    assert(Math.abs(mediaBox.width - 961) < 1);
+    assert(Math.abs(mediaBox.y - (1080 - 770.226) / 2) < 1);
+    assert.equal(await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Start over', exact: true }).count(), 1);
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'ending-single-print.png') });
+    }
     const refreshBox = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
-    const exitBox = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
+    const startOverBox = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Start over', exact: true }).boundingBox();
+    assert.equal(await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).count(), 0);
     const endingBox = await page.locator('.kiosk-panel-ending').boundingBox();
     assert(Math.abs(refreshBox.x - endingBox.x - 20) < 1);
     assert(Math.abs(endingBox.y + endingBox.height - refreshBox.y - refreshBox.height - 14) < 1);
-    assert(refreshBox.y > exitBox.y + exitBox.height);
+    assert(refreshBox.y > startOverBox.y + startOverBox.height);
     const refreshStyle = await page.locator('.kiosk-ending-refresh').evaluate((control) => {
       const style = getComputedStyle(control);
       return [style.fontSize, style.fontWeight, style.color, style.backgroundColor];
     });
     assert.deepEqual(refreshStyle, ['11px', '600', 'rgba(255, 255, 255, 0.42)', 'rgba(0, 0, 0, 0)']);
-    assert((await page.locator('.kiosk-panel-ending').innerText()).includes('sent to print fulfillment'));
-    const imageSource = await page.locator('.kiosk-share-qr').getAttribute('src');
+    assert((await page.locator('.kiosk-panel-ending').innerText()).includes('Please pick up your print at the counter as you leave.'));
+    const imageSource = await page.locator('.kiosk-print-preview').getAttribute('src');
     assert.equal(new URL(imageSource).searchParams.get('sr'), 'c');
     assert.equal(new URL(new URL(downloadURL()).searchParams.get('session')).searchParams.get('sr'), 'b');
     await page.setViewportSize({ width: 390, height: 844 });
@@ -522,14 +705,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const mobileMedia = await page.locator('.kiosk-ending-media').boundingBox();
     assert(mobileMedia.y >= mobileCopy.y + mobileCopy.height);
     const mobileRefresh = await page.getByRole('button', { name: 'Refresh', exact: true }).boundingBox();
-    const mobileExit = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).boundingBox();
+    const mobileStartOver = await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Start over', exact: true }).boundingBox();
     const mobilePanel = await page.locator('.kiosk-panel-ending').boundingBox();
     assert(Math.abs(mobileRefresh.x - mobilePanel.x - mobilePanel.width * 0.04) < 1,
       JSON.stringify({ mobileRefresh, mobilePanel }));
     assert(Math.abs(mobilePanel.y + mobilePanel.height - mobileRefresh.y - mobileRefresh.height - 46) < 1);
-    assert(mobileRefresh.y > mobileExit.y + mobileExit.height);
+    assert(mobileRefresh.y > mobileStartOver.y + mobileStartOver.height);
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).click();
+    await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Start over', exact: true }).click();
     await page.locator('.kiosk-panel-welcome').waitFor();
     await page.reload();
     await page.locator('.kiosk-consent input').check();
@@ -572,6 +755,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     shareStatus = 'ready';
     await download.reload();
     await download.waitForFunction(() => document.querySelectorAll('.max-download-gallery-item').length === 4);
+    assert.deepEqual(await download.locator('.max-download-gallery-btn').allTextContents(),
+      ['Download', 'Download', 'Download', 'Download']);
+    assert.equal(await download.locator('.max-download-gallery-btn img').count(), 0);
+    assert.equal(await download.locator('.max-download-links a').count(), 3);
+    assert.equal(await download.getByRole('link', { name: 'Work smarter with CX Enterprise Coworker', exact: true }).getAttribute('href'),
+      'https://business.adobe.com/blog/enterprise-creatives-work-smarter-with-cx-enterprise-coworker');
     assert.equal(await download.locator('.max-download-gallery img').first().getAttribute('referrerpolicy'), 'no-referrer');
     shareOverride = { ...share(), expiresAt: new Date(Date.now() - 1000).toISOString() };
     await download.reload();
@@ -665,7 +854,54 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await demo.keyboard.press('Enter');
     await demo.locator('.kiosk-name input').fill('Demo Animation');
     await demo.locator('.kiosk-name .kiosk-primary-action').click();
-    await demo.getByRole('button', { name: 'Jump to Ads', exact: true }).click();
+    const beatFrame = demo.frameLocator('.kiosk-frame-slot iframe');
+    const liveHeading = demo.locator('.kiosk-story-text:not([aria-hidden]) h2');
+    await beatFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await liveHeading.getByText('Step back in', { exact: true }).waitFor();
+    await beatFrame.getByRole('button', { name: 'Select L’Oréal Paris campaign brief', exact: true }).click();
+    await liveHeading.getByText('Get up to speed', { exact: true }).waitFor();
+    await beatFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await liveHeading.getByText('Build on what worked', { exact: true }).waitFor();
+    await beatFrame.getByRole('button', { name: 'Send', exact: true }).click();
+    await liveHeading.getByText('Take creative control', { exact: true }).waitFor();
+    await beatFrame.getByRole('button', { name: 'Open Firefly Graph', exact: true }).waitFor();
+    if (process.env.KIOSK_SCREENSHOT_DIR) {
+      await demo.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'story-creative-integrated.png') });
+    }
+    await beatFrame.getByRole('button', { name: 'Home', exact: true }).click();
+    await liveHeading.getByText('CX Enterprise Coworker', { exact: true }).waitFor();
+    await beatFrame.locator('body').evaluate(() => {
+      window.parent.postMessage({ type: 'KIOSK_NAV', target: 'view-graph-return' }, window.location.origin);
+    });
+    await demo.locator('.kiosk-graph-video').waitFor();
+    await demo.addInitScript(() => {
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function playWithAutoplayBlock() {
+        if (this.classList.contains('kiosk-graph-video') && !window.blockedGraphAutoplay) {
+          window.blockedGraphAutoplay = true;
+          return Promise.reject(new DOMException('Mock autoplay policy', 'NotAllowedError'));
+        }
+        return play.call(this);
+      };
+    });
+    await demo.reload();
+    await demo.locator('.kiosk-graph-video').waitFor();
+    await demo.getByRole('button', { name: 'Play interstitial video', exact: true }).click();
+    assert.equal(await demo.locator('.kiosk-ad-intro-copy h2').innerText(), 'Scaling your heros.\nBuilding your ads');
+    await demo.setViewportSize({ width: 390, height: 844 });
+    const mobileVideoBox = await demo.locator('.kiosk-graph-video').boundingBox();
+    const mobileHiddenGrid = await demo.locator('.kiosk-ad-grid').boundingBox();
+    assert(Math.abs(mobileVideoBox.width - mobileVideoBox.height) < 1);
+    assert(Math.abs(mobileVideoBox.y - mobileHiddenGrid.y) < 1);
+    await demo.locator('.kiosk-graph-video').evaluate((video) => {
+      video.pause();
+      video.dispatchEvent(new Event('error'));
+    });
+    await demo.getByText('The interstitial video could not play. Retry or continue to your ads.', { exact: true }).waitFor();
+    await demo.getByRole('button', { name: 'Continue to ads', exact: true }).click();
+    await demo.locator('.kiosk-graph-video').waitFor({ state: 'detached' });
+    assert.equal(await demo.locator('.kiosk-ad-selection-copy h2').innerText(), 'Tell your unique story.');
+    await demo.setViewportSize({ width: 1920, height: 1080 });
     await demo.locator('.kiosk-ad-grid button').first().click();
     await demo.setViewportSize({ width: 390, height: 844 });
     const mobileGrid = await demo.locator('.kiosk-ad-grid').boundingBox();

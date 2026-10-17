@@ -31,8 +31,14 @@ Its upload control selectors have not been verified against live Adobe Graph.
 
 The ending screen checks render and fulfillment status every five seconds until
 rendering is ready and fulfillment is submitted, or either reports failure.
-The bottom-left Refresh control repeats the same status read; Exit resets the
+The bottom-left Refresh control repeats the same status read; Start over resets the
 attendee session. Submitted fulfillment does not confirm physical printer readiness.
+The gallery fades upward into the ending screen, with a frosted status bar above
+the selected print. Once the actual image loads, it slides down from beneath the
+bar over 1.5 seconds. Polling preserves that image and does not replay its reveal.
+The bar reports preparation, file readiness, or failure, never physical printing
+or fabricated progress. The closing copy remains stable while status changes.
+Reduced motion uses short opacity fades; leaving the screen cancels animations.
 Publishing this frontend does not enable Creator's `GLAM_GRAPH_INPUT_ENABLED`
 flag or publish cutouts; those backend operations need separate approval.
 
@@ -146,7 +152,7 @@ page origin; do not enable write permissions.
 Settings are saved under `glam-kiosk-booth-v1` in localStorage on this origin,
 including the read/list SAS, optional dedicated create-only request SAS, event ID,
 MAX experience, and lead-capture preference. Print scope is `selected` (MAX default)
-or `all`; `showFinalQR` controls QR versus pickup presentation independently.
+or `all`; `showFinalQR` is retained in the immutable backend request contract.
 All four templates are always rendered for download. Legacy ending preferences
 migrate to QR visibility; `introMode` remains derived from intake selection.
 Settings survive browser restarts but are not shared between localhost, preview, live,
@@ -159,9 +165,14 @@ token. Attendee restart does not erase booth setup.
 Settings use a compact two-column layout on wider screens, with access notes
 expandable below the fields. Open kiosk window opens the fixture on the same
 origin in a new tab/window using saved settings, not unsaved form edits.
-The pre-ad timed interstitial is removed: Coworker and Graph return open ad
-selection directly. Sessions previously saved on the pacing stage resume at
-ad selection without a delay. Asset readiness checks remain unchanged.
+Graph return enters the refresh-safe `pacing` stage, playing the packaged
+nine-second square video before ad selection. Playback completion scrolls the
+left copy upward and crossfades the four ads into the same square media area.
+This is presentation only, not generation or proof of asset readiness; missing
+or failed ads still show their real adapter status. Refresh during playback
+restarts the clip; reset stops it. Autoplay rejection offers Play/Continue, and
+media failure offers Retry/Continue with an explicit message. Reduced motion
+disables the transition animations. The staff Jump to Ads shortcut stays direct.
 
 When saved booth settings exist, reload the attendee page to use the Azure
 read/list adapter. It retrieves inputs from `{event}/portraits/pending/`,
@@ -306,7 +317,10 @@ Simulation return instead sends `KIOSK_SIMULATE` followed by
 The child waits for the guided prompt and enabled editor, focuses it, and emits
 `KIOSK_SIMULATION_COMPOSER_FOCUSED`. Native Enter advances its existing beat;
 shell rerenders do not restart simulation or steal focus.
-Ad selection attaches a thumbnail to a two-row visual Coworker composer.
+Ad selection attaches a thumbnail to a Spectrum AI prompt-field composer
+(Spectrum AI Toolkit, light theme, 540 px) under the subhead on the left; the
+enlarged 2×2 ad grid fills the right column. The thumbnail's close button
+clears the selection unless a print request has locked it.
 Its Send button and panel-scoped Enter share one guarded submission path.
 Real requests must be accepted before transitioning; failed submissions retain
 their immutable request for retry and never animate a successful handoff.
@@ -344,13 +358,29 @@ Messages to the configured Coworker iframe use exact `targetOrigin`.
 absolute image URLs; `adIndex` is 1-based, with `brand` keys `roche`, `keratin`,
 `ysl`, and `paris` in the same canonical ad order. Incoming `KIOSK_NAV` messages require
 the configured iframe's `contentWindow`, exact origin and expected stage:
-`view-select` means request ad selection; `view-processing-max` and
+`view-select` requests ad selection directly from initial or continued story;
+`view-graph-return` enters the video interstitial from either story stage.
+Packaged Coworker watches only its tracked Graph popup's `closed` property and
+shares an idempotent completion handler with validated `ADOBE_GRAPH_DONE`;
+neither duplicate completion nor a blocked popup starts a second return.
+`view-processing-max` and
 `view-variations-max` mean continue to the final thumbnail presentation and are
 accepted only in the continued stage. Neither message starts a job. Actual hosted
 compatibility is not verified. Restart sends the proposed `KIOSK_RESET` message
 to the configured Coworker origin, then removes the iframe; the hosted app's
 support for that message is not verified. The shell never writes cross-origin
 storage.
+During initial story, source/origin-validated `KIOSK_STORY_BEAT {beat}` updates
+the shell's localized title and sub-copy when the corresponding response is
+visible: `overview`, `brief`, `performance`, or `creative`. `home` restores the
+initial CX Enterprise Coworker copy. Continued story accepts only `simulate`
+and `results`, for the simulation setup and visible audience results respectively.
+Other stages and unknown beats are ignored. The variations screen introduces its
+own title and sub-copy with the same upward motion.
+Coworker replays the current visible beat on `KIOSK_SET_NAME`; repeated beats do
+not replay the animation. Copy slides upward inside a clipped text area without
+moving the iframe or changing focus; reduced-motion users receive an immediate
+text replacement. These presentation messages never start processing.
 For packaged Coworker, restart instead waits up to five seconds for an
 origin/source-validated `KIOSK_RESET_DONE` acknowledgment before removing the
 iframe and clearing the shell session. Timeout surfaces an incomplete restart
@@ -363,8 +393,8 @@ This shell does not read a cross-origin page or close arbitrary windows. Graph
 postMessage return is not enabled.
 
 The former print/QR/QR-print split is superseded by always rendering four
-personalized templates, with selected/all fulfillment and independent final QR
-visibility. Demo selections never create production print requests.
+personalized templates, with selected/all fulfillment. Demo selections never
+create production print requests.
 
 ## Azure print requests and attendee shares
 
@@ -405,21 +435,23 @@ confirmed physical printing.
 Internal `share` provides `downloadPageUrl`, `expiresAt`, and
 `qrBlob: {event}/7-Share-Output/{requestId}/qr.png`. The worker reserves the
 attendee manifest before rendering and generates this PNG from its stable URL.
-The kiosk uses its read SAS only to display the PNG; the encoded QR contains
-an attendee-specific blob-read SAS, never the kiosk container credential.
+The ending presents one large selected personalized template, including the QR
+embedded by the worker, rather than a second standalone QR panel. The encoded
+QR contains an attendee-specific blob-read SAS, never the kiosk container
+credential. The template remains dynamic and portrait/request-bound; no Figma
+sample portrait or placeholder QR is used. Pending/failure/pickup status and
+manual Refresh remain available. Start over uses the existing attendee reset
+flow without changing production or booth settings; the ending has no Exit button.
 The continued story's personalized-ads control and child completion navigation
-open the ending screen. It polls every five seconds, shows explicit processing/
-failure states, and gates pickup on submitted fulfillment. The QR appears as
-soon as a valid attendee share link is published, even while templates are
-pending, provided the worker has published its QR image. A null/missing QR during
-processing keeps the thank-you screen polling without requesting a nonexistent
-image; a completed status must include the QR. Its download page shows processing
-progress and adds images as they
-become ready. Refresh resumes status lookup without a new submission.
+open the ending screen. It polls every five seconds and shows explicit preparation/
+failure states in the frosted status bar, separately from the closing copy.
+The selected template includes the backend-rendered QR; no separate QR is shown.
+Its download page shows processing progress and adds images as they become ready.
+Refresh resumes status lookup without a new submission.
 The ending screen says Thank you (Merci), with Refresh at the bottom left and
-Exit beneath the copy. On desktop its right side displays the selected personalized template
-and, when enabled/ready, an image-only clickable QR opening the attendee download
-page in a new tab. On smaller screens the preview and QR stack below the copy.
+Start over beneath the copy. On desktop its right side displays the selected
+personalized template beneath the status bar. On smaller screens the bar and
+preview stack below the copy.
 Selecting a favorite ad records the live event portrait ID in this browser's
 localStorage immediately, before Send, fulfillment, or Exit. Reselecting an ad
 does not duplicate or clear that record. The default picker
@@ -445,12 +477,28 @@ is removed from that Coworker card and placed on this results screen.
 The demo showcase contains 18 explicitly labeled sample InDesign outputs,
 optimized from the supplied Sample-indd-Output folder to JPEG previews at up to
 800 px, about 1 MB total. They are not attendee-personalized assets or downloads.
-The viewport automatically scrolls upward at 25 px/second and repeats. Manual
+Each gallery column moves upward at 25 px/second and repeats its own sequence
+seamlessly, avoiding a shared jagged bottom or a visible jump to the top.
+Alternating columns reverse their assigned ads; each cycle includes a reordered
+second pass for a varied arrangement before the seamless repeat.
+Repeated tiles are hidden from assistive technology; the original assets remain
+available once. Manual
 wheel/touch/keyboard scrolling pauses it until one second after the last interaction
 or manual scroll event; dragging holds the pause until release. Reduced-motion
 preference, hidden tabs, and an open workflow dialog stop automatic movement.
 There are no Pause or Back controls. Images retain their full
-aspect ratio and are not selectable. Noncritical previews are lazy loaded.
+aspect ratio without a height cap or wide portrait side gutters, and are not
+selectable. Repeated previews reuse the same asset URLs; images are loaded eagerly
+so the loop's geometry is established before tiles scroll into view. Reduced
+motion shows only the original sequence with native manual scrolling.
+
+Opening results from continued Coworker retains the outgoing panel while up to
+six current previews load (bounded to two seconds after results retrieval).
+Coworker recedes/fades while gallery columns rise beneath it with 140 ms
+staggering; the copy slides upward and controls fade in last. Continuous movement
+starts during the reveal and smoothly ramps to full speed over 1.2 seconds,
+without a stationary hold. Refresh/resume does not replay the handoff. Reduced motion
+uses short fades, and reset/navigation cancels outstanding animations.
 
 Azure portraits use the published banner-results manifest described above,
 without falling back to demo samples. Other protected API integrations can
@@ -462,7 +510,8 @@ the existing ending only if this attendee already has a print request.
 Runtime `productionWorkflow: { enabled: true, packaged: true }` opens
 `/production-workflow/index.html?workflow=banners&preview=eds` in a sandboxed, lazy-created iframe
 inside a modal slide-over. Unconfigured workflow shows an explicit unavailable
-state, not a fabricated graph or a live Adobe editor. Escape/Close remove the
+state, not a fabricated graph or a live Adobe editor. Escape, Close, or clicking
+the dimmed backdrop remove the
 iframe and return focus; stage changes/reset remove the dialog and stop scrolling.
 This preview has no authority to submit jobs; the static package is source-owned
 by Glam's ffe-wfb-design-proto app. Its `workflow=banners` mode embeds the editable
@@ -473,6 +522,19 @@ reset when the iframe closes. Run and import/export are disabled, Publish is
 hidden, and there are no job hooks, polling or processing results. Deploy it by
 syncing the built bundle into `/production-workflow/` with relative asset paths,
 like `/coworker/`.
+
+The gallery omits the personalized count and ready confirmation; pending,
+partial, failed and unavailable states remain visible, as does the demo label.
+The workflow child announces `KIOSK_WORKFLOW_READY`; the shell validates its
+exact window and same origin, then replies to that origin with
+`KIOSK_WORKFLOW_ASSETS {portraitId, portraitUrl, previewUrl}`. The portrait is
+read again from the selected attendee's validated Graph cutout manifest on
+each modal open. The preview is the first current banner result, updated if
+gallery results change. Missing/expired cutouts and missing previews remain
+empty with explicit unavailable messaging, never another attendee's sample.
+Demo mode sends the selected demo portrait but no unrelated sample banner.
+URLs stay in memory and trusted messages, never query parameters or storage.
+Closing or resetting aborts the read and removes the listener and child.
 
 New MAX attendee URLs use `/max-download.html?session=<encoded manifest URL>`.
 The static `max-download.html` shell loads the dedicated `max-download` block;

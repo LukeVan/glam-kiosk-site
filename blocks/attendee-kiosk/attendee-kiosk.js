@@ -4,7 +4,9 @@ import {
 } from './state.js';
 import { createAPI } from './api.js';
 import createAzureAPI from './azure.js';
-import { coworkerReady, navigation, send } from './integrations.js';
+import {
+  coworkerReady, navigation, send, storyBeat,
+} from './integrations.js';
 import copy from './copy.js';
 import { createPrintRequest } from './fulfillment.js';
 import { blobURL } from '../../scripts/kiosk-settings.js';
@@ -85,6 +87,8 @@ export default async function decorate(block) {
   let graphPortrait = null;
   let graphTimer;
   let frame;
+  let currentStoryBeat = 'home';
+  let currentContinuedBeat = 'simulate';
   const loadedFrames = new WeakSet();
   const readyFrames = new WeakSet();
   const homeFocusFrames = new WeakSet();
@@ -236,6 +240,8 @@ export default async function decorate(block) {
     }, { once: true });
   }
   async function clearCoworker() {
+    currentStoryBeat = 'home';
+    currentContinuedBeat = 'simulate';
     if (!frame) return;
     const resettingFrame = frame;
     if (config.coworker.packaged && readyFrames.has(resettingFrame)) {
@@ -551,13 +557,43 @@ export default async function decorate(block) {
       frameSlot.append(frame);
     }
   }
+  function updateStoryCopy(beat, animate = true) {
+    const viewport = panel.querySelector('.kiosk-story-copy');
+    const currentBeat = state.stage === 'continued' ? currentContinuedBeat : currentStoryBeat;
+    if (!viewport || (animate && beat === currentBeat)) return;
+    if (state.stage === 'continued') currentContinuedBeat = beat;
+    else currentStoryBeat = beat;
+    const next = element('div', '', 'kiosk-story-text');
+    const beatCopy = text().storyBeats[beat];
+    const heading = element('h2', beatCopy?.title || text().coworkerHeading);
+    heading.tabIndex = -1;
+    next.append(heading, element('p', beatCopy?.sub || text().coworkerSub, 'kiosk-story-subcopy'));
+    viewport.querySelectorAll('[aria-hidden]').forEach((node) => node.remove());
+    const previous = viewport.firstElementChild;
+    previous?.getAnimations().forEach((animation) => animation.cancel());
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (animate && previous && !reducedMotion) {
+      previous.setAttribute('aria-hidden', 'true');
+      viewport.append(next);
+      const timing = { duration: 450, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
+      const exit = previous.animate([
+        { transform: 'translateY(0)', opacity: 1 },
+        { transform: 'translateY(-100%)', opacity: 0 },
+      ], timing);
+      exit.onfinish = () => previous.remove();
+      next.animate([
+        { transform: 'translateY(100%)', opacity: 0 },
+        { transform: 'translateY(0)', opacity: 1 },
+      ], timing);
+    } else viewport.replaceChildren(next);
+  }
   function story() {
     panel.classList.add('kiosk-panel-coworker');
     const content = element('div', '', 'kiosk-coworker-copy');
-    const heading = element('h2', state.stage === 'story' ? text().coworkerHeading : text().continued);
-    heading.tabIndex = -1;
-    content.append(heading, element('p', state.stage === 'story'
-      ? text().coworkerSub : text().continuedSub));
+    const viewport = element('div', '', 'kiosk-story-copy');
+    viewport.setAttribute('aria-live', 'polite');
+    viewport.setAttribute('aria-atomic', 'true');
+    content.append(viewport);
     if (state.stage === 'story') {
       const jump = button(text().jumpAds, () => move('ads'));
       jump.className = 'kiosk-coworker-jump';
@@ -582,7 +618,8 @@ export default async function decorate(block) {
       );
     }
     panel.append(content);
-    if (!config.coworker.packaged) heading.focus();
+    updateStoryCopy(state.stage === 'story' ? currentStoryBeat : currentContinuedBeat, false);
+    if (!config.coworker.packaged) content.querySelector('h2').focus();
     if (!config.coworker.enabled) {
       panel.append(element('p', text().unavailable, 'kiosk-coworker-unavailable'));
     } else {
@@ -635,6 +672,7 @@ export default async function decorate(block) {
         }
         await api.select(state, signal);
         if (!signal.aborted) {
+          currentContinuedBeat = 'simulate';
           persist({ ...state, stage: 'continued' });
           notifyCoworker();
           frameSlot.hidden = !frame;
@@ -649,37 +687,62 @@ export default async function decorate(block) {
       }
     }, !state.selectedAdId);
     next.className = 'kiosk-primary-action kiosk-composer-send';
-    const sendIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    sendIcon.setAttribute('viewBox', '0 0 24 24');
+    const sendIcon = element('span', '', 'kiosk-composer-icon kiosk-composer-send-icon');
     sendIcon.setAttribute('aria-hidden', 'true');
-    sendIcon.setAttribute('focusable', 'false');
-    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    arrow.setAttribute('d', 'M6 12 12 6 18 12 M12 6V18');
-    sendIcon.append(arrow);
     next.replaceChildren(sendIcon);
     next.setAttribute('aria-label', text().simulateAudience);
     const dock = element('div', '', 'kiosk-composer');
     const halo = element('div', '', 'kiosk-composer-halo');
     const card = element('div', '', 'kiosk-composer-card');
-    const row = element('div', '', 'kiosk-composer-text-row');
+    const content = element('div', '', 'kiosk-composer-content');
     const attachment = element('div', '', 'kiosk-composer-attachment');
+    const row = element('div', '', 'kiosk-composer-text-row');
+    const aiIcon = picture('/blocks/attendee-kiosk/assets/prompt-field/ai-icon.svg', '');
+    aiIcon.className = 'kiosk-composer-ai';
+    aiIcon.loading = 'eager';
     const prompt = element('div', text().selectAudienceAd, 'kiosk-composer-text');
     prompt.setAttribute('aria-live', 'polite');
-    row.append(attachment, prompt);
+    row.append(aiIcon, prompt);
+    content.append(attachment, row);
     const icons = element('div', '', 'kiosk-composer-icons');
-    const add = element('span', '+', 'kiosk-composer-add');
+    const add = element('span', '', 'kiosk-composer-add');
     add.setAttribute('aria-hidden', 'true');
+    add.append(element('span', '', 'kiosk-composer-icon kiosk-composer-add-icon'));
     icons.append(add, next);
-    card.append(row, icons);
+    card.append(content, icons);
     halo.append(card);
     const disclaimer = element('p', text().verifyResponses, 'kiosk-composer-disclaimer');
     dock.append(halo, disclaimer);
     panel.append(dock);
-    const updateDock = () => {
+    let updateDock;
+    const deselect = () => {
+      try {
+        if (state.printRequest) throw new Error(text().selectionLocked);
+        persist({ ...state, selectedAdId: null });
+        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((tile) => {
+          tile.setAttribute('aria-pressed', 'false');
+        });
+        next.disabled = true;
+        updateDock();
+      } catch (error) { fail(error); }
+    };
+    updateDock = () => {
       const selected = manifest.ads.find((ad) => ad.id === state.selectedAdId);
       attachment.replaceChildren();
       if (selected) {
-        attachment.append(picture(selected.thumbnailUrl || selected.url, selected.label));
+        const thumbnail = element('div', '', 'kiosk-composer-thumbnail');
+        const border = picture('/blocks/attendee-kiosk/assets/prompt-field/thumbnail-border.svg', '');
+        border.className = 'kiosk-composer-thumbnail-border';
+        const image = picture(selected.thumbnailUrl || selected.url, selected.label);
+        image.className = 'kiosk-composer-thumbnail-image';
+        thumbnail.append(image, border);
+        const remove = button('', deselect);
+        remove.className = 'kiosk-composer-remove';
+        remove.setAttribute('aria-label', text().removeSelectedAd);
+        const removeIcon = picture('/blocks/attendee-kiosk/assets/prompt-field/close.svg', '');
+        removeIcon.className = 'kiosk-composer-remove-icon';
+        remove.append(removeIcon);
+        attachment.append(thumbnail, remove);
       }
       dock.classList.toggle('has-selection', !!selected);
       prompt.textContent = selected ? text().audiencePrompt : text().selectAudienceAd;
@@ -711,6 +774,94 @@ export default async function decorate(block) {
     }, 'kiosk-ad-grid');
     updateDock();
   }
+  function graphInterstitial() {
+    panel.className = 'kiosk-panel kiosk-panel-ads kiosk-graph-interstitial';
+    ads();
+    const { signal } = controller;
+    const copyPane = panel.querySelector('.kiosk-ad-copy');
+    const selectionCopy = element('div', '', 'kiosk-ad-selection-copy');
+    selectionCopy.append(...copyPane.childNodes);
+    const introCopy = element('div', '', 'kiosk-ad-intro-copy');
+    const introHeading = element('h2', text().graphReturnHeading);
+    introHeading.tabIndex = -1;
+    introCopy.append(introHeading, element('p', text().graphReturnSub));
+    copyPane.classList.add('kiosk-ad-copy-viewport');
+    copyPane.append(introCopy, selectionCopy);
+    introHeading.focus({ preventScroll: true });
+    const grid = panel.querySelector('.kiosk-ad-grid');
+    const dock = panel.querySelector('.kiosk-composer');
+    grid.inert = true;
+    grid.style.visibility = 'hidden';
+    selectionCopy.hidden = true;
+    if (dock) { dock.style.visibility = 'hidden'; dock.inert = true; }
+    const media = element('div', '', 'kiosk-graph-video-slot');
+    const mediaArea = element('div', '', 'kiosk-graph-media');
+    grid.before(mediaArea);
+    mediaArea.append(grid, media);
+    const video = element('video', '', 'kiosk-graph-video');
+    video.src = '/blocks/attendee-kiosk/assets/graph-return.mp4';
+    video.poster = '/blocks/attendee-kiosk/assets/graph-return-poster.jpg';
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.setAttribute('aria-label', text().playGraphVideo);
+    const status = element('div', '', 'kiosk-graph-video-status');
+    status.setAttribute('role', 'status');
+    media.append(video, status);
+    let finished = false;
+    const reveal = () => {
+      if (finished || signal.aborted) return;
+      try { persist({ ...state, stage: 'ads' }); } catch (error) { fail(error); return; }
+      finished = true;
+      video.pause();
+      selectionCopy.hidden = false;
+      grid.style.visibility = '';
+      grid.inert = false;
+      if (dock) { dock.style.visibility = ''; dock.inert = false; }
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduced) {
+        const timing = { duration: 450, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
+        introCopy.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-100%)', opacity: 0 }], timing);
+        selectionCopy.animate([{ transform: 'translateY(100%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], timing);
+        grid.animate([{ opacity: 0 }, { opacity: 1 }], timing);
+        const exit = media.animate([{ opacity: 1 }, { opacity: 0 }], timing);
+        exit.onfinish = () => { media.remove(); introCopy.remove(); };
+      } else {
+        media.remove();
+        introCopy.remove();
+      }
+      introCopy.setAttribute('aria-hidden', 'true');
+      selectionCopy.querySelector('h2').focus({ preventScroll: true });
+    };
+    let play;
+    function failed() {
+      if (finished || signal.aborted) return;
+      status.replaceChildren(
+        element('p', text().graphVideoFailed),
+        button(text().retry, () => { video.load(); play(); }),
+        button(text().continueToAds, reveal),
+      );
+    }
+    play = () => {
+      status.replaceChildren();
+      video.play().catch((error) => {
+        if (signal.aborted || finished || error.name === 'AbortError') return;
+        status.replaceChildren(button(text().playGraphVideo, () => {
+          video.play().then(() => status.replaceChildren()).catch(failed);
+        }), button(text().continueToAds, reveal));
+      });
+    };
+    video.addEventListener('ended', reveal, { once: true, signal });
+    video.addEventListener('error', failed, { signal });
+    signal.addEventListener('abort', () => {
+      finished = true;
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }, { once: true });
+    play();
+  }
   function banners() {
     title(text().banners, text().bannersSub);
     cards(manifest.ads.filter((ad) => ad.id === state.selectedAdId));
@@ -724,45 +875,79 @@ export default async function decorate(block) {
     panel.append(element('p', text().endings), button(text().refresh, () => render()));
   }
   async function ending(signal, currentEpoch) {
-    if (!panel.children.length) title(text().thankYou, text().printWaiting);
+    if (!panel.children.length) title(text().thankYou, text().printPreparing);
     if (!state.printRequest || !api.printStatus) {
+      title(text().thankYou, text().printPickup);
       panel.append(element('p', text().unavailable));
       return;
     }
     const request = state.printRequest;
     const result = await api.printStatus(request, signal);
     if (signal.aborted || epoch !== currentEpoch) return;
+    const previousMedia = panel.querySelector('.kiosk-ending-media');
+    const firstRender = !previousMedia;
     panel.replaceChildren();
     const content = element('div', '', 'kiosk-ending-copy');
-    const media = element('div', '', 'kiosk-ending-media');
+    const media = previousMedia || element('div', '', 'kiosk-ending-media');
     content.append(element('h2', text().thankYou));
     const ready = result?.render.status === 'ready';
     const submitted = result?.fulfillment.status === 'submitted';
     const failed = ['failed', 'error'].includes(result?.render.status)
       || result?.fulfillment.status === 'failed';
-    content.append(element('p', failed ? text().printFailed
-      : text()[submitted ? 'printPickup' : 'printWaiting']));
+    const status = element('p', text().printPickup);
+    content.append(status);
+    let bar = media.querySelector('.kiosk-print-status');
+    if (!bar) {
+      bar = element('div', '', 'kiosk-print-status');
+      bar.setAttribute('role', 'status');
+      bar.setAttribute('aria-live', 'polite');
+      media.append(bar, element('div', '', 'kiosk-print-slot'));
+    }
+    const slot = media.querySelector('.kiosk-print-slot');
+    bar.setAttribute('role', 'status');
+    const setPrintStatus = (value, complete = false) => {
+      bar.textContent = value;
+      bar.classList.toggle('kiosk-print-status-ready', complete);
+    };
+    if (failed) setPrintStatus(text().printFailed);
+    else if (slot.querySelector('img')?.naturalWidth > 0) {
+      setPrintStatus(text().printTakeHome, true);
+    } else setPrintStatus(text().printPreparing);
     const selected = result?.render.brands?.[request.selectedBrand];
-    if (selected?.status === 'ready') {
+    if (selected?.status === 'ready' && media.dataset.preview !== selected.blob) {
       const previewURL = blobURL(api.settings().containerSAS, selected.blob);
       const preview = picture(previewURL, text().printPreview);
       preview.className = 'kiosk-print-preview';
-      media.append(preview);
-    }
-    if (request.showFinalQR && result?.share?.downloadPageUrl && result.share.qrBlob) {
-      const qrURL = blobURL(api.settings().containerSAS, result.share.qrBlob);
-      const qr = picture(qrURL, text().scanQR);
-      qr.className = 'kiosk-share-qr';
-      const link = element('a', '', 'kiosk-qr-link');
-      link.setAttribute('aria-label', text().scanQR);
-      link.href = result.share.downloadPageUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.referrerPolicy = 'no-referrer';
-      link.append(qr);
-      media.append(link);
-    } else if (request.showFinalQR && !failed) {
-      content.append(element('p', text().shareWaiting));
+      preview.loading = 'eager';
+      media.dataset.preview = selected.blob;
+      preview.style.opacity = '0';
+      let revealed = false;
+      const reveal = () => {
+        if (revealed || signal.aborted || !preview.isConnected) return;
+        revealed = true;
+        preview.style.opacity = '';
+        if (!failed) setPrintStatus(text().printTakeHome, true);
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const animation = preview.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }] : [
+          { transform: 'translateY(-100%)', opacity: 0.25 },
+          { transform: 'translateY(0)', opacity: 1 },
+        ], {
+          duration: reduced ? 180 : 1500,
+          delay: reduced || !firstRender ? 0 : 350,
+          fill: 'backwards',
+          easing: 'cubic-bezier(0.22, 0.75, 0.2, 1)',
+        });
+        signal.addEventListener('abort', () => animation.cancel(), { once: true });
+      };
+      preview.addEventListener('load', reveal, { once: true, signal });
+      preview.addEventListener('error', () => {
+        preview.hidden = true;
+        delete media.dataset.preview;
+        setPrintStatus(text().printPreviewFailed);
+        bar.setAttribute('role', 'alert');
+      }, { once: true, signal });
+      slot.replaceChildren(preview);
+      if (preview.complete && preview.naturalWidth > 0) queueMicrotask(reveal);
     }
     if (!failed && (!ready || !submitted)) {
       timer = setTimeout(() => {
@@ -774,15 +959,30 @@ export default async function decorate(block) {
       }, 5000);
     }
     const actions = element('div', '', 'kiosk-ending-actions');
-    const exit = button(text().exit, reset);
+    const startOver = button(text().startOver, reset);
     const refresh = button(text().refreshShort, () => render());
     refresh.className = 'kiosk-ending-refresh';
-    actions.append(refresh, exit);
+    actions.append(startOver, refresh);
     content.append(actions);
     panel.append(content, media);
+    if (firstRender) {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      [content.querySelector('h2'), status, bar].forEach((node, index) => {
+        const animation = node.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }] : [
+          { opacity: 0, transform: 'translateY(24px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ], { duration: reduced ? 180 : 900, delay: reduced ? 0 : 150 + (index % 2) * 100, fill: 'backwards' });
+        signal.addEventListener('abort', () => animation.cancel(), { once: true });
+      });
+      const animation = actions.animate([{ opacity: 0 }, { opacity: 1 }], {
+        duration: reduced ? 180 : 500,
+        delay: reduced ? 0 : 1100,
+        fill: 'backwards',
+      });
+      signal.addEventListener('abort', () => animation.cancel(), { once: true });
+    }
   }
   render = async () => {
-    if (state.stage === 'pacing') persist({ ...state, stage: 'ads' });
     if (state.stage !== 'continued') cancelEngulf();
     epoch += 1;
     const currentEpoch = epoch;
@@ -806,8 +1006,38 @@ export default async function decorate(block) {
     try {
       if (snapshot.stage === 'welcome') { preparePanel(); welcome(); return; }
       if (snapshot.stage === 'ending') {
+        let outgoing;
+        if (panel.classList.contains('kiosk-panel-variations')) {
+          outgoing = panel.cloneNode(true);
+          outgoing.classList.add('kiosk-ending-outgoing');
+          outgoing.inert = true;
+          outgoing.setAttribute('aria-hidden', 'true');
+          outgoing.style.zIndex = '3';
+          outgoing.style.pointerEvents = 'none';
+          outgoing.style.position = 'absolute';
+          block.append(outgoing);
+          signal.addEventListener('abort', () => outgoing.remove(), { once: true });
+        }
         preparePanel();
-        await ending(signal, currentEpoch);
+        try {
+          await ending(signal, currentEpoch);
+        } catch (error) {
+          outgoing?.remove();
+          throw error;
+        }
+        if (outgoing) {
+          if (signal.aborted) { outgoing.remove(); return; }
+          const animation = outgoing.animate([
+            { opacity: 1, transform: 'translateY(0)' },
+            { opacity: 0, transform: 'translateY(-28px)' },
+          ], {
+            duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 180 : 900,
+            easing: 'ease-in-out',
+            fill: 'forwards',
+          });
+          animation.finished.then(() => outgoing.remove(), () => outgoing.remove());
+          signal.addEventListener('abort', () => animation.cancel(), { once: true });
+        }
         return;
       }
       panel.inert = true;
@@ -881,25 +1111,122 @@ export default async function decorate(block) {
       if (signal.aborted || epoch !== currentEpoch) return;
       portrait = assets.selectedPortrait;
       manifest = assets.selectedManifest;
+      const revealVariations = snapshot.stage === 'variations'
+        && panel.classList.contains('kiosk-panel-continued') && !frameSlot.hidden;
+      let initialResults;
+      let finishRevealSetup = () => {};
+      if (revealVariations) {
+        if (api.bannerResults && !snapshot.portraitId.startsWith('demo_')) {
+          initialResults = await api.bannerResults(snapshot.portraitId, signal);
+        }
+        let previews = manifest.banners.length ? manifest.banners : [];
+        if (snapshot.portraitId.startsWith('demo_') && !previews.length) previews = sampleVariations();
+        if (initialResults) {
+          previews = initialResults.assets.filter((asset) => (
+            asset.status === 'ready' && asset.mimeType?.startsWith('image/')
+          ));
+        }
+        await Promise.all(previews.slice(0, 6).map((asset) => new Promise((resolve) => {
+          const image = new Image();
+          let timeout;
+          const done = () => {
+            clearTimeout(timeout);
+            signal.removeEventListener('abort', done);
+            image.onload = null;
+            image.onerror = null;
+            resolve();
+          };
+          timeout = setTimeout(done, 2000);
+          signal.addEventListener('abort', done, { once: true });
+          image.onload = done;
+          image.onerror = done;
+          image.referrerPolicy = 'no-referrer';
+          image.src = asset.url;
+        })));
+        if (signal.aborted || epoch !== currentEpoch) return;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const outgoingCopy = panel.cloneNode(true);
+        outgoingCopy.setAttribute('aria-hidden', 'true');
+        outgoingCopy.inert = true;
+        outgoingCopy.removeAttribute('aria-busy');
+        outgoingCopy.style.zIndex = '3';
+        outgoingCopy.style.pointerEvents = 'none';
+        block.append(outgoingCopy);
+        frameSlot.style.zIndex = '3';
+        frameSlot.style.pointerEvents = 'none';
+        const outgoing = [
+          frameSlot.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }] : [
+            { opacity: 1, transform: 'scale(1)' },
+            { opacity: 0.7, transform: 'scale(0.99) translateY(-4px)', offset: 0.35 },
+            { opacity: 0, transform: 'scale(0.975) translateY(-12px)' },
+          ], { duration: reduced ? 180 : 1000, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }),
+          outgoingCopy.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }] : [
+            { opacity: 1, transform: 'translateY(0)' },
+            { opacity: 0, transform: 'translateY(-24px)' },
+          ], { duration: reduced ? 180 : 650, easing: 'ease-in-out', fill: 'forwards' }),
+        ];
+        const cancel = () => {
+          frameSlot.hidden = true;
+          frameSlot.style.zIndex = '';
+          frameSlot.style.pointerEvents = '';
+          outgoingCopy.remove();
+          outgoing.forEach((animation) => animation.cancel());
+          signal.removeEventListener('abort', cancel);
+        };
+        signal.addEventListener('abort', cancel, { once: true });
+        finishRevealSetup = () => {
+          frameSlot.hidden = false;
+          Promise.all(outgoing.map((animation) => animation.finished)).then(cancel, (error) => {
+            if (error.name !== 'AbortError') {
+              cancel();
+              if (!signal.aborted && epoch === currentEpoch) fail(error);
+            }
+          });
+        };
+      }
       preparePanel();
+      finishRevealSetup();
       if (snapshot.stage === 'name') nameEntry();
       if (['story', 'continued'].includes(snapshot.stage)) story();
       if (['story', 'continued'].includes(snapshot.stage)) loadGraphPortrait(signal, currentEpoch);
       if (snapshot.stage === 'graph') graph();
+      if (snapshot.stage === 'pacing') graphInterstitial();
       if (snapshot.stage === 'ads') ads();
       if (snapshot.stage === 'banners') banners();
       if (snapshot.stage === 'variations') {
         const sample = snapshot.portraitId.startsWith('demo_') && !manifest.banners.length;
+        let variationAssets = sample ? sampleVariations() : manifest.banners;
+        if (initialResults) {
+          variationAssets = initialResults.assets.filter((asset) => (
+            asset.status === 'ready' && asset.mimeType?.startsWith('image/')
+          ));
+        }
         renderVariations({
           panel,
           block,
-          assets: sample ? sampleVariations() : manifest.banners,
+          assets: variationAssets,
           sample,
           loadResults: api.bannerResults && !snapshot.portraitId.startsWith('demo_')
-            ? () => api.bannerResults(snapshot.portraitId, signal) : null,
+            ? () => {
+              if (initialResults) {
+                const result = initialResults;
+                initialResults = null;
+                return Promise.resolve(result);
+              }
+              return api.bannerResults(snapshot.portraitId, signal);
+            } : null,
           text: text(),
           signal,
           workflow: config.productionWorkflow,
+          portraitId: snapshot.portraitId,
+          loadWorkflowPortrait: async (workflowSignal) => {
+            if (snapshot.portraitId.startsWith('demo_')) {
+              return new URL(portrait.thumbnailUrl, window.location.origin).href;
+            }
+            const result = await api.graphInput(snapshot.portraitId, workflowSignal);
+            return result.status === 'ready' ? result.url : null;
+          },
+          animateEntrance: revealVariations,
           onFinish: state.printRequest ? () => move('ending') : null,
         });
       }
@@ -912,6 +1239,11 @@ export default async function decorate(block) {
     if (coworkerReady(event, frame?.contentWindow, config.coworker)) {
       readyFrames.add(frame);
       notifyCoworker();
+      return;
+    }
+    const beat = storyBeat(event, frame?.contentWindow, config.coworker, state.stage);
+    if (beat) {
+      updateStoryCopy(beat);
       return;
     }
     const stage = navigation(event, frame?.contentWindow, config.coworker, state.stage);

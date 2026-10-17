@@ -20,6 +20,8 @@ function buildLinks() {
         target="_blank" rel="noopener">Content Supply Chain</a></li>
       <li><a href="https://business.adobe.com/products/firefly-business.html"
         target="_blank" rel="noopener">Adobe Firefly for Business</a></li>
+      <li><a href="https://business.adobe.com/blog/enterprise-creatives-work-smarter-with-cx-enterprise-coworker"
+        target="_blank" rel="noopener">Work smarter with CX Enterprise Coworker</a></li>
     </ul>
   `;
   return links;
@@ -68,10 +70,7 @@ async function renderSession(block, sessionUrl, name) {
     btn.target = '_blank';
     btn.rel = 'noopener';
     btn.referrerPolicy = 'no-referrer';
-    const btnImg = document.createElement('img');
-    btnImg.src = '/blocks/download/download-icon.png';
-    btnImg.alt = 'Download & Share';
-    btn.append(btnImg);
+    btn.textContent = 'Download';
 
     card.append(img, btn);
     gallery.append(card);

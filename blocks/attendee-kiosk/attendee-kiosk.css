@@ -45,8 +45,8 @@
 .attendee-kiosk .kiosk-ending-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 32px;
+  gap: 12px;
+  margin-top: 50px;
 }
 
 .attendee-kiosk .kiosk-ending-media {
@@ -54,40 +54,65 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  min-width: 0;
+}
+
+.attendee-kiosk .kiosk-print-status {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 100px;
+  padding: 24px 28px 34px;
+  border: 1px solid rgb(0 0 0 / 20%);
+  border-radius: 24px 24px 16px 16px;
+  background: rgb(255 255 255 / 50%);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 12%);
+  backdrop-filter: blur(21px);
+  color: #2c2c2c;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.attendee-kiosk .kiosk-print-status::after {
+  position: absolute;
+  right: 28px;
+  bottom: 20px;
+  left: 28px;
+  height: 4px;
+  border-radius: 4px;
+  background: #9450dc;
+  content: '';
+}
+
+.attendee-kiosk .kiosk-print-status-ready::after {
+  background: #25854a;
+}
+
+.attendee-kiosk .kiosk-print-slot {
+  width: 100%;
+  aspect-ratio: 961 / 646.226;
+  overflow: hidden;
 }
 
 .attendee-kiosk .kiosk-print-preview {
   display: block;
   width: 100%;
-  max-width: 600px;
-  max-height: 42vh;
-  object-fit: contain;
-}
-
-.attendee-kiosk .kiosk-qr-link,
-.attendee-kiosk .kiosk-qr-link:hover {
-  display: block;
-  min-height: 0;
-  padding: 0;
-  border-radius: 0;
-  background: none;
-  line-height: 0;
-}
-
-.attendee-kiosk .kiosk-share-qr {
-  width: min(280px, 60vw);
   height: auto;
-  background: #fff;
+  max-height: 646px;
+  object-fit: contain;
+  filter: drop-shadow(0 17px 49px rgb(0 0 0 / 9%));
 }
 
 @media (width >= 900px) {
   .attendee-kiosk .kiosk-panel.kiosk-panel-ending {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 615fr) minmax(0, 961fr);
     align-items: center;
-    gap: 64px;
-    padding: 150px 70px 80px;
+    gap: 82px;
+    padding: 0 174px 0 88px;
   }
 }
 
@@ -562,11 +587,11 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-panel-ads {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 800px;
-  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr) min(920px, calc(100vh - 160px));
+  grid-template-rows: 1fr auto auto 1fr;
   align-content: center;
   align-items: center;
-  gap: 0 80px;
+  gap: 0 64px;
   padding: 2% 4%;
 }
 
@@ -578,11 +603,12 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-ad-copy {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
 }
 
 .attendee-kiosk .kiosk-ad-copy h2 {
   max-width: 560px;
+  outline: none;
   font-size: 88px;
   letter-spacing: -1.5px;
   line-height: 0.96;
@@ -592,6 +618,67 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   max-width: 440px;
   margin-bottom: 0;
   font-size: 26px;
+}
+
+.attendee-kiosk .kiosk-ad-copy-viewport {
+  display: grid;
+  overflow: clip;
+}
+
+.attendee-kiosk .kiosk-ad-intro-copy,
+.attendee-kiosk .kiosk-ad-selection-copy {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.attendee-kiosk .kiosk-ad-intro-copy h2 {
+  font-size: clamp(40px, 3.6vw, 68px);
+  white-space: pre-line;
+}
+
+.attendee-kiosk .kiosk-ad-intro-copy p,
+.attendee-kiosk .kiosk-ad-selection-copy p {
+  max-width: 440px;
+  margin-bottom: 0;
+  font-size: 26px;
+}
+
+.attendee-kiosk .kiosk-graph-video-slot {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.attendee-kiosk .kiosk-graph-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  grid-column: 2;
+  grid-row: 1 / -1;
+}
+
+.attendee-kiosk .kiosk-graph-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.attendee-kiosk .kiosk-graph-video-status {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+}
+
+.attendee-kiosk .kiosk-graph-video-status:not(:empty) {
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
 }
 
 .attendee-kiosk .kiosk-ad-copy .kiosk-primary-action {
@@ -699,18 +786,12 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   box-shadow: 0 0 0 4px rgb(92 92 224 / 18%);
 }
 
-.attendee-kiosk .kiosk-variation img {
+.attendee-kiosk .kiosk-variation img,
+.attendee-kiosk .kiosk-variation-repeat img {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 380px;
   object-fit: contain;
-}
-
-.attendee-kiosk .kiosk-composer-attachment img {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
 }
 
 .attendee-kiosk .kiosk-engulf-ghost img {
@@ -1309,13 +1390,42 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-copy h2 {
   margin-bottom: 24px;
-  font-size: 60px;
+  font-size: 80px;
   line-height: 1;
 }
 
-.attendee-kiosk .kiosk-panel-story .kiosk-coworker-copy h2 {
-  font-size: 46px;
-  white-space: nowrap;
+.attendee-kiosk .kiosk-story-copy {
+  display: grid;
+  min-height: 330px;
+  align-items: center;
+  overflow: clip;
+}
+
+.attendee-kiosk .kiosk-story-text {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.attendee-kiosk .kiosk-variations-intro {
+  animation: kiosk-copy-enter 450ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes kiosk-copy-enter {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendee-kiosk .kiosk-variations-intro {
+    animation: none;
+  }
 }
 
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-jump,
@@ -1482,64 +1592,147 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-composer {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
   cursor: pointer;
   transition: opacity 460ms ease, transform 460ms ease;
 }
 
 .attendee-kiosk .kiosk-composer-halo {
-  padding: 6px;
+  position: relative;
+  border-radius: 24px;
+}
+
+.attendee-kiosk .kiosk-composer-halo::before,
+.attendee-kiosk .kiosk-composer-halo::after {
+  position: absolute;
   border-radius: 30px;
-  background: linear-gradient(to right, rgb(201 162 78 / 50%), rgb(201 162 78 / 26%), rgb(201 162 78 / 50%));
-  box-shadow: 0 2px 4px rgb(0 0 0 / 12%), 0 6px 16px -10px rgb(201 162 78 / 45%);
+  content: "";
+}
+
+.attendee-kiosk .kiosk-composer-halo::before {
+  inset: 6px -7px -6px -6px;
+  background: linear-gradient(to right, rgb(236 105 255 / 60%), rgb(255 81 61 / 50%) 37.316%, rgb(255 162 35 / 40%) 76.741%);
+  filter: blur(8px);
+  opacity: 0.32;
+}
+
+.attendee-kiosk .kiosk-composer-halo::after {
+  inset: -6px;
+  background: linear-gradient(to top, rgb(255 255 255 / 48%), #fff);
+  box-shadow: 0 2px 4px rgb(236 105 255 / 10%);
+  backdrop-filter: blur(4px);
 }
 
 .attendee-kiosk .kiosk-composer-card {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 16px 12px;
-  border-radius: 26px;
+  gap: 24px;
+  padding: 16px;
+  border: 1px solid rgb(236 105 255 / 10%);
+  border-radius: 24px;
   background:
-    linear-gradient(to bottom, rgb(255 255 255 / 80%) 0% 37%, rgb(255 255 255 / 20%) 83% 100%),
-    radial-gradient(70% 60% at 40% 100%, rgb(201 162 78 / 22%), transparent 70%), #fbf8f2;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 7%), inset 0 6px 15px rgb(255 255 255 / 60%),
-    0 -3px 10px 1px rgb(201 162 78 / 6%);
+    linear-gradient(to bottom, rgb(255 255 255 / 40%) 37.305%, rgb(255 255 255 / 13%) 83.398%),
+    radial-gradient(120% 340% at 100% 100%, rgb(235 238 255 / 16%) 0%, rgb(250 211 255 / 16%) 34.964%, rgb(255 235 232 / 16%) 81.972%, rgb(255 236 207 / 16%) 100%),
+    rgb(255 255 255 / 80%);
+  box-shadow:
+    0 -3px 10px 1px rgb(236 105 255 / 5%),
+    inset 0 6px 15px rgb(255 255 255 / 4%),
+    inset 0 -5px 21.6px rgb(255 255 255 / 4%),
+    inset 0 24px 32px rgb(255 255 255 / 4%);
 }
 
-.attendee-kiosk .kiosk-composer-text-row {
+.attendee-kiosk .kiosk-composer-content {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
+  flex-direction: column;
+  gap: 16px;
+  padding-left: 6px;
 }
 
 .attendee-kiosk .kiosk-composer-attachment {
+  position: relative;
   display: none;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #f5f5f5;
+  align-self: flex-start;
+  padding-top: 7px;
 }
 
 .attendee-kiosk .kiosk-composer.has-selection .kiosk-composer-attachment {
   display: flex;
 }
 
+.attendee-kiosk .kiosk-composer-thumbnail {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.attendee-kiosk .kiosk-composer-thumbnail -image {
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.attendee-kiosk .kiosk-composer-thumbnail-border {
+  position: absolute;
+  inset: 0;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-remove {
+  position: absolute;
+  top: 1px;
+  right: -6px;
+  display: flex;
+  width: 20px;
+  min-width: 0;
+  height: 20px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 12px;
+  background: #e1e1e1;
+  backdrop-filter: blur(5px);
+  cursor: pointer;
+}
+
+.attendee-kiosk .kiosk-composer-remove-icon {
+  width: 8px;
+  height: 8px;
+}
+
+.attendee-kiosk .kiosk-composer-text-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.attendee-kiosk .kiosk-composer-ai {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
 .attendee-kiosk .kiosk-composer-text {
   flex: 1;
   min-width: 0;
+  min-height: 21px;
   overflow: hidden;
-  color: #8e8e8e;
-  font-size: 18px;
+  color: rgb(0 0 0 / 56%);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .attendee-kiosk .kiosk-composer.has-selection .kiosk-composer-text {
-  color: #1a1a1a;
+  color: rgb(0 0 0 / 80%);
 }
 
 .attendee-kiosk .kiosk-composer-icons {
@@ -1554,21 +1747,37 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   height: 32px;
   align-items: center;
   justify-content: center;
-  opacity: 0.65;
-  font-size: 26px;
+  border-radius: 8px;
+}
+
+.attendee-kiosk .kiosk-composer-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: 18px 18px;
+}
+
+.attendee-kiosk .kiosk-composer-add-icon {
+  background: rgb(0 0 0 / 80%);
+  mask-image: url("/blocks/attendee-kiosk/assets/prompt-field/add.svg");
 }
 
 .attendee-kiosk .kiosk-composer .kiosk-composer-send {
   display: flex;
   flex-shrink: 0;
-  width: 36px;
-  min-height: 36px;
-  height: 36px;
+  width: 32px;
+  min-width: 0;
+  height: 32px;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
   margin: 0;
-  padding: 0;
-  border-radius: 50%;
-  background: #1a1a1a;
-  font-size: 24px;
+  padding: 7px;
+  border: 0;
+  border-radius: 20px;
+  background: rgb(0 0 0 / 80%);
   transition: background 200ms ease, transform 100ms ease;
 }
 
@@ -1576,21 +1785,18 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   background: #000;
 }
 
-.attendee-kiosk .kiosk-composer-send svg {
-  display: block;
-  width: 24px;
-  height: 24px;
-  fill: none;
-  stroke: currentcolor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.attendee-kiosk .kiosk-composer-send-icon {
+  background: #fff;
+  mask-image: url("/blocks/attendee-kiosk/assets/prompt-field/send.svg");
 }
 
 .attendee-kiosk .kiosk-composer .kiosk-composer-send:disabled {
-  background: #d3d3d3;
-  color: #fff;
+  background: rgb(0 0 0 / 4%);
   cursor: not-allowed;
+}
+
+.attendee-kiosk .kiosk-composer .kiosk-composer-send:disabled .kiosk-composer-send-icon {
+  background: #c6c6c6;
 }
 
 .attendee-kiosk .kiosk-composer .kiosk-composer-send:active {
@@ -1599,11 +1805,24 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-composer .kiosk-composer-disclaimer {
   margin: 0;
-  color: #8a8a8a;
+  color: #717171;
   font-size: 12px;
   font-weight: 400;
   line-height: 16px;
   text-align: center;
+}
+
+.attendee-kiosk .kiosk-panel-ads .kiosk-ad-grid {
+  grid-column: 2;
+  grid-row: 1 / -1;
+}
+
+.attendee-kiosk .kiosk-panel-ads .kiosk-composer {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: start;
+  width: min(100%, 540px);
+  margin-top: 48px;
 }
 
 .attendee-kiosk .kiosk-panel.kiosk-engulf-overlay {
@@ -1663,19 +1882,6 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   to { opacity: 1; }
 }
 
-@media (width >= 900px) {
-  .attendee-kiosk .kiosk-panel-ads {
-    padding-bottom: 180px;
-  }
-
-  .attendee-kiosk .kiosk-composer {
-    position: absolute;
-    right: 4%;
-    bottom: 24px;
-    width: 896px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .attendee-kiosk .kiosk-composer,
   .attendee-kiosk .kiosk-composer .kiosk-composer-send {
@@ -1694,6 +1900,10 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   margin: 24px 0;
   font-size: 16px;
   line-height: 1.4;
+}
+
+.attendee-kiosk .kiosk-variations-status:empty {
+  display: none;
 }
 
 .attendee-kiosk .kiosk-variations-copy .kiosk-variations-status:not(:empty) {
@@ -1721,12 +1931,24 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 }
 
 .attendee-kiosk .kiosk-variations-grid {
-  columns: 2;
-  column-gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
   padding: 16px;
 }
 
-.attendee-kiosk .kiosk-variation {
+.attendee-kiosk .kiosk-variations-column {
+  min-width: 0;
+  overflow: clip;
+}
+
+.attendee-kiosk .kiosk-variations-sequence {
+  display: flow-root;
+}
+
+.attendee-kiosk .kiosk-variation,
+.attendee-kiosk .kiosk-variation-repeat {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1737,6 +1959,13 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   border-radius: 16px;
   background: rgb(255 255 255 / 75%);
   break-inside: avoid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attendee-kiosk .kiosk-variations-sequence[aria-hidden],
+  .attendee-kiosk .kiosk-variation-repeat {
+    display: none;
+  }
 }
 
 .attendee-kiosk .kiosk-variation-failed {
@@ -1812,6 +2041,15 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   padding: 24px;
 }
 
+.attendee-kiosk .kiosk-workflow-asset-status {
+  margin: 0 24px 16px;
+  font-size: 16px;
+}
+
+.attendee-kiosk .kiosk-workflow-asset-status:empty {
+  display: none;
+}
+
 @keyframes kiosk-workflow-enter {
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
@@ -1847,12 +2085,63 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   }
 
   .attendee-kiosk .kiosk-variations-grid {
-    columns: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .attendee-kiosk .kiosk-workflow-dialog[open] {
     animation: none;
+  }
+}
+
+.attendee-kiosk .kiosk-panel-ads .kiosk-graph-media .kiosk-ad-grid {
+  margin: 0;
+}
+
+.attendee-kiosk .kiosk-panel-ending .kiosk-ending-copy h2 {
+  margin-bottom: 40px;
+  color: #2c2c2c;
+  font-size: 96px;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.attendee-kiosk .kiosk-panel-ending .kiosk-ending-copy p {
+  margin: 0;
+  color: #2c2c2c;
+  font-size: 32px;
+  line-height: 1.2;
+  white-space: pre-line;
+}
+
+.attendee-kiosk .kiosk-ending-actions button:not(.kiosk-ending-refresh) {
+  min-height: 60px;
+  padding: 16px 30px;
+  background: #3b63fb;
+  font-size: 22px;
+}
+
+@media (width >= 900px) {
+  .attendee-kiosk .kiosk-ending-media {
+    min-height: 770px;
+  }
+
+  .attendee-kiosk .kiosk-print-status {
+    width: calc(100% + 100px);
+    min-height: 124px;
+    border-radius: 32px 32px 16px 16px;
+    font-size: 28px;
+  }
+}
+
+@media (width <= 800px) {
+  .attendee-kiosk .kiosk-panel-ending .kiosk-ending-copy h2 {
+    margin-bottom: 24px;
+    font-size: 56px;
+  }
+
+  .attendee-kiosk .kiosk-panel-ending .kiosk-ending-copy p {
+    font-size: 24px;
   }
 }

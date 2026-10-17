@@ -5,7 +5,7 @@ import {
 import { validateSettings } from '../scripts/kiosk-settings.js';
 import { initialState, validState } from '../blocks/attendee-kiosk/state.js';
 import { completedPortraits, markCompleted } from '../blocks/attendee-kiosk/completed.js';
-import { navigation } from '../blocks/attendee-kiosk/integrations.js';
+import { navigation, storyBeat } from '../blocks/attendee-kiosk/integrations.js';
 import { sampleVariations } from '../blocks/attendee-kiosk/variations.js';
 import { validateBannerManifest, readBannerManifest } from '../blocks/attendee-kiosk/banner-assets.js';
 import { validateGraphInput, readGraphInput, GRAPH_SOURCE_NODE } from '../blocks/attendee-kiosk/graph-input.js';
@@ -132,6 +132,30 @@ assert.equal(validateSettings({ ...settings, showCompletedPortraits: true }).sho
 assert.throws(() => validateSettings({ ...settings, showCompletedPortraits: 'true' }));
 const source = {};
 const integration = { enabled: true, origin: 'https://kiosk.example' };
+const beatEvent = {
+  source, origin: integration.origin,
+  data: { type: 'KIOSK_STORY_BEAT', beat: 'overview' },
+};
+for (const beat of ['home', 'overview', 'brief', 'performance', 'creative']) {
+  assert.equal(storyBeat({ ...beatEvent, data: { ...beatEvent.data, beat } }, source, integration, 'story'), beat);
+  assert.equal(storyBeat({ ...beatEvent, data: { ...beatEvent.data, beat } }, source, integration, 'continued'), null);
+}
+for (const beat of ['simulate', 'results']) {
+  const event = { ...beatEvent, data: { ...beatEvent.data, beat } };
+  assert.equal(storyBeat(event, source, integration, 'continued'), beat);
+  assert.equal(storyBeat(event, source, integration, 'story'), null);
+  assert.equal(storyBeat({ ...event, source: {} }, source, integration, 'continued'), null);
+  assert.equal(storyBeat({ ...event, origin: 'https://wrong.example' }, source, integration, 'continued'), null);
+}
+for (const stage of ['welcome', 'portraits', 'name', 'graph', 'ads', 'continued', 'variations', 'ending']) {
+  assert.equal(storyBeat(beatEvent, source, integration, stage), null);
+}
+assert.equal(storyBeat({ ...beatEvent, source: {} }, source, integration, 'story'), null);
+assert.equal(storyBeat({ ...beatEvent, origin: 'https://wrong.example' }, source, integration, 'story'), null);
+assert.equal(storyBeat(beatEvent, source, { ...integration, enabled: false }, 'story'), null);
+for (const data of [null, [], { type: 'KIOSK_STORY_BEAT', beat: 'unknown' }, { type: 'other', beat: 'overview' }]) {
+  assert.equal(storyBeat({ ...beatEvent, data }, source, integration, 'story'), null);
+}
 const variationsEvent = {
   source, origin: integration.origin,
   data: { type: 'KIOSK_NAV', target: 'view-variations-max' },
@@ -143,6 +167,25 @@ assert.equal(navigation({
 assert.equal(navigation(variationsEvent, source, integration, 'story'), null);
 assert.equal(navigation({ ...variationsEvent, source: {} }, source, integration, 'continued'), null);
 assert.equal(navigation({ ...variationsEvent, origin: 'https://wrong.example' }, source, integration, 'continued'), null);
+const selectEvent = {
+  ...variationsEvent, data: { type: 'KIOSK_NAV', target: 'view-select' },
+};
+for (const stage of ['story', 'continued']) {
+  assert.equal(navigation(selectEvent, source, integration, stage), 'ads');
+  assert.equal(navigation({ ...selectEvent, source: {} }, source, integration, stage), null);
+  assert.equal(navigation({ ...selectEvent, origin: 'https://wrong.example' }, source, integration, stage), null);
+  assert.equal(navigation(selectEvent, source, { ...integration, enabled: false }, stage), null);
+  const graphEvent = { ...selectEvent, data: { type: 'KIOSK_NAV', target: 'view-graph-return' } };
+  assert.equal(navigation(graphEvent, source, integration, stage), 'pacing');
+  assert.equal(navigation({ ...graphEvent, source: {} }, source, integration, stage), null);
+  assert.equal(navigation({ ...graphEvent, origin: 'https://wrong.example' }, source, integration, stage), null);
+}
+for (const stage of ['intake', 'portraits', 'name', 'graph', 'pacing', 'ads', 'banners', 'variations', 'ending']) {
+  assert.equal(navigation(selectEvent, source, integration, stage), null);
+  assert.equal(navigation({
+    ...selectEvent, data: { type: 'KIOSK_NAV', target: 'view-graph-return' },
+  }, source, integration, stage), null);
+}
 assert.equal(sampleVariations().length, 18);
 assert.equal(new Set(sampleVariations().map((item) => item.id)).size, 18);
 const state = {
