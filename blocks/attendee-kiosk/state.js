@@ -1,4 +1,4 @@
-import { PRINT_BRANDS, validRequest } from './fulfillment.js';
+import { PRINT_BRANDS, validRequest, validPreparation } from './fulfillment.js';
 
 export const STAGES = ['welcome', 'portraits', 'name', 'story', 'graph', 'pacing', 'ads', 'continued', 'banners', 'ending', 'variations'];
 export const ID_PATTERN = /^[a-zA-Z0-9_-]{1,128}$/;
@@ -14,6 +14,8 @@ export function initialState() {
     selectedAdId: null,
     sessionId: null,
     printRequest: null,
+    prepareRequest: null,
+    prepareSubmitted: false,
   };
 }
 
@@ -24,15 +26,27 @@ export function validState(state) {
   if (['portraitId', 'selectedAdId', 'sessionId'].some((key) => (
     state[key] !== null && (typeof state[key] !== 'string' || !ID_PATTERN.test(state[key]))
   ))) return false;
+  if (state.prepareSubmitted !== undefined && typeof state.prepareSubmitted !== 'boolean') return false;
+  if (state.prepareSubmitted && !state.prepareRequest) return false;
+  if (state.prepareRequest != null && (!validPreparation(state.prepareRequest)
+    || state.prepareRequest.portraitId !== state.portraitId
+    || state.prepareRequest.attendeeName !== state.name
+    || state.prepareRequest.lang !== state.language
+    || !state.sessionId)) return false;
   if (state.printRequest != null && (!validRequest(state.printRequest)
     || state.printRequest.portraitId !== state.portraitId
     || state.printRequest.attendeeName !== state.name
     || state.selectedAdId !== `${state.portraitId}_${PRINT_BRANDS.indexOf(state.printRequest.selectedBrand) + 1}`)) return false;
+  if (state.prepareRequest && state.printRequest && (
+    !state.prepareSubmitted || ['requestId', 'eventPrefix', 'portraitId', 'attendeeName', 'lang', 'createdAt']
+      .some((field) => state.prepareRequest[field] !== state.printRequest[field])
+  )) return false;
   const index = STAGES.indexOf(state.stage);
   return !(index > 0 && !state.consent)
     && !(index > 1 && !state.portraitId)
     && !(index > 2 && !state.name.trim())
     && !(index > 2 && !state.sessionId)
+    && !(index > 2 && state.prepareRequest && !state.prepareSubmitted)
     && !(index >= 7 && !state.selectedAdId);
 }
 

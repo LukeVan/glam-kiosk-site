@@ -2,11 +2,22 @@ import { blobURL } from '../../scripts/kiosk-settings.js';
 
 const STATUSES = ['pending', 'running', 'partial', 'ready', 'failed'];
 const ASSET_STATUSES = ['pending', 'ready', 'failed', 'unavailable'];
+export const BANNER_BRANDS = [
+  '1-larocheposay', '2-lorealprofessionnel', '3-YSLbeauty', '4-lorealparis',
+];
 
-export function validateBannerManifest(data, portraitId, settings) {
-  const prefix = `${settings.eventId}/8-Banner-Output/${portraitId}/`;
+export function bannerPrefix(portraitId, settings, brand) {
+  if (!/^azure_[a-f0-9]{64}$/.test(portraitId) || !BANNER_BRANDS.includes(brand)) {
+    throw new Error('Invalid banner portrait or brand identity.');
+  }
+  const root = `${settings.eventId}/8-Banner-Output/${portraitId}/`;
+  return brand === '4-lorealparis' ? root : `${root}${brand}/`;
+}
+
+export function validateBannerManifest(data, portraitId, settings, brand = '4-lorealparis') {
+  const prefix = bannerPrefix(portraitId, settings, brand);
   if (!data || data.schemaVersion !== 1 || data.portraitId !== portraitId
-    || data.brand !== '4-lorealparis' || !STATUSES.includes(data.status)
+    || data.brand !== brand || !STATUSES.includes(data.status)
     || !Array.isArray(data.assets) || data.assets.length > 100) {
     throw new Error('Invalid or mismatched banner manifest.');
   }
@@ -23,6 +34,9 @@ export function validateBannerManifest(data, portraitId, settings) {
     if (asset.status === 'ready') {
       if (!asset.mimeType || typeof asset.blob !== 'string' || !asset.blob.startsWith(prefix)
         || /[\\?#%]/.test(asset.blob)) throw new Error('Invalid banner asset path.');
+      if (brand === '4-lorealparis' && BANNER_BRANDS.some((item) => (
+        asset.blob.slice(prefix.length).startsWith(`${item}/`)
+      ))) throw new Error('Banner asset belongs to another brand.');
       const extension = {
         'application/pdf': /\.pdf$/i,
         'image/png': /\.png$/i,
@@ -42,8 +56,8 @@ export function validateBannerManifest(data, portraitId, settings) {
   return { status: data.status, assets };
 }
 
-export async function readBannerManifest(portraitId, settings, signal, fetcher = fetch) {
-  if (!/^azure_[a-f0-9]{64}$/.test(portraitId)) throw new Error('Invalid banner portrait identity.');
+export async function readBannerManifest(portraitId, settings, signal, fetcher = fetch, brand = '4-lorealparis') {
+  const prefix = bannerPrefix(portraitId, settings, brand);
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
@@ -52,14 +66,14 @@ export async function readBannerManifest(portraitId, settings, signal, fetcher =
   try {
     const url = blobURL(
       settings.containerSAS,
-      `${settings.eventId}/8-Banner-Output/${portraitId}/manifest.json`,
+      `${prefix}manifest.json`,
     );
     const response = await fetcher(url, {
       signal: controller.signal, cache: 'no-store', credentials: 'omit', redirect: 'error',
     });
     if (response.status === 404) return { status: 'unavailable', assets: [] };
     if (!response.ok) throw new Error(`Banner results unavailable (HTTP ${response.status}).`);
-    return validateBannerManifest(await response.json(), portraitId, settings);
+    return validateBannerManifest(await response.json(), portraitId, settings, brand);
   } catch (error) {
     if (controller.signal.aborted && !signal?.aborted) throw new Error('Banner results request timed out.');
     throw error;

@@ -25,7 +25,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
           render({
             block: document.querySelector('.attendee-kiosk'),
             panel: document.querySelector('.kiosk-panel'),
-            assets: Array.from({length:18}, (_,i) => ({
+            assets: Array.from({length:23}, (_,i) => ({
               id: 'asset_'+i, label: 'Ad '+i,
               url: '/mock-variation-'+i+'-'+formats[i%6].join('x')+'.svg',
             })),
@@ -41,7 +41,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       });
     });
     await page.goto('http://localhost:3017/drafts/variations-loop-test.html');
-    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18);
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 23);
+    assert.equal(await page.locator('.kiosk-variation img').evaluateAll((images) => (
+      new Set(images.map((image) => image.src)).size
+    )), 23);
     await page.waitForFunction(() => [...document.querySelectorAll('.kiosk-variation img')]
       .every((image) => image.complete && image.naturalWidth > 0));
     const viewport = page.locator('.kiosk-variations-viewport');
@@ -104,7 +107,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-variations-sequence[aria-hidden]').first().isVisible(), false);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForFunction(() => document.querySelectorAll('.kiosk-variations-track').length === 2);
-    assert.equal(await page.locator('.kiosk-variation').count(), 18);
+    assert.equal(await page.locator('.kiosk-variation').count(), 23);
     await page.evaluate(() => window.operation.abort());
     console.log('Variations: reordered columns, seamless seam, uncropped portrait, reduced motion and responsive layout passed.');
   } finally {

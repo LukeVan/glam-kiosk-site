@@ -162,7 +162,9 @@ export default function renderVariations({
       syncWorkflow();
       const previewUnavailable = result.assets.some((asset) => asset.status === 'unavailable');
       status.textContent = result.status === 'ready' ? '' : text[`banner_${result.status}`] || '';
-      if (previewUnavailable) status.textContent = text.bannerPreviewUnavailable;
+      if (previewUnavailable || (result.status === 'ready' && !images.length)) {
+        status.textContent = text.bannerPreviewUnavailable;
+      }
       if (!['ready', 'failed'].includes(result.status)) {
         pollTimer = setTimeout(refreshResults, 5000);
       }

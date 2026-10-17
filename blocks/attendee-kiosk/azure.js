@@ -1,9 +1,9 @@
 import {
   SETTINGS_KEY, loadSettings, listBlobs, blobURL,
 } from '../../scripts/kiosk-settings.js';
-import { readPrintStatus, submitPrintRequest } from './fulfillment.js';
+import { readPrintStatus, submitPrintRequest, submitPreparation } from './fulfillment.js';
 import { completedPortraits } from './completed.js';
-import { readBannerManifest } from './banner-assets.js';
+import { readBannerManifest, BANNER_BRANDS } from './banner-assets.js';
 import { readGraphInput } from './graph-input.js';
 
 const EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i;
@@ -81,11 +81,16 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     eventId: eventId || 'invalid-settings',
     intakeEnabled,
     settings,
+    async prepare(request, signal) {
+      await submitPreparation(request, settings(), signal, fetcher);
+    },
     async graphInput(id, signal) {
       return readGraphInput(id, settings(), signal, fetcher);
     },
-    async bannerResults(id, signal) {
-      return readBannerManifest(id, settings(), signal, fetcher);
+    async bannerResults(id, selectedAdId, signal) {
+      const brand = BANNER_BRANDS.find((item, index) => selectedAdId === `${id}_${index + 1}`);
+      if (!brand) throw new Error('Banner results require the selected portrait’s ad.');
+      return readBannerManifest(id, settings(), signal, fetcher, brand);
     },
     async printStatus(request, signal) {
       return readPrintStatus(request, settings(), signal, fetcher);

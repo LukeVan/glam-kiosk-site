@@ -15,6 +15,15 @@ Ready schema-version-1 manifests must match portrait ID, source node, and
 Only the configured account/container/exact blob with `sr=b`, `sp=r`,
 `spr=https`, matching active UTC expiry and at most seven days remaining is
 accepted. Container SAS is used only to read the manifest, never handed to Graph.
+For staff troubleshooting, `.kiosk-graph-input-status` exposes
+`data-graph-input-reason` and logs changes to fixed failure codes only: missing
+manifest, publisher cutout error, HTTP failure, invalid manifest/asset/access,
+expiry mismatch/invalidity, inactive access, or unreadable response. Signed URLs,
+credentials and attendee identities are never included in these diagnostics.
+Local HTTP previews give each new packaged Coworker iframe a random
+`kiosk-preview` query value so its HTML entry is reloaded after package updates.
+An already-open iframe retains its running JavaScript: reload the entire kiosk
+tab after syncing a package. Production HTTPS URLs are unchanged.
 
 The shell sends `KIOSK_SET_GRAPH_PORTRAIT` with selected `portraitId`, validated
 `url` and `expiresAt` (null URL when unavailable) to the exact Coworker origin.
@@ -30,7 +39,11 @@ activation userscript with it rather than running duplicate return controls.
 Its upload control selectors have not been verified against live Adobe Graph.
 
 The ending screen checks render and fulfillment status every five seconds until
-rendering is ready and fulfillment is submitted, or either reports failure.
+rendering is ready, fulfillment is submitted and the selected preview image has
+loaded, or either backend state reports failure. Status-read failures show an
+explicit automatic-retry message and retry after five seconds without replacing
+the attendee's request. A preview-load failure also retries through status polling,
+even if rendering and fulfillment already report completion.
 The bottom-left Refresh control repeats the same status read; Start over resets the
 attendee session. Submitted fulfillment does not confirm physical printer readiness.
 The gallery fades upward into the ending screen, with a frosted status bar above
@@ -44,18 +57,32 @@ flag or publish cutouts; those backend operations need separate approval.
 
 ## Personalized banner results
 
-The Azure showcase reads
-`{eventId}/8-Banner-Output/{portraitId}/manifest.json` every five seconds while
+The Azure showcase uses the selected ad's canonical brand:
+`1-larocheposay`, `2-lorealprofessionnel`, `3-YSLbeauty`, or `4-lorealparis`.
+YSL's mixed case matches Creator's case-sensitive published paths and manifest brand.
+Paris retains its existing
+`{eventId}/8-Banner-Output/{portraitId}/manifest.json`; other brands use
+`{eventId}/8-Banner-Output/{portraitId}/{canonicalBrand}/manifest.json`.
+It reads that exact manifest every five seconds while
 results are pending, running, partial, or not yet published (404). Retrieval
 errors are displayed and retried; ready/failed manifests stop automatic polling.
+An unpublished manifest displays an explicit selected-brand waiting message rather
+than a blank gallery with no explanation.
 Leaving the screen cancels retrieval and polling. This is read-only: the Creator
 worker owns cutout persistence, workflow execution, retry, and PDF rasterization.
 
-The manifest must identify schema version 1, the selected portrait, and brand
-`4-lorealparis`. Asset IDs are unique and each asset declares its label, status,
+The manifest must identify schema version 1, the selected portrait, and the exact
+selected brand. Asset IDs are unique and each asset declares its label, status,
 MIME type, and container-relative blob path **including the event prefix**.
-Ready assets must stay within the selected portrait's banner directory.
+Ready assets must stay within that brand's manifest directory; Paris cannot
+reference the other brands' subdirectories. There is no fallback to Paris when
+another brand's manifest or selected Template Set INDD is unavailable.
+Creator uses the same Create Variations workflow with each brand's selected
+Template Set INDD. The illustrative offline workflow popout is unchanged.
 Only PNG/JPEG/WebP previews enter the gallery. PDFs have a separate open link.
+Rendition counts are dynamic: every ready preview is included, including all 23
+Professionnel outputs. The manifest safety limit is 100 total assets, not nine
+renditions; the transition's first-six image preload does not truncate the gallery.
 An unavailable preview is explicit even when the PDF is ready. Real portraits
 never substitute sample previews for missing production results; demo portraits
 retain the labeled static showcase.
@@ -406,15 +433,39 @@ the dedicated container is the isolation boundary. Saving validates token format
 only and does not perform a test write. Blank request access explicitly disables
 live submission. Existing portrait read/list access remains separate.
 
+Confirming Next (or Enter) on name entry for a real portrait reserves a UUID and
+enqueues an immutable schema-version-1 preparation document at
+`{event}/requests/{requestId}/prepare.json` in the dedicated requests container.
+Its exact fields are `schemaVersion: 1`, `type: "prepare"`, `requestId`,
+`eventPrefix`, `portraitId`, `attendeeName`, `lang`, and `createdAt`. Typing,
+portrait selection, demo portraits and ordinary resume never enqueue preparation.
+The document is persisted before the first create-only PUT. Failed or ambiguous
+submissions retry the exact body/UUID after Retry or reload, with the confirmed
+identity frozen; acknowledged preparations are not resubmitted on resume.
+Preparation requests all four personalized templates and their same-UUID share/QR,
+but never physical print fulfillment. Creator defers rendering until all four
+source ads exist; the browser does not wait for ads at name confirmation.
+This requires the updated Creator prepare consumer; old workers do not support it.
+
 Confirming a real selected ad creates an immutable schema-version-1 JSON request
 at `{event}/requests/{requestId}.json` in the dedicated container with:
 `requestId` (UUID v4), `eventPrefix`, `portraitId`, `attendeeName`, `selectedBrand`
 (`larocheposay`, `lorealprofessionnel`, `yslbeauty`, `lorealparis`),
 `printScope`, `showFinalQR`, `lang`, and `createdAt`.
+For prepared sessions this reuses the reserved UUID and all shared identity
+fields, including `createdAt`. Selection controls the final Thank-you preview and
+the existing print-scope policy, not which of the four templates are rendered.
+Creator reuses those exact prepared files and their embedded same-UUID QR, without
+copying an unrelated portrait-only cache or rerendering them with a different QR.
+Legacy saved sessions without a preparation retain their previous final-submit
+behavior. Restart clears local preparation state, not queued work or assets.
 The shell saves the entire unsigned request in sessionStorage before its first
 PUT, using `If-None-Match: *` and `x-ms-blob-type: BlockBlob`. Failed/ambiguous
 submissions retry the same ID/body; selection is locked after an attempt.
 Duplicate responses await worker status, not a fabricated processed result.
+While the worker still reports `preparation: true`, only an exact matching
+preparation request echo is accepted as pending finalization. It cannot report
+successful print fulfillment; normal final status must bind the full final request.
 Reset clears local attendee state but does not cancel already submitted work.
 
 Glam Creator resolves portrait IDs from its own canonical inputs and manages

@@ -26,11 +26,16 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let ready = true;
     let completed = false;
     let imageFailed = false;
+    let statusFailed = false;
     const methods = [];
     await page.route('https://ffservices24.blob.core.windows.net/**', async (route) => {
       methods.push(route.request().method());
       const url = new URL(route.request().url());
       if (url.pathname.includes('/requests-status/')) {
+        if (statusFailed) {
+          await route.fulfill({ status: 503 });
+          return;
+        }
         await route.fulfill({
           contentType: 'application/json',
           body: JSON.stringify({
@@ -141,12 +146,23 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'ending-pickup-copy.png') });
     }
-    completed = false;
     imageFailed = true;
     await page.reload();
     await page.getByRole('alert').filter({ hasText: 'Your print preview could not load.' }).waitFor();
     assert.equal(await image.isVisible(), false);
     imageFailed = false;
+    await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0
+      && !document.querySelector('.kiosk-print-preview').hidden, null, { timeout: 10000 });
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    statusFailed = true;
+    await page.reload();
+    await page.getByText('We couldn’t check your print status. Retrying automatically…', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Start over', exact: true }).isVisible(), true);
+    statusFailed = false;
+    await image.waitFor({ timeout: 10000 });
+    await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    completed = false;
     ready = false;
     await page.reload();
     await page.locator('.kiosk-ending-copy h2').waitFor();
@@ -167,7 +183,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'Start over', exact: true }).click();
     await page.locator('.kiosk-panel-welcome').waitFor();
     assert(methods.every((method) => method === 'GET'));
-    console.log('Single-print ending: desktop/mobile geometry, current template, pending/error, reset and read-only checks passed.');
+    console.log('Single-print ending: geometry, pending/read/image automatic recovery, no replay, reduced motion, reset and read-only checks passed.');
   } finally {
     await browser.close();
   }

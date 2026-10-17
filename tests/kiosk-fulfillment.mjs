@@ -1,13 +1,16 @@
 import assert from 'node:assert/strict';
 import {
   createPrintRequest, submitPrintRequest, readPrintStatus, validatePrintStatus, PRINT_BRANDS,
+  createPreparation, validPreparation, submitPreparation,
 } from '../blocks/attendee-kiosk/fulfillment.js';
 import { validateSettings } from '../scripts/kiosk-settings.js';
 import { initialState, validState } from '../blocks/attendee-kiosk/state.js';
 import { completedPortraits, markCompleted } from '../blocks/attendee-kiosk/completed.js';
 import { navigation, storyBeat } from '../blocks/attendee-kiosk/integrations.js';
 import { sampleVariations } from '../blocks/attendee-kiosk/variations.js';
-import { validateBannerManifest, readBannerManifest } from '../blocks/attendee-kiosk/banner-assets.js';
+import {
+  validateBannerManifest, readBannerManifest, BANNER_BRANDS, bannerPrefix,
+} from '../blocks/attendee-kiosk/banner-assets.js';
 import { validateGraphInput, readGraphInput, GRAPH_SOURCE_NODE } from '../blocks/attendee-kiosk/graph-input.js';
 
 const expiry = new Date(Date.now() + 86400000).toISOString();
@@ -63,13 +66,22 @@ assert.throws(() => validateGraphInput(graphManifest, `azure_${'b'.repeat(64)}`,
 assert.equal(validateGraphInput({
   ...graphManifest, status: 'failed', asset: null, errorCode: 'cutout_signing_failed',
 }, portraitId, settings).status, 'failed');
-assert.equal(validateGraphInput({
+assert.deepEqual(validateGraphInput({
   ...graphManifest, status: 'failed', asset: null, errorCode: 'cutout_resolve_failed',
-}, portraitId, settings).status, 'failed');
+}, portraitId, settings), { status: 'failed', portraitId, errorCode: 'cutout_resolve_failed' });
+assert.throws(() => validateGraphInput({
+  ...graphManifest, sourceNodeId: 'other',
+}, portraitId, settings), { graphInputCode: 'manifest_invalid' });
+assert.throws(() => validateGraphInput({
+  ...graphManifest,
+  asset: { ...graphManifest.asset, expiresAt: new Date(Date.parse(graphExpiry) + 1000).toISOString() },
+}, portraitId, settings), { graphInputCode: 'asset_expiry_mismatch' });
+assert.throws(() => validateGraphInput(graphManifest, portraitId, settings, Date.parse(graphExpiry)),
+  { graphInputCode: 'asset_expiry_invalid' });
 assert.deepEqual(await readGraphInput(portraitId, settings, null,
-  async () => ({ status: 404 })), { status: 'unavailable', portraitId });
+  async () => ({ status: 404 })), { status: 'unavailable', portraitId, errorCode: 'manifest_missing' });
 await assert.rejects(readGraphInput(portraitId, settings, null,
-  async () => ({ status: 403, ok: false })), /HTTP 403/);
+  async () => ({ status: 403, ok: false })), { graphInputCode: 'manifest_http_403' });
 const bannerManifest = {
   schemaVersion: 1, portraitId, brand: '4-lorealparis', status: 'ready',
   assets: [
@@ -84,6 +96,51 @@ const bannerManifest = {
   ],
 };
 assert.equal(validateBannerManifest(bannerManifest, portraitId, settings).assets.length, 2);
+for (const brand of BANNER_BRANDS) {
+  const prefix = bannerPrefix(portraitId, settings, brand);
+  const branded = {
+    ...bannerManifest, brand,
+    assets: [{ ...bannerManifest.assets[1], blob: `${prefix}page_1.png` }],
+  };
+  assert.equal(validateBannerManifest(branded, portraitId, settings, brand).assets.length, 1);
+  const otherBrand = BANNER_BRANDS.find((item) => item !== brand);
+  assert.throws(() => validateBannerManifest(branded, portraitId, settings, otherBrand));
+  assert.throws(() => validateBannerManifest({
+    ...branded,
+    assets: [{ ...branded.assets[0], blob: `${bannerPrefix(portraitId, settings, otherBrand)}page_1.png` }],
+  }, portraitId, settings, brand));
+  const reads = [];
+  // eslint-disable-next-line no-await-in-loop
+  assert.equal((await readBannerManifest(portraitId, settings, null, async (url) => {
+    reads.push(new URL(url).pathname);
+    return new Response(JSON.stringify(branded));
+  }, brand)).status, 'ready');
+  assert.deepEqual(reads, [`/mock-assets/${prefix}manifest.json`]);
+  // eslint-disable-next-line no-await-in-loop
+  assert.deepEqual(await readBannerManifest(portraitId, settings, null,
+    async () => ({ status: 404 }), brand), { status: 'unavailable', assets: [] });
+}
+assert.throws(() => bannerPrefix(portraitId, settings, 'unknown'));
+assert.equal(bannerPrefix(portraitId, settings, '3-YSLbeauty'),
+  `mock-event/8-Banner-Output/${portraitId}/3-YSLbeauty/`);
+assert.throws(() => bannerPrefix(portraitId, settings, '3-yslbeauty'));
+const professionalPrefix = bannerPrefix(portraitId, settings, '2-lorealprofessionnel');
+const professionalManifest = {
+  ...bannerManifest,
+  brand: '2-lorealprofessionnel',
+  assets: [
+    { ...bannerManifest.assets[0], blob: `${professionalPrefix}variations.pdf` },
+    ...Array.from({ length: 23 }, (_, index) => ({
+      id: `page_${index + 1}`, label: `Variation ${index + 1}`, status: 'ready',
+      mimeType: 'image/png', blob: `${professionalPrefix}page_${index + 1}.png`,
+    })),
+  ],
+};
+const professionalAssets = validateBannerManifest(
+  professionalManifest, portraitId, settings, '2-lorealprofessionnel',
+).assets;
+assert.equal(professionalAssets.length, 24);
+assert.equal(professionalAssets.filter((asset) => asset.mimeType === 'image/png').length, 23);
 for (const status of ['pending', 'running', 'partial', 'failed']) {
   assert.equal(validateBannerManifest({ ...bannerManifest, status, assets: [] },
     portraitId, settings).status, status);
@@ -202,6 +259,55 @@ assert.equal(request.selectedBrand, 'lorealprofessionnel');
 assert(validState({ ...state, printRequest: request }));
 assert(!validState({ ...state, name: 'Another attendee', printRequest: request }));
 assert(!validState({ ...state, selectedAdId: `${portraitId}_1`, printRequest: request }));
+const preparation = createPreparation({ ...state, selectedAdId: null }, settings);
+assert(validPreparation(preparation));
+assert.equal(preparation.selectedBrand, undefined);
+assert.equal(preparation.printScope, undefined);
+assert.equal(preparation.showFinalQR, undefined);
+assert(!validPreparation({ ...preparation, selectedBrand: 'yslbeauty' }));
+const preparedState = {
+  ...state, prepareRequest: preparation, prepareSubmitted: true,
+};
+const preparedFinal = createPrintRequest(preparedState, settings);
+assert.equal(preparedFinal.requestId, preparation.requestId);
+assert.equal(preparedFinal.createdAt, preparation.createdAt);
+assert.equal(preparedFinal.type, undefined);
+assert(validState({ ...preparedState, printRequest: preparedFinal }));
+assert(!validState({ ...preparedState, language: 'fr' }));
+assert(!validState({ ...preparedState, name: 'Another attendee' }));
+assert(!validState({ ...preparedState, printRequest: request }));
+assert(!validState({ ...state, prepareSubmitted: true }));
+assert.throws(() => createPrintRequest({ ...preparedState, name: 'Another attendee' }, settings));
+const preparationWrites = [];
+for (const status of [201, 409, 412]) {
+  // eslint-disable-next-line no-await-in-loop
+  await submitPreparation(preparation, settings, undefined, async (url, options) => {
+    preparationWrites.push({ url, options });
+    return new Response('', { status });
+  });
+}
+assert(preparationWrites.every(({ url, options }) => (
+  new URL(url).pathname === `/glam-kiosk-requests/mock-event/requests/${preparation.requestId}/prepare.json`
+  && options.method === 'PUT' && options.headers['If-None-Match'] === '*'
+  && new URL(url).searchParams.get('sp') === 'c' && options.body === JSON.stringify(preparation)
+)));
+await assert.rejects(submitPreparation(preparation, { ...settings, requestSAS: '' }), /not configured/);
+await assert.rejects(submitPreparation(preparation, { ...settings, eventId: 'other' }), /match this event/);
+await assert.rejects(submitPreparation(preparation, settings, undefined, async () => (
+  new Response('', { status: 403 })
+)), /HTTP 403/);
+const preparationStatus = {
+  preparation: true, schemaVersion: 1, requestId: preparation.requestId,
+  portraitId, eventPrefix: settings.eventId, request: preparation,
+};
+assert.equal(await readPrintStatus(preparedFinal, settings, undefined, async () => (
+  new Response(JSON.stringify(preparationStatus))
+)), null);
+await assert.rejects(readPrintStatus(preparedFinal, settings, undefined, async () => (
+  new Response(JSON.stringify({
+    ...preparationStatus, request: { ...preparation, attendeeName: 'Other' },
+  }))
+)), /another request/);
 assert.equal(validateSettings({ ...settings, requestSAS: '', printScope: undefined }).printScope, 'selected');
 assert.throws(() => validateSettings({ ...settings, requestSAS: sas('mock-assets', 'c') }));
 assert.throws(() => validateSettings({ ...settings, requestSAS: sas('glam-kiosk-requests', 'cw') }));

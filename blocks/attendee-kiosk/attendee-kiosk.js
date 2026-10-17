@@ -8,7 +8,7 @@ import {
   coworkerReady, navigation, send, storyBeat,
 } from './integrations.js';
 import copy from './copy.js';
-import { createPrintRequest } from './fulfillment.js';
+import { createPrintRequest, createPreparation } from './fulfillment.js';
 import { blobURL } from '../../scripts/kiosk-settings.js';
 import playAdEngulf from './engulf.js';
 import { markCompleted } from './completed.js';
@@ -219,16 +219,26 @@ export default async function decorate(block) {
     const warning = element('p', '', 'kiosk-graph-input-status');
     warning.setAttribute('role', 'status');
     panel.querySelector('.kiosk-coworker-copy').append(warning);
+    const diagnose = (reason) => {
+      if (warning.dataset.graphInputReason !== reason && reason !== 'ready') {
+        // Only fixed reason codes; never log the signed URL or attendee identity.
+        // eslint-disable-next-line no-console
+        console.warn(`[kiosk] Graph portrait: ${reason}.`);
+      }
+      warning.dataset.graphInputReason = reason;
+    };
     const refresh = async () => {
       try {
         const result = await api.graphInput(id, signal);
         if (signal.aborted || epoch !== currentEpoch || state.portraitId !== id) return;
         graphPortrait = result.status === 'ready' ? result : null;
         warning.textContent = graphPortrait ? '' : text().graphPortraitUnavailable;
-      } catch {
+        diagnose(graphPortrait ? 'ready' : result.errorCode || result.status);
+      } catch (error) {
         if (signal.aborted || epoch !== currentEpoch) return;
         graphPortrait = null;
         warning.textContent = text().graphPortraitReadFailed;
+        diagnose(error.graphInputCode || 'manifest_read_failed');
       }
       notifyCoworker();
       graphTimer = setTimeout(refresh, 5000);
@@ -489,6 +499,20 @@ export default async function decorate(block) {
     }
     panel.append(hero, content);
   }
+  async function confirmName(signal) {
+    if (api.source === 'azure' && !state.portraitId.startsWith('demo_')) {
+      if (!state.prepareRequest) {
+        persist({ ...state, prepareRequest: createPreparation(state, api.settings()) });
+      }
+      if (!state.prepareSubmitted) {
+        await api.prepare(state.prepareRequest, signal);
+        if (signal.aborted) return;
+        persist({ ...state, prepareSubmitted: true });
+      }
+    }
+    await api.resume(state, signal);
+    if (!signal.aborted) move('story');
+  }
   function nameEntry() {
     const copyPane = element('div', '', 'kiosk-name-copy');
     const heading = element('h2', text().name);
@@ -503,6 +527,7 @@ export default async function decorate(block) {
     input.autocomplete = 'off';
     input.autofocus = true;
     input.value = state.name;
+    input.readOnly = Boolean(state.prepareRequest);
     input.placeholder = text().namePlaceholder
       || (state.language === 'fr' ? 'Saisissez votre nom ici' : 'Enter your name here');
     label.append(input);
@@ -517,17 +542,19 @@ export default async function decorate(block) {
       if (event.key === 'Enter' && event.isComposing) event.preventDefault();
     });
     form.append(label, next);
+    let confirming = false;
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (confirming) return;
       if (!input.value.trim()) { input.focus(); return; }
+      confirming = true;
       next.disabled = true;
       const { signal } = controller;
       try {
         persist({
           ...state, name: input.value.trim(), sessionId: state.sessionId || crypto.randomUUID(),
         });
-        await api.resume(state, signal);
-        if (!signal.aborted) move('story');
+        await confirmName(signal);
       } catch (error) {
         if (!signal.aborted) fail(error);
       }
@@ -553,7 +580,12 @@ export default async function decorate(block) {
         loadedFrames.add(loadingFrame);
         if (frame === loadingFrame) notifyCoworker();
       });
-      frame.src = config.coworker.url;
+      const frameURL = new URL(config.coworker.url);
+      if (config.coworker.packaged && frameURL.protocol === 'http:'
+        && ['localhost', '127.0.0.1'].includes(frameURL.hostname)) {
+        frameURL.searchParams.set('kiosk-preview', crypto.randomUUID());
+      }
+      frame.src = frameURL.href;
       frameSlot.append(frame);
     }
   }
@@ -882,7 +914,13 @@ export default async function decorate(block) {
       return;
     }
     const request = state.printRequest;
-    const result = await api.printStatus(request, signal);
+    let result;
+    let readFailed = false;
+    try {
+      result = await api.printStatus(request, signal);
+    } catch {
+      readFailed = true;
+    }
     if (signal.aborted || epoch !== currentEpoch) return;
     const previousMedia = panel.querySelector('.kiosk-ending-media');
     const firstRender = !previousMedia;
@@ -904,12 +942,15 @@ export default async function decorate(block) {
       media.append(bar, element('div', '', 'kiosk-print-slot'));
     }
     const slot = media.querySelector('.kiosk-print-slot');
+    media.dataset.printState = failed ? 'failed' : 'available';
+    if (readFailed) media.dataset.printState = 'read-error';
     bar.setAttribute('role', 'status');
     const setPrintStatus = (value, complete = false) => {
       bar.textContent = value;
       bar.classList.toggle('kiosk-print-status-ready', complete);
     };
-    if (failed) setPrintStatus(text().printFailed);
+    if (readFailed) setPrintStatus(text().printStatusRetrying);
+    else if (failed) setPrintStatus(text().printFailed);
     else if (slot.querySelector('img')?.naturalWidth > 0) {
       setPrintStatus(text().printTakeHome, true);
     } else setPrintStatus(text().printPreparing);
@@ -926,7 +967,7 @@ export default async function decorate(block) {
         if (revealed || signal.aborted || !preview.isConnected) return;
         revealed = true;
         preview.style.opacity = '';
-        if (!failed) setPrintStatus(text().printTakeHome, true);
+        if (media.dataset.printState === 'available') setPrintStatus(text().printTakeHome, true);
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const animation = preview.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }] : [
           { transform: 'translateY(-100%)', opacity: 0.25 },
@@ -949,7 +990,10 @@ export default async function decorate(block) {
       slot.replaceChildren(preview);
       if (preview.complete && preview.naturalWidth > 0) queueMicrotask(reveal);
     }
-    if (!failed && (!ready || !submitted)) {
+    const loadedPreview = slot.querySelector('img');
+    const imageReady = loadedPreview?.naturalWidth > 0 && !loadedPreview.hidden;
+    clearTimeout(timer);
+    if (readFailed || (!failed && (!ready || !submitted || !imageReady))) {
       timer = setTimeout(() => {
         if (epoch === currentEpoch) {
           ending(signal, currentEpoch).catch((error) => {
@@ -1060,7 +1104,12 @@ export default async function decorate(block) {
         const next = button(
           text().next,
           () => move('name', {
-            name: '', selectedAdId: null, sessionId: null, printRequest: null,
+            name: '',
+            selectedAdId: null,
+            sessionId: null,
+            printRequest: null,
+            prepareRequest: null,
+            prepareSubmitted: false,
           }),
           !portraits.some((item) => item.id === state.portraitId),
         );
@@ -1078,6 +1127,8 @@ export default async function decorate(block) {
                 selectedAdId: null,
                 sessionId: null,
                 printRequest: null,
+                prepareRequest: null,
+                prepareSubmitted: false,
               });
               panel.querySelectorAll('.kiosk-portrait-grid .kiosk-card').forEach((card) => {
                 card.setAttribute('aria-pressed', String(card.dataset.assetId === item.id));
@@ -1106,6 +1157,10 @@ export default async function decorate(block) {
         panel.replaceChildren(copyPane, gallery, refresh);
         return;
       }
+      if (snapshot.stage === 'name' && snapshot.prepareRequest) {
+        await confirmName(signal);
+        return;
+      }
       const assets = await selectedAssets(snapshot, signal);
       if (snapshot.sessionId) await api.resume(snapshot, signal);
       if (signal.aborted || epoch !== currentEpoch) return;
@@ -1117,7 +1172,11 @@ export default async function decorate(block) {
       let finishRevealSetup = () => {};
       if (revealVariations) {
         if (api.bannerResults && !snapshot.portraitId.startsWith('demo_')) {
-          initialResults = await api.bannerResults(snapshot.portraitId, signal);
+          initialResults = await api.bannerResults(
+            snapshot.portraitId,
+            snapshot.selectedAdId,
+            signal,
+          );
         }
         let previews = manifest.banners.length ? manifest.banners : [];
         if (snapshot.portraitId.startsWith('demo_') && !previews.length) previews = sampleVariations();
@@ -1213,7 +1272,7 @@ export default async function decorate(block) {
                 initialResults = null;
                 return Promise.resolve(result);
               }
-              return api.bannerResults(snapshot.portraitId, signal);
+              return api.bannerResults(snapshot.portraitId, snapshot.selectedAdId, signal);
             } : null,
           text: text(),
           signal,

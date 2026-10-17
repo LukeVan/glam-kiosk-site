@@ -10,11 +10,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
     const sas = (container, permissions, resource = 'c') => `https://ffservices24.blob.core.windows.net/${container}?sv=2023-11-03&sr=${resource}&sp=${permissions}&se=${encodeURIComponent(expiresAt)}&sig=MOCK_ONLY`;
     const brands = ['larocheposay', 'lorealprofessionnel', 'yslbeauty', 'lorealparis'];
+    const variationBrand = process.env.KIOSK_VARIATION_BRAND || '2-lorealprofessionnel';
+    const selectedBrandIndex = ['1-larocheposay', '2-lorealprofessionnel', '3-YSLbeauty', '4-lorealparis']
+      .indexOf(variationBrand);
+    assert(selectedBrandIndex >= 0);
     let request;
+    let preparation;
+    let prepareWrites = 0;
+    let failFirstPreparation = true;
+    let sourceAdsReady = false;
     let writes = 0;
     let failFirstWrite = true;
     let completed = false;
     let statusPublished = false;
+    let preparationOnly = true;
     let previewReady = false;
     let qrPublished = false;
     let bannerStatus = 'unpublished';
@@ -39,8 +48,25 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.route('https://ffservices24.blob.core.windows.net/**', async (route) => {
       const url = new URL(route.request().url());
       if (route.request().method() === 'PUT') {
-        writes += 1;
         const body = route.request().postDataJSON();
+        if (url.pathname.endsWith('/prepare.json')) {
+          prepareWrites += 1;
+          if (!preparation) preparation = body;
+          else assert.deepEqual(body, preparation);
+          assert.equal(body.type, 'prepare');
+          assert.equal(body.selectedBrand, undefined);
+          assert.equal(body.printScope, undefined);
+          assert.equal(body.showFinalQR, undefined);
+          assert.equal(url.pathname, `/glam-kiosk-requests/TestEvent/requests/${body.requestId}/prepare.json`);
+          assert.equal(route.request().headers()['if-none-match'], '*');
+          assert.equal(url.searchParams.get('sp'), 'c');
+          if (failFirstPreparation) {
+            failFirstPreparation = false;
+            await route.abort('failed');
+          } else await route.fulfill({ status: 412 });
+          return;
+        }
+        writes += 1;
         if (!request) request = body;
         else assert.deepEqual(body, request);
         assert.equal(url.pathname, `/glam-kiosk-requests/TestEvent/requests/${request.requestId}.json`);
@@ -58,7 +84,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         }
         const portraitId = url.pathname.split('/').at(-2);
         const blob = `TestEvent/9-Graph-Input/${portraitId}/portrait.png`;
-        const graphExpiry = new Date(Date.now() + 3600000).toISOString();
+        const graphExpiry = new Date(Date.now() + 7 * 86400000).toISOString();
         const image = new URL(`https://ffservices24.blob.core.windows.net/mock-assets/${blob}`);
         image.search = new URLSearchParams({
           sv: '2023-11-03', sr: 'b', sp: 'r', spr: 'https',
@@ -75,22 +101,24 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return;
       }
       if (url.pathname.includes('/8-Banner-Output/') && url.pathname.endsWith('/manifest.json')) {
+        const brandDirectory = variationBrand === '4-lorealparis' ? '' : `${variationBrand}/`;
+        assert(url.pathname.endsWith(`/${request.portraitId}/${brandDirectory}manifest.json`));
         if (bannerStatus === 'unpublished') {
           await route.fulfill({ status: 404 });
           return;
         }
-        const portraitId = url.pathname.split('/').at(-2);
-        const prefix = `TestEvent/8-Banner-Output/${portraitId}/`;
+        const portraitId = request.portraitId;
+        const prefix = `TestEvent/8-Banner-Output/${portraitId}/${brandDirectory}`;
         await route.fulfill({
           contentType: 'application/json',
           body: JSON.stringify({
-            schemaVersion: 1, portraitId, brand: '4-lorealparis',
+            schemaVersion: 1, portraitId, brand: variationBrand,
             status: bannerStatus === 'preview-unavailable' ? 'ready' : bannerStatus,
             assets: [
               { id: 'banner_pdf', label: 'Banner PDF', status: 'ready', mimeType: 'application/pdf', blob: `${prefix}banner.pdf` },
               ...(bannerStatus === 'preview-unavailable' ? [{
                 id: 'preview', label: 'Preview', status: 'unavailable', mimeType: null, blob: null,
-              }] : Array.from({ length: 18 }, (_, i) => ({
+              }] : Array.from({ length: 23 }, (_, i) => ({
                 id: `page_${i + 1}`, label: `Page ${i + 1}`, status: 'ready',
                 mimeType: 'image/png', blob: `${prefix}page_${i + 1}.png`,
               }))),
@@ -105,6 +133,18 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       }
       if (url.pathname.includes('/requests-status/')) {
         if (!statusPublished) { await route.fulfill({ status: 404 }); return; }
+        if (preparationOnly) {
+          await route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+              schemaVersion: 1, preparation: true, requestId: preparation.requestId,
+              portraitId: preparation.portraitId, eventPrefix: preparation.eventPrefix,
+              request: preparation, selectedBrand: null, printScope: null, stage: 'prepared',
+              render: { status: 'ready' }, fulfillment: { status: 'pending' },
+            }),
+          });
+          return;
+        }
         await route.fulfill({
           contentType: 'application/json',
           body: JSON.stringify({
@@ -140,8 +180,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
           await route.fulfill({ status: 403 });
           return;
         }
-        const names = prefix.endsWith('/portraits/pending/') ? ['mock.jpg']
-          : brands.map((brand, i) => `mock_${i + 1}-${brand}.jpg`);
+        let names = [];
+        if (prefix.endsWith('/portraits/pending/')) names = ['mock.jpg'];
+        else if (sourceAdsReady) names = brands.map((brand, i) => `mock_${i + 1}-${brand}.jpg`);
         const body = `<EnumerationResults><Blobs>${names.map((name) => `<Blob><Name>${prefix}${name}</Name><Properties><Last-Modified>Mon, 05 Oct 2026 10:00:00 GMT</Last-Modified></Properties></Blob>`).join('')}</Blobs><NextMarker></NextMarker></EnumerationResults>`;
         await route.fulfill({ contentType: 'application/xml', body });
         return;
@@ -179,8 +220,26 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.locator('.kiosk-portrait-grid button').first().click();
     await page.keyboard.press('Enter');
     await page.locator('.kiosk-name input').fill('Mock Print');
+    assert.equal(prepareWrites, 0);
+    assert.equal(writes, 0);
     await page.locator('.kiosk-name .kiosk-primary-action').click();
+    await page.getByRole('alert').waitFor();
+    assert.equal(prepareWrites, 1);
+    assert.equal(writes, 0);
+    const savedPreparation = await page.evaluate(() => JSON.parse(
+      sessionStorage.getItem('glam-attendee-v1:azure:TestEvent'),
+    ));
+    assert.deepEqual(savedPreparation.prepareRequest, preparation);
+    assert.equal(savedPreparation.prepareSubmitted, false);
+    await page.reload();
     await page.locator('.kiosk-coworker-copy .kiosk-graph-input-status').waitFor({ state: 'attached' });
+    assert.equal(prepareWrites, 2);
+    assert.equal(writes, 0);
+    const confirmedPreparation = await page.evaluate(() => JSON.parse(
+      sessionStorage.getItem('glam-attendee-v1:azure:TestEvent'),
+    ));
+    assert.equal(confirmedPreparation.prepareSubmitted, true);
+    sourceAdsReady = true;
     assert.equal(await page.locator('.kiosk-coworker-copy h2').innerText(), 'CX Enterprise Coworker');
     assert.equal(await page.locator('.kiosk-story-subcopy').innerText(),
       'Find the work and information you need all in one place. No hunting through projects, folders, or tools.');
@@ -327,7 +386,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 0);
     assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
     assert.equal(await page.locator('.kiosk-ad-grid [aria-pressed="true"]').count(), 0);
-    await page.locator('.kiosk-ad-grid button').nth(3).click();
+    await page.locator('.kiosk-ad-grid button').nth(selectedBrandIndex).click();
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'engulf-ads.png') });
     }
@@ -340,6 +399,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const coworker = page.frameLocator('.kiosk-frame-slot iframe');
     await coworker.locator('body').waitFor({ state: 'attached' });
     await coworker.locator('button').first().waitFor({ state: 'attached' });
+    const coworkerURL = new URL(await page.locator('.kiosk-frame-slot iframe').getAttribute('src'));
+    assert.equal(coworkerURL.pathname, '/coworker/index.html');
+    assert(coworkerURL.searchParams.has('kiosk-preview'));
+    assert.equal(coworkerURL.hash, '#/loreal/home');
     await page.evaluate(() => {
       window.simulationMessages = [];
       window.graphMessages = [];
@@ -374,6 +437,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(new URL(graph.url).searchParams.get('sr'), 'b');
     assert.equal(new URL(graph.url).searchParams.get('sp'), 'r');
     assert.equal(graph.portraitId, request.portraitId);
+    ['requestId', 'eventPrefix', 'portraitId', 'attendeeName', 'lang', 'createdAt'].forEach((field) => {
+      assert.equal(request[field], preparation[field]);
+    });
+    assert.equal(prepareWrites, 2);
     assert.equal(await page.evaluate(() => (
       [localStorage, sessionStorage].some((storage) => Object.keys(storage)
         .some((key) => storage.getItem(key).includes('MOCK_GRAPH_ONLY')))
@@ -419,16 +486,27 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       };
     });
     const graphButtons = coworker.getByRole('button', { name: 'Open Firefly Graph', exact: true });
-    if (await graphButtons.count()) {
-      await graphButtons.first().click();
-      const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
-      const launchedURL = new URL(graphLaunch);
-      assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
-      assert(launchedURL.pathname.endsWith('08944592-9145-526f-8b43-75400178e5ee'));
-      const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
-      assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
-      assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
-    }
+    await graphButtons.first().waitFor();
+    await coworker.locator('body').evaluate(() => { window.open = () => null; });
+    await graphButtons.first().click();
+    await coworker.getByRole('alert').filter({
+      hasText: 'Firefly Graph could not open. Allow pop-ups for this kiosk site, then click Open Firefly Graph again.',
+    }).waitFor();
+    await coworker.locator('body').evaluate(() => {
+      window.graphOpened = [];
+      window.open = (url) => {
+        window.graphOpened.push(url);
+        return { focus() {} };
+      };
+    });
+    await graphButtons.first().click();
+    const graphLaunch = await coworker.locator('body').evaluate(() => window.graphOpened[0]);
+    const launchedURL = new URL(graphLaunch);
+    assert.equal(launchedURL.origin, 'https://firefly.adobe.com');
+    assert(launchedURL.pathname.endsWith('08944592-9145-526f-8b43-75400178e5ee'));
+    const cutoutURL = new URL(new URLSearchParams(launchedURL.hash.slice(1)).get('portraitUrl'));
+    assert.equal(cutoutURL.searchParams.get('sig'), 'MOCK_GRAPH_ONLY');
+    assert(cutoutURL.pathname.endsWith(`/9-Graph-Input/${request.portraitId}/portrait.png`));
     await coworker.getByRole('button', { name: 'Send', exact: true }).click();
     await coworker.getByText('Firefly Creative Production workflow', { exact: false }).first().waitFor();
     await page.evaluate(() => {
@@ -448,11 +526,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       && animation.duration === 1000));
     assert.equal(await page.locator('.kiosk-variation').count(), 0);
     assert.equal(await page.getByText('One idea. A whole world of content.', { exact: true }).count(), 0);
-    assert.equal(await page.locator('.kiosk-variations-status').innerText(), '');
+    assert.equal(await page.locator('.kiosk-variations-status').innerText(),
+      'Variations for your selected brand are not available yet. Checking again automatically.');
     bannerStatus = 'ready';
-    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18,
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 23,
       null, { timeout: 10000 });
-    assert.equal(await page.locator('.kiosk-variation').count(), 18);
+    assert.equal(await page.locator('.kiosk-variation').count(), 23);
+    assert.equal(await page.locator('.kiosk-variation img').evaluateAll((images) => (
+      new Set(images.map((image) => image.src)).size
+    )), 23);
     await page.locator('.kiosk-variation img').evaluateAll(async (images) => {
       await Promise.all(images.map((image) => new Promise((resolve, reject) => {
         const check = new Image();
@@ -616,8 +698,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(workflowRequests.some((url) => url.includes('/api/')), false);
     await page.reload();
     await page.locator('.kiosk-panel-variations').waitFor();
-    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 18);
-    assert.equal(await page.locator('.kiosk-variation').count(), 18);
+    await page.waitForFunction(() => document.querySelectorAll('.kiosk-variation').length === 23);
+    assert.equal(await page.locator('.kiosk-variation').count(), 23);
     assert.equal(writes, 2);
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.waitForFunction(() => document.querySelector('.kiosk-variations-intro').getAnimations().every((animation) => animation.playState === 'finished'));
@@ -648,6 +730,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Preparing your take-home ad');
+    preparationOnly = false;
     qrPublished = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
     await page.locator('.kiosk-ending-copy h2').waitFor();
@@ -714,6 +798,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Start over', exact: true }).click();
     await page.locator('.kiosk-panel-welcome').waitFor();
+    assert.equal(await page.evaluate(() => sessionStorage.getItem('glam-attendee-v1:azure:TestEvent')), null);
+    assert.equal(prepareWrites, 2);
     await page.reload();
     await page.locator('.kiosk-consent input').check();
     await page.locator('.kiosk-print').click();
@@ -949,6 +1035,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       await demo.locator('.kiosk-panel-welcome').waitFor();
     }
     await demo.close();
-    console.log('PASS mocked immutable retry/reload, pending/ready ending, partial/ready/expired shares, legacy downloads, selected/all and QR/pickup settings.');
+    assert.equal(prepareWrites, 2);
+    console.log('PASS mocked early all-four preparation, same-ID retry/reload/finalization, pending/ready ending, shares, legacy downloads, selected/all and reset.');
   } finally { await browser.close(); }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

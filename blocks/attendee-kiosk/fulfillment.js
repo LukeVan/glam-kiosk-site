@@ -5,7 +5,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{1
 const RENDER_STATUSES = ['pending', 'running', 'rendering', 'ready', 'partial', 'failed', 'error'];
 const PRINT_STATUSES = ['pending', 'partial', 'submitted', 'failed'];
 
-export function validRequest(request) {
+function validIdentity(request) {
   return request?.schemaVersion === 1 && UUID.test(request.requestId)
     && /^azure_[0-9a-f]{64}$/.test(request.portraitId)
     && typeof request.eventPrefix === 'string' && request.eventPrefix.length > 0
@@ -14,17 +14,45 @@ export function validRequest(request) {
     && !['.', '..'].includes(request.eventPrefix)
     && typeof request.attendeeName === 'string' && request.attendeeName.trim().length > 0
     && request.attendeeName.length <= 80
+    && ['en', 'fr'].includes(request.lang)
+    && Number.isFinite(Date.parse(request.createdAt));
+}
+
+export function validPreparation(request) {
+  return validIdentity(request) && request.type === 'prepare'
+    && Object.keys(request).every((key) => [
+      'schemaVersion', 'type', 'requestId', 'eventPrefix', 'portraitId',
+      'attendeeName', 'lang', 'createdAt',
+    ].includes(key));
+}
+
+export function validRequest(request) {
+  return validIdentity(request)
     && PRINT_BRANDS.includes(request.selectedBrand)
     && ['selected', 'all'].includes(request.printScope)
-    && typeof request.showFinalQR === 'boolean' && ['en', 'fr'].includes(request.lang)
-    && Number.isFinite(Date.parse(request.createdAt));
+    && typeof request.showFinalQR === 'boolean';
+}
+
+export function createPreparation(state, settings) {
+  const request = {
+    schemaVersion: 1,
+    type: 'prepare',
+    requestId: crypto.randomUUID(),
+    eventPrefix: settings.eventId,
+    portraitId: state.portraitId,
+    attendeeName: state.name,
+    lang: state.language,
+    createdAt: new Date().toISOString(),
+  };
+  if (!validPreparation(request)) throw new Error('Cannot prepare templates without a portrait and name.');
+  return request;
 }
 
 export function createPrintRequest(state, settings) {
   const selectedBrand = PRINT_BRANDS[Number(state.selectedAdId?.slice(-1)) - 1];
   const request = {
     schemaVersion: 1,
-    requestId: crypto.randomUUID(),
+    requestId: state.prepareRequest?.requestId || crypto.randomUUID(),
     eventPrefix: settings.eventId,
     portraitId: state.portraitId,
     attendeeName: state.name,
@@ -32,9 +60,13 @@ export function createPrintRequest(state, settings) {
     printScope: settings.printScope,
     showFinalQR: settings.showFinalQR,
     lang: state.language,
-    createdAt: new Date().toISOString(),
+    createdAt: state.prepareRequest?.createdAt || new Date().toISOString(),
   };
   if (!validRequest(request)
+    || (state.prepareRequest && (!validPreparation(state.prepareRequest)
+      || ['eventPrefix', 'portraitId', 'attendeeName', 'lang'].some((field) => (
+        state.prepareRequest[field] !== request[field]
+      ))))
     || state.selectedAdId !== `${state.portraitId}_${PRINT_BRANDS.indexOf(selectedBrand) + 1}`) {
     throw new Error('Cannot submit an invalid portrait or ad selection.');
   }
@@ -67,13 +99,16 @@ async function fetchAzure(url, options, fetcher, signal) {
   }
 }
 
-export async function submitPrintRequest(request, settings, signal, fetcher = fetch) {
-  if (!validRequest(request) || request.eventPrefix !== settings.eventId) {
+async function submitDocument(request, settings, preparation, signal, fetcher) {
+  if (!(preparation ? validPreparation(request) : validRequest(request))
+    || request.eventPrefix !== settings.eventId) {
     throw new Error('Print request does not match this event.');
   }
   if (!settings.requestSAS) throw new Error('Print request access is not configured. Ask booth staff.');
   const { url } = parseContainerSAS(settings.requestSAS, Date.now(), 'create');
-  url.pathname += `/${[request.eventPrefix, 'requests', `${request.requestId}.json`].map(encodeURIComponent).join('/')}`;
+  const path = preparation ? [request.eventPrefix, 'requests', request.requestId, 'prepare.json']
+    : [request.eventPrefix, 'requests', `${request.requestId}.json`];
+  url.pathname += `/${path.map(encodeURIComponent).join('/')}`;
   const response = await fetchAzure(url.href, {
     method: 'PUT',
     headers: {
@@ -88,6 +123,14 @@ export async function submitPrintRequest(request, settings, signal, fetcher = fe
   if (![201, 409, 412].includes(response.status)) {
     throw new Error(`Azure did not accept the print request (HTTP ${response.status}).`);
   }
+}
+
+export async function submitPreparation(request, settings, signal, fetcher = fetch) {
+  return submitDocument(request, settings, true, signal, fetcher);
+}
+
+export async function submitPrintRequest(request, settings, signal, fetcher = fetch) {
+  return submitDocument(request, settings, false, signal, fetcher);
 }
 
 export function validatePrintStatus(data, request) {
@@ -150,5 +193,14 @@ export async function readPrintStatus(request, settings, signal, fetcher = fetch
   if (!response.ok) throw new Error(`Cannot read print status (HTTP ${response.status}).`);
   let data;
   try { data = await response.json(); } catch { throw new Error('Print status is not valid JSON.'); }
+  if (data?.preparation === true) {
+    if (data.schemaVersion !== 1 || !validPreparation(data.request)
+      || ['requestId', 'portraitId', 'eventPrefix'].some((field) => data[field] !== request[field])
+      || ['requestId', 'portraitId', 'eventPrefix', 'attendeeName', 'lang', 'createdAt']
+        .some((field) => data.request[field] !== request[field])) {
+      throw new Error('Template preparation status belongs to another request.');
+    }
+    return null;
+  }
   return validatePrintStatus(data, request);
 }
