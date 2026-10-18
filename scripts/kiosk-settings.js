@@ -55,6 +55,7 @@ export function validateSettings(value) {
     || [...value.eventId].some((character) => character.charCodeAt(0) < 32)
     || SYSTEM_PREFIXES.has(value.eventId)
     || value.activationProfile !== 'max'
+    || (value.appearance !== undefined && !['light', 'dark'].includes(value.appearance))
     || !['none', 'marketo'].includes(value.formType)
     || (value.printScope !== undefined && !['selected', 'all'].includes(value.printScope))
     || (value.showFinalQR !== undefined && typeof value.showFinalQR !== 'boolean')
@@ -70,6 +71,7 @@ export function validateSettings(value) {
     containerSAS: value.containerSAS,
     eventId: value.eventId,
     activationProfile: 'max',
+    appearance: value.appearance || 'light',
     formType: value.formType,
     introMode: value.formType === 'none' ? 'normal' : 'registration-form',
     requestSAS: value.requestSAS || '',

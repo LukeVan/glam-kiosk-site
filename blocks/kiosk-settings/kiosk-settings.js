@@ -56,6 +56,9 @@ export default function decorate(block) {
   event.append(new Option('Test connection to discover events', ''));
   const experience = field('Kiosk experience', node('select'));
   experience.append(new Option('Adobe MAX 2026', 'max'));
+  const appearance = field('Activation appearance', node('select'));
+  appearance.append(new Option('Light', 'light'));
+  appearance.append(new Option('Dark', 'dark'));
   const intake = field('Lead capture', node('select'));
   intake.append(new Option('None / separate handheld scanners', 'none'));
   intake.append(new Option('Marketo (integration requires owner validation)', 'marketo'));
@@ -155,6 +158,7 @@ export default function decorate(block) {
         containerSAS: testedSAS,
         eventId: event.value,
         activationProfile: experience.value,
+        appearance: appearance.value,
         formType: intake.value,
         requestSAS: requests.value.trim(),
         printScope: scope.value,
@@ -162,7 +166,7 @@ export default function decorate(block) {
         showCompletedPortraits: completed.value === 'show',
       });
       savedEvent = event.value;
-      report('Booth settings saved on this browser. Reload the kiosk to apply them. Glam Creator must be running to process print requests.');
+      report('Booth settings saved on this browser. Appearance updates open kiosk tabs immediately; reload for other changes. Glam Creator must be running to process print requests.');
     } catch (error) { report(error.message, true); }
   });
   clear.addEventListener('click', () => {
@@ -197,13 +201,18 @@ export default function decorate(block) {
     const saved = loadSettings(window.localStorage);
     if (saved) {
       sas.value = saved.containerSAS;
+      testedSAS = saved.containerSAS;
       savedEvent = saved.eventId;
+      event.replaceChildren(new Option(saved.eventId, saved.eventId));
+      event.disabled = false;
+      save.disabled = false;
       intake.value = saved.formType;
+      appearance.value = saved.appearance;
       requests.value = saved.requestSAS;
       scope.value = saved.printScope;
       qr.value = saved.showFinalQR ? 'qr' : 'pickup';
       completed.value = saved.showCompletedPortraits ? 'show' : 'hide';
-      report(`Saved event: ${saved.eventId}. Access expires ${new Date(saved.expiresAt).toLocaleString()}. Test again to verify access.`);
+      report(`Saved event: ${saved.eventId}. Access expires ${new Date(saved.expiresAt).toLocaleString()}. You can save changes using this connection. Test again to verify access or discover other events.`);
     } else report('This kiosk is unconfigured.');
   } catch (error) { report(error.message, true); }
 }

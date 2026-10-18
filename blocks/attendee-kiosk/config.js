@@ -1,3 +1,5 @@
+import { PUBLIC_DEMO_ORIGINS } from './public-demo.js';
+
 export const COWORKER_ORIGIN = 'https://meow-max2026-lor-coworker-demo-a2137.entapp.adproto.com';
 
 export function httpsURL(value) {
@@ -63,6 +65,11 @@ function productionWorkflowIntegration(value, pageOrigin) {
 export function readConfig(authoredMode, runtime = {}, pageOrigin = (
   typeof window === 'undefined' ? undefined : window.location.origin
 )) {
+  const publicDemoOrigin = runtime.publicDemoOrigin
+    ?? (PUBLIC_DEMO_ORIGINS.includes(pageOrigin) ? pageOrigin : '');
+  if (publicDemoOrigin && !PUBLIC_DEMO_ORIGINS.includes(publicDemoOrigin)) {
+    throw new Error('Public demo cutouts require an approved hosted kiosk origin.');
+  }
   const mode = runtime.mode ?? authoredMode ?? 'live';
   if (!['demo', 'live'].includes(mode)) throw new Error('Mode must be demo or live.');
   const apiBase = runtime.apiBase || '';
@@ -90,6 +97,7 @@ export function readConfig(authoredMode, runtime = {}, pageOrigin = (
     throw new Error('Live mode requires owner-approved English and French consent copy.');
   }
   return {
+    publicDemoOrigin,
     mode,
     apiBase,
     mediaOrigins,

@@ -1,0 +1,309 @@
+.attendee-kiosk[data-appearance="dark"] {
+  color-scheme: dark;
+  background: #000;
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"]::before {
+  inset: 0;
+  border-radius: 0;
+  background: #000 url("/blocks/attendee-kiosk/assets/dark-background.png") center / cover no-repeat;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-header > img {
+  display: none;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-dark-lockup {
+  position: relative;
+  display: block;
+  width: min(32vw, 230px);
+  aspect-ratio: 538 / 64;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-dark-lockup > span {
+  position: absolute;
+  display: block;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel h2,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel p,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel details,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel summary,
+.attendee-kiosk[data-appearance="dark"] .kiosk-consent span,
+.attendee-kiosk[data-appearance="dark"] .kiosk-name label,
+.attendee-kiosk[data-appearance="dark"] .kiosk-card span,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-welcome .kiosk-consent-items li,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-welcome .kiosk-consent-items li::marker {
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-welcome .kiosk-release-link,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-welcome .kiosk-release-link:hover,
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-body a,
+.attendee-kiosk[data-appearance="dark"] .kiosk-demo-cutout {
+  color: #90c7ff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-name input {
+  border-color: #f2f2f2;
+  background: #111;
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-name input::placeholder {
+  color: #8a8a8a;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-primary-action:disabled,
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-welcome .kiosk-print:disabled {
+  background: #2c2c2c;
+  color: #888;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-card {
+  border-color: #444;
+  background: #222;
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid .kiosk-card {
+  padding: 8px;
+  border-radius: 24px;
+  background: #222;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid .kiosk-card img {
+  border-radius: 16px;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid:has([aria-pressed="true"]) .kiosk-card[aria-pressed="false"] img {
+  opacity: 0.6;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid .kiosk-card[aria-pressed="true"] {
+  background: linear-gradient(35deg, #706bff, #ff35b2 40%, #ff6648 75%, #ffbd28);
+  box-shadow: none;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid .kiosk-card[aria-pressed="true"]::before,
+.attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid .kiosk-card[aria-pressed="true"]::after {
+  display: none;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-name-artwork {
+  position: relative;
+  display: block;
+  order: -1;
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+  aspect-ratio: 862 / 867;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-name-lens {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-lens-canvas {
+  position: absolute;
+  top: -3.1142%;
+  left: -31.7865%;
+  width: 131.7865%;
+  height: 106.113%;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-lens-piece {
+  position: absolute;
+  display: block;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-lens-piece > span {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-position: center;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-lens-rotated {
+  container-type: size;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-lens-rotated > span {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 100cqh;
+  height: 100cqw;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-name-photo {
+  position: absolute;
+  z-index: 1;
+  top: 12.8%;
+  left: 12.53%;
+  width: 74.83%;
+  height: 74.39%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel-name {
+  padding: 100px 3% 76px;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-halo::before {
+  background: rgb(138 138 138 / 5%);
+  filter: blur(8px);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-halo::after {
+  background: linear-gradient(to top, rgb(138 138 138 / 4%), rgb(138 138 138 / 5%));
+  box-shadow: 0 4px 8px rgb(0 0 0 / 3%);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-card {
+  border-color: rgb(255 255 255 / 6%);
+  background: rgb(255 255 255 / 3%);
+  box-shadow: inset 0 -7px 28px rgb(255 255 255 / 4%), inset 0 34px 46px rgb(255 255 255 / 4%);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-text,
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer.has-selection .kiosk-composer-text {
+  color: rgb(255 255 255 / 80%);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-ai {
+  filter: invert(1);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-add-icon,
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer .kiosk-composer-send {
+  background: rgb(255 255 255 / 80%);
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer-send-icon {
+  background: #000;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-composer .kiosk-composer-send:disabled {
+  background: #444;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-print-status {
+  border-color: #555;
+  background: rgb(34 34 34 / 80%);
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-frame-slot,
+.attendee-kiosk[data-appearance="dark"] iframe {
+  background: #111;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-dialog,
+.attendee-kiosk[data-appearance="dark"] .kiosk-connection-dialog {
+  background: #222;
+  color: #fff;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-body,
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-dialog h2,
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-close,
+.attendee-kiosk[data-appearance="dark"] .kiosk-connection-dialog input {
+  background: transparent;
+  color: #fff;
+}
+
+@media (width >= 900px) {
+  .attendee-kiosk[data-appearance="dark"]::before {
+    background-size: 100% 100%;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-header {
+    top: 112px;
+    left: 76px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-dark-lockup {
+    width: var(--kiosk-copy-width);
+    height: auto;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-panel-name {
+    position: absolute;
+    display: block;
+    padding: 0;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-name-copy {
+    position: absolute;
+    top: 272px;
+    left: 80px;
+    width: 608px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-name-copy h2 {
+    font-size: 80px;
+    line-height: 0.95;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-name-copy > p {
+    margin-bottom: 18px;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-name input {
+    max-width: 608px;
+    min-height: 98px;
+    border-width: 2px;
+    font-size: 42px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-name-artwork {
+    position: absolute;
+    top: 107px;
+    right: 80px;
+    width: 862px;
+    height: 867px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-panel-ads {
+    grid-template-columns: 560px 920px;
+    gap: 0 280px;
+    padding: 80px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-ad-copy h2 {
+    font-size: 80px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-ad-intro-copy h2 {
+    font-size: 60px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-ad-copy > p {
+    max-width: 560px;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-panel-ads .kiosk-composer {
+    width: 560px;
+  }
+
+  .attendee-kiosk[data-appearance="dark"] .kiosk-ad-grid {
+    gap: 32px;
+  }
+}

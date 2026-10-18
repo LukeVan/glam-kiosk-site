@@ -1,5 +1,96 @@
 # Hosted attendee kiosk frontend
 
+## Light and dark activation appearance
+
+In `/drafts/kiosk-settings.html`, **Activation appearance** switches between
+**Light** and **Dark**. The validated booth setting is
+`appearance: "light" | "dark"`; older settings default to light. Saving only
+appearance updates other open kiosk tabs on the same origin immediately,
+without restarting the attendee or losing typed input. Other setup changes
+retain the existing reload requirement.
+
+Valid saved connection settings and their event can be reused when saving booth
+options; changing appearance does not require another Azure connection test.
+Changing the container SAS URL requires testing again before saving. Test
+connection also refreshes the list of available events.
+
+Both appearances use the same DOM, copy/localization, session state and API
+paths. Dark styling lives in `dark.css`, scoped by
+`.attendee-kiosk[data-appearance="dark"]`. The Figma source artwork supplies the
+black patterned background, red Adobe/white L'Oréal lockup and MAX name-page
+lens. The selected portrait remains dynamic inside that lens. Ad selection
+uses a gradient border without changing ad order or selection behavior.
+The original light styling and assets remain the default.
+
+The packaged Coworker receives `KIOSK_SET_THEME {theme: "light" | "dark"}` after
+ready and on parent appearance changes. Coworker validates exact parent source,
+origin and enum before applying its shared ThemeProvider. Repeated notifications
+of the same activation default preserve the attendee's manual Coworker theme
+toggle; a changed activation default applies immediately. A fresh iframe or
+reset reapplies the activation default. No copy or story flow is duplicated.
+
+## Opening screen transitions
+
+The production workflow panel retains the gallery's Finish action and adds
+the same action at the panel's lower right when finishing is available.
+Finish closes the panel before using the existing ending flow; it does not
+create another request. Close, Escape and backdrop dismissal slide the panel
+out to the right and restore focus to its opener. Reduced-motion preferences
+use a short fade. Stage changes dispose the panel immediately.
+
+`opening-transitions.js` animates only welcome → portraits → name → story
+navigation, not initial loads, refreshes or Coworker story beats. The gallery
+enters with a capped stagger, the selected portrait moves into its name-page
+position, and the Coworker frame reveals from the right. The header remains
+stationary. Both appearances share this motion; the dark MAX lens also
+assembles around the portrait.
+
+Animations do not delay rendering, input or integration loading. Temporary
+outgoing panels are inert and hidden from assistive technology. Portrait
+overlays are transient DOM images, never persisted. Navigation cancels and
+cleans up active animation/overlays. Reduced-motion preferences use short
+opacity fades instead of movement.
+
+## Permanent demo people
+
+With booth settings configured, the kiosk reads the global blob
+`assets/permanent-demos/catalog.json` using the existing read-only container access.
+Only a 404 uses the original bundled Person2/3/5 fixtures. A published empty
+catalog, disabled people, or people without the selected Template Set profile
+show no demo cards. Network, authorization and schema errors are explicit errors,
+not a fallback to old demo content.
+
+Catalog v1 contains `schemaVersion: 1`, a 32-character lowercase hexadecimal
+`revision`, `experienceTemplateSets: {main, max}`, and `people`. Each person has
+stable `demo_*` ID, `name`, `enabled`, non-negative integer `order`, and `profiles`
+keyed by Template Set ID. The current MAX shell uses the explicit `max` mapping,
+including custom set assignments; event names do not choose demo profiles.
+Each published profile has `demo: true`, UUID-hex `version`, SHA-256
+`templateFingerprint`, `portrait`, and four canonical-brand maps:
+`ads`, `cutouts`, `variations`, `printPreviews`. Each asset is `{blob, mimeType}`;
+variation entries also have `label`. Each variation list can be empty or contain
+up to 100 images. No generic Paris samples replace an empty published list.
+Every asset must belong to
+`assets/permanent-demos/{personId}/{templateSetId}/{version}/`.
+Role and brand paths are checked: `portrait.jpg`, `ads/{brand}.jpg`,
+`cutouts/{brand}.png`, `variations/{brand}/page_N.jpg`,
+`print-previews/{brand}.jpg`. Cutouts are PNG; other images can also use
+matching PNG or WebP filenames/MIME types.
+
+Creator publishes complete immutable profile versions, replacing the catalog
+only after generation succeeds. The kiosk keeps one catalog snapshot across
+an attendee journey; refreshing the portrait picker or reloading the page reads
+the newly published catalog. Demo identities never become Azure attendee IDs.
+No demo sends preparation, print, fulfillment or share requests.
+Finish remains available on demo variations and in the workflow panel. It clears
+the attendee session and returns to the welcome screen rather than the live ending.
+The ending displays a labeled static demo print preview, including any static
+demonstration QR from the template; it makes no pickup or share-success claim.
+Story screens do not expose manual Graph upload controls. They never send
+container SAS access to Graph or bypass the live signed-portrait validator.
+The workflow example uses the selected demo brand's cutout and first rendition.
+Without booth settings, the original bundled offline demo remains available.
+
 ## Adobe Graph cutout handoff
 
 For Azure portraits, story screens read
@@ -33,10 +124,54 @@ explicit Graph click before adding a URLSearchParams-encoded `portraitUrl` hash.
 The userscript captures it at document-start and removes it from the address.
 Backend publication remains opt-in; real node output/signing is not live-verified.
 
-`/tools/graph-auto-load.user.js` is the source-owned combined Tampermonkey v1.6
+Published catalog demos use public cutouts when available and otherwise open Graph without an image. Each setup
+sends `KIOSK_SET_GRAPH_MODE {mode, portraitId}` immediately before
+`KIOSK_SET_NAME` with the same `portraitId`. Only a positively classified
+catalog portrait uses `manual-demo`; all live and legacy identities use
+`portrait`. Coworker consumes the staged mode only for a matching identity,
+otherwise retaining strict portrait validation. The fallback opens the configured
+Graph without `portraitUrl` or manual-upload instructions. The existing
+Continue to ads action remains available without claiming that Graph completed. Catalog cutouts never
+masquerade as live `azure_*` manifests or receive a container-SAS handoff.
+
+`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.0
 artifact for manual installation, not an EDS-injected script. Replace the old
 activation userscript with it rather than running duplicate return controls.
-Its upload control selectors have not been verified against live Adobe Graph.
+It preserves the installed v1.8 return control and edit-access/save-copy notice
+suppression, while accepting active blob-read links with up to seven days
+remaining and UTC timestamps with optional fractions or `+00:00`. Rejections
+log fixed reason codes under `[autoload]`, never signed URLs. The upload
+sequence is exercised against a local shadow-DOM fixture; its selectors still
+require verification against live Adobe Graph.
+
+### Evergreen permanent-demo cutouts
+
+Creator's explicit public-cutout export writes only four approved PNGs per
+completed demo version to
+`assets/permanent-demo-cutouts/{personId}/{templateSetId}/{version}/{brand}.png`.
+Its `index.json` is `{schemaVersion:1,cutouts:[{personId,templateSetId,version,
+brand,path,sha256}]}`. No portraits, ads, attendee outputs or SAS are exported.
+Versions are immutable; publishing these public files is a separate approved
+deployment, not part of generation or local export.
+
+The shell fetches the index from the actual public HTTPS origin and matches the
+active catalog identity, Template Set, version and brand. Before ad selection
+the Paris Graph story uses `4-lorealparis`; afterward the selected brand is used.
+Only `kiosk-preview--glam-kiosk-site--lukevan.aem.page` and
+`main--glam-kiosk-site--lukevan.aem.live` are permitted. Hosted kiosks use their
+own approved origin by default. Local testing requires explicit runtime
+`publicDemoOrigin` pointing to one of those HTTPS origins; it never constructs
+a public URL from a locally exported index. Missing mappings open Graph without
+an image; failed reads also emit a credential-free console diagnostic.
+
+For a matched export, identity-bound `KIOSK_SET_GRAPH_MODE` uses `public-demo`
+and a `demo` object containing `personId,templateSetId,version,brand,sha256,url`.
+Coworker validates this separate public namespace without altering live SAS
+validation. Graph receives `portraitUrl` plus `publicDemo` JSON provenance in the
+fragment. Userscript v2.0 clears both immediately, validates the exact namespace
+and approved origin, then verifies the PNG SHA-256 before import. Public demo
+URLs never expire, but removed/unpublished files remain unavailable. Until the
+code, index and PNGs are actually published, no evergreen availability is claimed.
 
 The ending screen checks render and fulfillment status every five seconds until
 rendering is ready, fulfillment is submitted and the selected preview image has
@@ -51,6 +186,9 @@ the selected print. Once the actual image loads, it slides down from beneath the
 bar over 1.5 seconds. Polling preserves that image and does not replay its reveal.
 The bar reports preparation, file readiness, or failure, never physical printing
 or fabricated progress. The closing copy remains stable while status changes.
+While preparing or waiting for the preview image, the green line pulses as an
+indeterminate activity cue. It becomes steady once the image loads and stops
+on read/image errors or terminal failure. Reduced-motion users see a steady line.
 Reduced motion uses short opacity fades; leaving the screen cancels animations.
 Publishing this frontend does not enable Creator's `GLAM_GRAPH_INPUT_ENABLED`
 flag or publish cutouts; those backend operations need separate approval.

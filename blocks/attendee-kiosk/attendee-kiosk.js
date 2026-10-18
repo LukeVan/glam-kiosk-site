@@ -10,7 +10,12 @@ import {
 import copy from './copy.js';
 import { createPrintRequest, createPreparation } from './fulfillment.js';
 import { blobURL } from '../../scripts/kiosk-settings.js';
+import { loadCSS } from '../../scripts/aem.js';
+import { darkLockup, darkNameLens } from './dark-artwork.js';
 import playAdEngulf from './engulf.js';
+import captureOpeningTransition from './opening-transitions.js';
+import { readPublicDemo } from './public-demo.js';
+import { BANNER_BRANDS } from './banner-assets.js';
 import { markCompleted } from './completed.js';
 import renderVariations, { sampleVariations } from './variations.js';
 
@@ -61,9 +66,11 @@ export default async function decorate(block) {
     return;
   }
   let api;
+  let boothSettings;
   try {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
       || createAPI(config);
+    if (api.source === 'azure') boothSettings = api.settings();
   } catch (error) {
     block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
     return;
@@ -85,6 +92,7 @@ export default async function decorate(block) {
   let manifest;
   let portrait;
   let graphPortrait = null;
+  let publicDemo = null;
   let graphTimer;
   let frame;
   let currentStoryBeat = 'home';
@@ -97,15 +105,15 @@ export default async function decorate(block) {
   let resetting = false;
   let cancelEngulf = () => {};
   const header = element('div', '', 'kiosk-header');
+  await loadCSS('/blocks/attendee-kiosk/dark.css');
   const logo = picture('/blocks/attendee-kiosk/assets/lockup.png', 'Adobe × L’Oréal Groupe');
   logo.loading = 'eager';
-  header.append(logo);
+  header.append(logo, darkLockup());
   const tools = element('div', '', 'kiosk-tools');
   const badge = element('div', '', 'kiosk-badge');
   const panel = element('div', '', 'kiosk-panel');
   const frameSlot = element('div', '', 'kiosk-frame-slot');
   block.append(header, tools, badge, panel, frameSlot);
-
   const text = () => copy[state.language];
   function button(label, action, disabled = false) {
     const node = element('button', label);
@@ -176,8 +184,18 @@ export default async function decorate(block) {
   }
   function notifyCoworker() {
     if (resetting || !frame || !portrait) return;
+    sendCoworker({ type: 'KIOSK_SET_THEME', theme: boothSettings?.appearance || 'light' });
+    let graphMode = 'portrait';
+    if (portrait.demoCatalog) graphMode = publicDemo ? 'public-demo' : 'manual-demo';
+    sendCoworker({
+      type: 'KIOSK_SET_GRAPH_MODE',
+      mode: graphMode,
+      portraitId: state.portraitId,
+      ...(publicDemo ? { demo: publicDemo } : {}),
+    });
     sendCoworker({
       type: 'KIOSK_SET_NAME',
+      portraitId: state.portraitId,
       name: state.name,
       portrait: new URL(portrait.thumbnailUrl, window.location.origin).href,
     });
@@ -211,10 +229,38 @@ export default async function decorate(block) {
       }
     }
   }
+  function applyAppearance() {
+    const appearance = boothSettings?.appearance || 'light';
+    block.dataset.appearance = appearance;
+    sendCoworker({ type: 'KIOSK_SET_THEME', theme: appearance });
+  }
+  applyAppearance();
   function loadGraphPortrait(signal, currentEpoch) {
     clearTimeout(graphTimer);
     graphPortrait = null;
+    publicDemo = null;
     const id = state.portraitId;
+    if (id.startsWith('demo_')) {
+      if (portrait.demoCatalog && config.publicDemoOrigin) {
+        const brandIndex = manifest?.ads.findIndex((ad) => ad.id === state.selectedAdId) ?? -1;
+        readPublicDemo(config.publicDemoOrigin, {
+          personId: id,
+          templateSetId: portrait.templateSetId,
+          version: portrait.demoVersion,
+          brand: BANNER_BRANDS[brandIndex < 0 ? 3 : brandIndex],
+        }, signal).then((result) => {
+          if (signal.aborted || epoch !== currentEpoch) return;
+          publicDemo = result;
+          notifyCoworker();
+        }).catch(() => {
+          if (signal.aborted || epoch !== currentEpoch) return;
+          // eslint-disable-next-line no-console
+          console.warn('[kiosk] Public demo cutout unavailable; Graph will open without an image.');
+        });
+      }
+      signal.addEventListener('abort', () => { publicDemo = null; }, { once: true });
+      return;
+    }
     if (!api.graphInput || id.startsWith('demo_')) return;
     const warning = element('p', '', 'kiosk-graph-input-status');
     warning.setAttribute('role', 'status');
@@ -303,6 +349,7 @@ export default async function decorate(block) {
   function renderTools() {
     tools.replaceChildren();
     const language = element('div', '', 'kiosk-language');
+    language.hidden = true;
     [['en', 'Switch to English'], ['fr', 'Passer en français']]
       .forEach(([languageCode, label]) => {
         const toggle = button('', () => {
@@ -560,7 +607,11 @@ export default async function decorate(block) {
       }
     });
     copyPane.append(form);
-    panel.append(copyPane, picture(portrait.thumbnailUrl, portrait.label));
+    const photo = picture(portrait.thumbnailUrl, portrait.label);
+    photo.className = 'kiosk-name-photo';
+    const artwork = element('div', '', 'kiosk-name-artwork');
+    artwork.append(darkNameLens(), photo);
+    panel.append(copyPane, artwork);
     input.focus();
     if (document.readyState !== 'complete') {
       window.addEventListener('load', () => requestAnimationFrame(() => {
@@ -907,6 +958,27 @@ export default async function decorate(block) {
     panel.append(element('p', text().endings), button(text().refresh, () => render()));
   }
   async function ending(signal, currentEpoch) {
+    if (state.portraitId?.startsWith('demo_') && api.demoAssets) {
+      const assets = await api.demoAssets(state.portraitId, state.selectedAdId, signal);
+      if (signal.aborted || epoch !== currentEpoch) return;
+      if (assets) {
+        const content = element('div', '', 'kiosk-ending-copy');
+        content.append(element('h2', text().thankYou), element('p', text().demoPrintPreview));
+        content.append(button(text().startOver, reset));
+        const media = element('div', '', 'kiosk-ending-media kiosk-demo-print');
+        const preview = picture(assets.printPreview.url, text().demoPrintPreview);
+        preview.className = 'kiosk-print-preview';
+        preview.addEventListener('error', () => {
+          preview.hidden = true;
+          const error = element('p', text().printPreviewFailed);
+          error.setAttribute('role', 'alert');
+          media.append(error);
+        }, { once: true, signal });
+        media.append(preview);
+        panel.append(content, media);
+        return;
+      }
+    }
     if (!panel.children.length) title(text().thankYou, text().printPreparing);
     if (!state.printRequest || !api.printStatus) {
       title(text().thankYou, text().printPickup);
@@ -945,15 +1017,16 @@ export default async function decorate(block) {
     media.dataset.printState = failed ? 'failed' : 'available';
     if (readFailed) media.dataset.printState = 'read-error';
     bar.setAttribute('role', 'status');
-    const setPrintStatus = (value, complete = false) => {
+    const setPrintStatus = (value, complete = false, processing = false) => {
       bar.textContent = value;
       bar.classList.toggle('kiosk-print-status-ready', complete);
+      bar.classList.toggle('kiosk-print-status-processing', processing);
     };
     if (readFailed) setPrintStatus(text().printStatusRetrying);
     else if (failed) setPrintStatus(text().printFailed);
     else if (slot.querySelector('img')?.naturalWidth > 0) {
       setPrintStatus(text().printTakeHome, true);
-    } else setPrintStatus(text().printPreparing);
+    } else setPrintStatus(text().printPreparing, false, true);
     const selected = result?.render.brands?.[request.selectedBrand];
     if (selected?.status === 'ready' && media.dataset.preview !== selected.blob) {
       const previewURL = blobURL(api.settings().containerSAS, selected.blob);
@@ -1039,7 +1112,9 @@ export default async function decorate(block) {
     block.lang = state.language;
     renderTools();
     panel.removeAttribute('role');
+    let playOpening = () => {};
     const preparePanel = () => {
+      playOpening = captureOpeningTransition(block, panel, snapshot.stage, signal);
       panel.inert = false;
       panel.removeAttribute('aria-busy');
       panel.className = `kiosk-panel kiosk-panel-${snapshot.stage}`;
@@ -1155,6 +1230,7 @@ export default async function decorate(block) {
           if (!event.repeat) next.click();
         });
         panel.replaceChildren(copyPane, gallery, refresh);
+        playOpening(frameSlot);
         return;
       }
       if (snapshot.stage === 'name' && snapshot.prepareRequest) {
@@ -1171,7 +1247,7 @@ export default async function decorate(block) {
       let initialResults;
       let finishRevealSetup = () => {};
       if (revealVariations) {
-        if (api.bannerResults && !snapshot.portraitId.startsWith('demo_')) {
+        if (api.bannerResults && (!snapshot.portraitId.startsWith('demo_') || manifest.demoCatalog)) {
           initialResults = await api.bannerResults(
             snapshot.portraitId,
             snapshot.selectedAdId,
@@ -1179,7 +1255,8 @@ export default async function decorate(block) {
           );
         }
         let previews = manifest.banners.length ? manifest.banners : [];
-        if (snapshot.portraitId.startsWith('demo_') && !previews.length) previews = sampleVariations();
+        if (snapshot.portraitId.startsWith('demo_') && !manifest.demoCatalog
+          && !previews.length) previews = sampleVariations();
         if (initialResults) {
           previews = initialResults.assets.filter((asset) => (
             asset.status === 'ready' && asset.mimeType?.startsWith('image/')
@@ -1247,13 +1324,19 @@ export default async function decorate(block) {
       finishRevealSetup();
       if (snapshot.stage === 'name') nameEntry();
       if (['story', 'continued'].includes(snapshot.stage)) story();
+      if (['name', 'story'].includes(snapshot.stage)) playOpening(frameSlot);
       if (['story', 'continued'].includes(snapshot.stage)) loadGraphPortrait(signal, currentEpoch);
       if (snapshot.stage === 'graph') graph();
       if (snapshot.stage === 'pacing') graphInterstitial();
       if (snapshot.stage === 'ads') ads();
       if (snapshot.stage === 'banners') banners();
       if (snapshot.stage === 'variations') {
-        const sample = snapshot.portraitId.startsWith('demo_') && !manifest.banners.length;
+        const demo = snapshot.portraitId.startsWith('demo_');
+        const sample = demo && !manifest.demoCatalog
+          && !manifest.banners.length;
+        let onFinish = null;
+        if (demo) onFinish = reset;
+        else if (state.printRequest) onFinish = () => move('ending');
         let variationAssets = sample ? sampleVariations() : manifest.banners;
         if (initialResults) {
           variationAssets = initialResults.assets.filter((asset) => (
@@ -1265,7 +1348,9 @@ export default async function decorate(block) {
           block,
           assets: variationAssets,
           sample,
-          loadResults: api.bannerResults && !snapshot.portraitId.startsWith('demo_')
+          demo: Boolean(manifest.demoCatalog),
+          loadResults: api.bannerResults && (!snapshot.portraitId.startsWith('demo_')
+            || manifest.demoCatalog)
             ? () => {
               if (initialResults) {
                 const result = initialResults;
@@ -1280,13 +1365,18 @@ export default async function decorate(block) {
           portraitId: snapshot.portraitId,
           loadWorkflowPortrait: async (workflowSignal) => {
             if (snapshot.portraitId.startsWith('demo_')) {
+              if (manifest.demoCatalog) {
+                const { portraitId, selectedAdId } = snapshot;
+                const fixtures = await api.demoAssets(portraitId, selectedAdId, workflowSignal);
+                return fixtures.cutout.url;
+              }
               return new URL(portrait.thumbnailUrl, window.location.origin).href;
             }
             const result = await api.graphInput(snapshot.portraitId, workflowSignal);
             return result.status === 'ready' ? result.url : null;
           },
           animateEntrance: revealVariations,
-          onFinish: state.printRequest ? () => move('ending') : null,
+          onFinish,
         });
       }
     } catch (error) {
@@ -1310,6 +1400,19 @@ export default async function decorate(block) {
   });
   window.addEventListener('storage', (event) => {
     if (api.source !== 'azure' || (event.key !== 'glam-kiosk-booth-v1' && event.key !== null)) return;
+    try {
+      const updated = api.settings();
+      const sameSetup = Object.keys(updated).every((field) => (
+        field === 'appearance' || updated[field] === boothSettings[field]
+      ));
+      if (sameSetup) {
+        boothSettings = updated;
+        applyAppearance();
+        return;
+      }
+    } catch {
+      // Clearing or invalidating settings still blocks the current attendee.
+    }
     controller?.abort();
     clearTimeout(timer);
     fail(new Error(text().boothChanged));

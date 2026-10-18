@@ -5,6 +5,7 @@ import { readPrintStatus, submitPrintRequest, submitPreparation } from './fulfil
 import { completedPortraits } from './completed.js';
 import { readBannerManifest, BANNER_BRANDS } from './banner-assets.js';
 import { readGraphInput } from './graph-input.js';
+import { readDemoCatalog } from './demo-catalog.js';
 
 const EXTENSIONS = /\.(jpg|jpeg|png|webp)$/i;
 const BRANDS = [
@@ -41,12 +42,35 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     setupError = error.message;
   }
   let warning = '';
+  let catalog;
   function settings() {
     if (setupError) throw new Error(setupError);
     const saved = loadSettings(storage);
     if (!saved) throw new Error('Booth settings were cleared. Restart the kiosk page.');
     if (saved.eventId !== eventId) throw new Error('The booth event changed. Restart the kiosk page.');
     return saved;
+  }
+  async function demos(signal, refresh = false) {
+    if (refresh || catalog === undefined) {
+      catalog = await readDemoCatalog(settings(), signal, fetcher);
+    }
+    if (catalog === null) return demo.portraits(signal);
+    return catalog.people.map((person) => ({
+      id: person.id,
+      label: person.label,
+      thumbnailUrl: person.profile.portrait.url,
+      demo: true,
+      demoCatalog: true,
+      templateSetId: catalog.templateSetId,
+      demoVersion: person.profile.version,
+    }));
+  }
+  async function demoProfile(id, signal) {
+    await demos(signal);
+    if (catalog === null) return null;
+    const person = catalog.people.find((item) => item.id === id);
+    if (!person) throw new Error('This demo is no longer published for the selected Template Set.');
+    return person.profile;
   }
   async function azurePortraits(signal) {
     const saved = settings();
@@ -71,7 +95,7 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     return portraits.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   }
   async function selectedPortrait(id, signal) {
-    if (id.startsWith('demo_')) return (await demo.portraits(signal)).find((item) => item.id === id);
+    if (id.startsWith('demo_')) return (await demos(signal)).find((item) => item.id === id);
     const selected = (await azurePortraits(signal)).find((item) => item.id === id);
     if (!selected) throw new Error('The selected Azure portrait is no longer available. Choose another photo.');
     return selected;
@@ -90,7 +114,26 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     async bannerResults(id, selectedAdId, signal) {
       const brand = BANNER_BRANDS.find((item, index) => selectedAdId === `${id}_${index + 1}`);
       if (!brand) throw new Error('Banner results require the selected portrait’s ad.');
+      if (id.startsWith('demo_')) {
+        const profile = await demoProfile(id, signal);
+        if (!profile) throw new Error('Legacy demo variations are static samples.');
+        return { status: 'ready', assets: profile.variations[brand] };
+      }
       return readBannerManifest(id, settings(), signal, fetcher, brand);
+    },
+    async demoAssets(id, selectedAdId, signal) {
+      if (!id.startsWith('demo_')) throw new Error('Demo assets require a demo identity.');
+      const profile = await demoProfile(id, signal);
+      if (!profile) return null;
+      const brand = BANNER_BRANDS.find((item, index) => selectedAdId === `${id}_${index + 1}`);
+      if (!brand) throw new Error('Demo assets require the selected demo’s ad.');
+      return { cutout: profile.cutouts[brand], printPreview: profile.printPreviews[brand] };
+    },
+    async demoCutouts(id, signal) {
+      const profile = await demoProfile(id, signal);
+      return profile ? BANNER_BRANDS.map((brand, index) => ({
+        ...profile.cutouts[brand], label: BRANDS[index][1],
+      })) : [];
     },
     async printStatus(request, signal) {
       return readPrintStatus(request, settings(), signal, fetcher);
@@ -98,7 +141,7 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     get warning() { return warning; },
     selectedPortrait,
     async portraits(signal) {
-      const samples = (await demo.portraits(signal)).map((item) => ({ ...item, demo: true }));
+      const samples = (await demos(signal, true)).map((item) => ({ ...item, demo: true }));
       const hidden = settings().showCompletedPortraits ? [] : completedPortraits(storage, eventId);
       try {
         const portraits = await azurePortraits(signal);
@@ -111,7 +154,19 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
       }
     },
     async manifest(id, signal) {
-      if (id.startsWith('demo_')) return demo.manifest(id, signal);
+      if (id.startsWith('demo_')) {
+        const profile = await demoProfile(id, signal);
+        if (!profile) return demo.manifest(id, signal);
+        return {
+          portraitId: id,
+          status: 'ready',
+          demoCatalog: true,
+          ads: BANNER_BRANDS.map((brand, index) => ({
+            id: `${id}_${index + 1}`, label: BRANDS[index][1], url: profile.ads[brand].url,
+          })),
+          banners: [],
+        };
+      }
       const selected = await selectedPortrait(id, signal);
       const saved = settings();
       const prefix = `${saved.eventId}/4-Output/${selected.stem}/`;

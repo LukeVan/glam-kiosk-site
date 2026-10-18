@@ -185,6 +185,12 @@ assert.throws(() => markCompleted({
   getItem: () => null, setItem: () => { throw new Error('Storage unavailable'); },
 }, 'event-one', portraitId), /Storage unavailable/);
 assert.equal(settings.showCompletedPortraits, false);
+assert.equal(settings.appearance, 'light');
+assert.equal(validateSettings({ ...settings, appearance: 'dark' }).appearance, 'dark');
+assert.equal(validateSettings({ ...settings, appearance: undefined }).appearance, 'light');
+for (const appearance of ['auto', 'Dark', '', null, true, {}]) {
+  assert.throws(() => validateSettings({ ...settings, appearance }));
+}
 assert.equal(validateSettings({ ...settings, showCompletedPortraits: true }).showCompletedPortraits, true);
 assert.throws(() => validateSettings({ ...settings, showCompletedPortraits: 'true' }));
 const source = {};
@@ -197,7 +203,7 @@ for (const beat of ['home', 'overview', 'brief', 'performance', 'creative']) {
   assert.equal(storyBeat({ ...beatEvent, data: { ...beatEvent.data, beat } }, source, integration, 'story'), beat);
   assert.equal(storyBeat({ ...beatEvent, data: { ...beatEvent.data, beat } }, source, integration, 'continued'), null);
 }
-for (const beat of ['simulate', 'results']) {
+for (const beat of ['simulate', 'results', 'variations']) {
   const event = { ...beatEvent, data: { ...beatEvent.data, beat } };
   assert.equal(storyBeat(event, source, integration, 'continued'), beat);
   assert.equal(storyBeat(event, source, integration, 'story'), null);

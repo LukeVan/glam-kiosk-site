@@ -26,7 +26,7 @@ export function navigation(event, source, integration, stage) {
 
 export function storyBeat(event, source, integration, stage) {
   const beats = stage === 'story' ? ['home', 'overview', 'brief', 'performance', 'creative']
-    : ['simulate', 'results'];
+    : ['simulate', 'results', 'variations'];
   if (!['story', 'continued'].includes(stage) || !integration.enabled || !source || event.source !== source
     || event.origin !== integration.origin || !event.data || typeof event.data !== 'object'
     || Array.isArray(event.data) || event.data.type !== 'KIOSK_STORY_BEAT'

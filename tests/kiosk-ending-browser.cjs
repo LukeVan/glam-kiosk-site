@@ -98,7 +98,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         printRequest,
       }));
     }, {
-      settings: { version: 1, containerSAS, eventId: 'TestEvent', activationProfile: 'max', formType: 'none' },
+      settings: {
+        version: 1, containerSAS, eventId: 'TestEvent', activationProfile: 'max',
+        formType: 'none', appearance: process.env.KIOSK_APPEARANCE || 'light',
+      },
       printRequest: request,
     });
     await page.reload();
@@ -169,10 +172,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await image.count(), 0);
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Preparing your take-home ad');
+    assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'kiosk-print-processing');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'none');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     ready = true;
     await image.waitFor({ timeout: 10000 });
     await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
     assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'none');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.reload();
     await image.waitFor();

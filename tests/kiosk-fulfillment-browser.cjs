@@ -47,6 +47,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await page.route('https://ffservices24.blob.core.windows.net/**', async (route) => {
       const url = new URL(route.request().url());
+      if (url.pathname.endsWith('/assets/permanent-demos/catalog.json')) {
+        await route.fulfill({ status: 404 });
+        return;
+      }
       if (route.request().method() === 'PUT') {
         const body = route.request().postDataJSON();
         if (url.pathname.endsWith('/prepare.json')) {
@@ -269,10 +273,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }, beat);
     const currentHeading = page.locator('.kiosk-story-text:not([aria-hidden]) h2');
     const beats = [
-      ['overview', 'Step back in', "See what's in motion, what's next, and where to jump back in."],
-      ['brief', 'Get up to speed', 'Receive the context you need to move forward.'],
-      ['performance', 'Build on what worked', 'Understand past performance without digging through dashboards.'],
-      ['creative', 'Take creative control', 'Step into Firefly Graph to explore the direction of your hero assets.'],
+      ['overview', 'Step back in', 'Pull up your active tasks to instantly understand campaign context, deadlines, and next actions.'],
+      ['brief', 'Get up to speed', 'Bring the brief into focus to review creative direction, audience, and required assets.'],
+      ['performance', 'Build on what worked', 'Compare past performance to see which creative choices connected without digging through reports.'],
+      ['creative', 'Take creative control', 'Move into Firefly Graph to refine your hero assets and explore new visual treatments while keeping the original subject intact.'],
     ];
     await storyFrame.locator('[contenteditable="true"]').focus();
     const copyFrameBefore = await page.locator('.kiosk-frame-slot').boundingBox();
@@ -449,7 +453,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-panel-continued h2').innerText(), 'Test your thinking');
     assert.equal(await page.locator('.kiosk-panel-continued h2').evaluate((node) => getComputedStyle(node).fontSize), '80px');
     assert.equal(await page.locator('.kiosk-panel-continued .kiosk-story-subcopy').innerText(),
-      'See how your creative might resonate in market before you move forward.');
+      'Simulate audience reactions to your creative before you commit to production.');
     const continuedCopyFrame = await page.locator('.kiosk-frame-slot').boundingBox();
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'story-simulate.png') });
@@ -469,7 +473,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
     await page.locator('.kiosk-story-text:not([aria-hidden]) h2').getByText('See what resonates', { exact: true }).waitFor();
     assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden]) p').innerText(),
-      'Turn what you learn into creative direction.');
+      'See where your creative connects and gain feedback on clarity, relevance, and appeal to help refine.');
     await page.waitForFunction(() => document.querySelectorAll('.kiosk-story-text[aria-hidden]').length === 0);
     assert.deepEqual(await page.locator('.kiosk-frame-slot').boundingBox(), continuedCopyFrame);
     if (process.env.KIOSK_SCREENSHOT_DIR) {
@@ -519,8 +523,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return animate.call(this, frames, options);
       };
     });
+    await coworker.getByRole('button', { name: 'Open Workflow Results', exact: true }).waitFor();
+    await page.locator('.kiosk-story-text:not([aria-hidden]) h2')
+      .getByText('Let Coworker make the variations', { exact: true }).waitFor();
+    assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden]) p').innerText(),
+      'Take your design, and scale it to every size, language, and variation.');
     await coworker.getByRole('button', { name: 'Open Workflow Results', exact: true }).click();
     await page.locator('.kiosk-panel-variations').waitFor();
+    assert.equal(await page.locator('.kiosk-variations-copy .kiosk-story-text p').innerText(),
+      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand');
     const reveal = await page.evaluate(() => window.handoffAnimations);
     assert(reveal.some((animation) => animation.className.includes('kiosk-frame-slot')
       && animation.duration === 1000));
@@ -572,7 +583,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const workflowRequests = [];
     assert.equal(await page.locator('.kiosk-variations-copy h2').innerText(), 'Beauty, amplified');
     assert.equal(await page.locator('.kiosk-variations-intro p').innerText(),
-      'Scale your initial hero assets into the variations your campaign needs.');
+      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand');
     const trackWorkflow = (request) => {
       if (/\/api\/|\/production-workflow\//.test(request.url())) workflowRequests.push(request.url());
     };
@@ -587,6 +598,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await canvas.locator('.react-flow__node').count(), 9);
     assert.equal(await canvas.locator('.react-flow__edge').count(), 10);
     assert.equal(await page.locator('.kiosk-workflow-bar h2').innerText(), 'Firefly Creative Production for Enterprise');
+    assert.equal(await page.locator('.kiosk-workflow-dialog').evaluate((node) => getComputedStyle(node).backgroundColor), 'rgb(44, 44, 44)');
+    assert.equal(await page.locator('.kiosk-workflow-bar h2').evaluate((node) => getComputedStyle(node).color), 'rgb(255, 255, 255)');
+    assert.equal(await page.locator('.kiosk-workflow-close').evaluate((node) => getComputedStyle(node).color), 'rgb(255, 255, 255)');
     assert.equal(await page.locator('.kiosk-workflow-bar h2').evaluate((node) => getComputedStyle(node).fontFamily.includes('condensed')), false);
     await canvas.getByText('Loreal-ads-atscale-simple.csv', { exact: true }).waitFor();
     const attendeePreview = await page.locator('.kiosk-variation img').first().getAttribute('src');
@@ -660,7 +674,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const closeWorkflow = page.getByRole('button', { name: 'Close window', exact: true });
     assert.equal(await closeWorkflow.innerText(), '×');
     await closeWorkflow.click();
+    await page.locator('.kiosk-workflow-closing').waitFor();
+    await page.locator('.kiosk-workflow-dialog').waitFor({ state: 'detached' });
     assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(await page.locator('.kiosk-variations-controls').getByRole('button', { name: 'Finish', exact: true }).isEnabled(), true);
     assert.equal(await page.getByRole('button', { name: 'View production workflow', exact: true }).evaluate((node) => node === document.activeElement), true);
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
@@ -685,6 +702,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     await canvas.locator('.react-flow__node').first().waitFor({ timeout: 15000 });
     await page.keyboard.press('Escape');
+    await page.locator('.kiosk-workflow-dialog').waitFor({ state: 'detached' });
     assert.equal(await page.getByRole('dialog').count(), 0);
     graphUnavailable = true;
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
@@ -693,6 +711,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await canvas.locator('img[src*="/9-Graph-Input/"], img[src*="portrait-cutout-"]').count(), 0);
     await workflowImages[1].waitFor();
     await page.keyboard.press('Escape');
+    await page.locator('.kiosk-workflow-dialog').waitFor({ state: 'detached' });
     graphUnavailable = false;
     page.off('request', trackWorkflow);
     assert.equal(workflowRequests.some((url) => url.includes('/api/')), false);
@@ -715,10 +734,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     await workflowImages[0].waitFor();
     assert.equal(await canvas.locator('.react-flow__node[data-id="node-1791265273787-sqjsvf0ys"] img').count(), 0);
-    await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: 'Finish', exact: true }).click();
-    assert.equal(writes, 2);
+    const modalFinish = page.locator('.kiosk-workflow-actions').getByRole('button', { name: 'Finish', exact: true });
+    const finishBounds = await modalFinish.boundingBox();
+    const modalBounds = await page.locator('.kiosk-workflow-dialog').boundingBox();
+    assert(finishBounds.x + finishBounds.width > modalBounds.x + modalBounds.width - 40);
+    assert(finishBounds.y + finishBounds.height > modalBounds.y + modalBounds.height - 40);
+    await modalFinish.click();
     await page.locator('.kiosk-panel-ending').waitFor();
+    assert.equal(writes, 2);
+    assert.equal(await page.locator('.kiosk-workflow-dialog').count(), 0);
     await page.locator('.kiosk-ending-outgoing').waitFor({ state: 'detached' });
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     await page.reload();

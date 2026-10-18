@@ -12,7 +12,7 @@ export function sampleVariations() {
 
 export default function renderVariations({
   panel, block, assets, sample, text, signal, onFinish, workflow, loadResults,
-  portraitId, loadWorkflowPortrait, animateEntrance = false,
+  portraitId, loadWorkflowPortrait, animateEntrance = false, demo = false,
 }) {
   const make = (tag, value, className) => {
     const node = document.createElement(tag);
@@ -27,6 +27,7 @@ export default function renderVariations({
   copyViewport.append(copyText);
   copy.append(copyViewport);
   if (sample) copy.append(make('p', text.variationsSample, 'kiosk-variations-notice'));
+  else if (demo) copy.append(make('p', text.demo, 'kiosk-variations-notice'));
   let currentAssets = assets;
   let syncWorkflow = () => {};
   const controls = make('div', '', 'kiosk-variations-controls');
@@ -198,6 +199,29 @@ export default function renderVariations({
   const openWorkflow = button(text.viewProduction, () => {
     const dialog = make('dialog', '', 'kiosk-workflow-dialog');
     dialog.setAttribute('aria-label', text.productionWorkflowTitle);
+    let closing = false;
+    let closeAnimation;
+    const closePanel = (finish = false) => {
+      if (closing) return;
+      closing = true;
+      dialog.classList.add('kiosk-workflow-closing');
+      dialog.querySelectorAll('button').forEach((node) => { node.disabled = true; });
+      closeAnimation = dialog.animate(reducedMotion.matches ? [
+        { opacity: 1 }, { opacity: 0 },
+      ] : [
+        { transform: getComputedStyle(dialog).transform, opacity: 1 },
+        { transform: 'translateX(100%)', opacity: 0 },
+      ], { duration: reducedMotion.matches ? 150 : 350, easing: 'ease-in', fill: 'forwards' });
+      closeAnimation.finished.then(() => {
+        if (signal.aborted) return;
+        dialog.close();
+        if (finish) onFinish();
+      }, () => {});
+    };
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      closePanel();
+    });
     const outside = (event) => {
       const bounds = dialog.getBoundingClientRect();
       return event.target === dialog && (event.clientX < bounds.left
@@ -209,7 +233,7 @@ export default function renderVariations({
       backdropPress = outside(event);
     });
     dialog.addEventListener('click', (event) => {
-      if (backdropPress && outside(event)) dialog.close();
+      if (backdropPress && outside(event)) closePanel();
       backdropPress = false;
     });
     const bar = make('div', '', 'kiosk-workflow-bar');
@@ -217,7 +241,7 @@ export default function renderVariations({
     close.textContent = '×';
     close.setAttribute('aria-label', text.closeWorkflow);
     close.type = 'button';
-    close.addEventListener('click', () => dialog.close());
+    close.addEventListener('click', () => closePanel());
     bar.append(make('h2', text.productionWorkflowTitle, ''), close);
     dialog.append(bar);
     const operation = new AbortController();
@@ -264,7 +288,15 @@ export default function renderVariations({
         notify();
       });
     } else dialog.append(make('p', text.workflowUnavailable, 'kiosk-workflow-unavailable'));
+    if (onFinish) {
+      const footer = make('div', '', 'kiosk-workflow-actions');
+      const finish = button(text.finishVariations, () => closePanel(true));
+      finish.className = 'kiosk-workflow-finish';
+      footer.append(finish);
+      dialog.append(footer);
+    }
     const dispose = () => {
+      closeAnimation?.cancel();
       operation.abort();
       syncWorkflow = () => {};
       modalOpen = false;
