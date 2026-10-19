@@ -1,4 +1,17 @@
 export const SETTINGS_KEY = 'glam-kiosk-booth-v1';
+export const APPEARANCE_KEY = 'glam-kiosk-appearance-v1';
+export function loadAppearance(storage, fallback = 'light') {
+  const value = storage.getItem(APPEARANCE_KEY);
+  if (value === null) return fallback;
+  if (!['light', 'dark'].includes(value)) throw new Error('Saved activation appearance is invalid. Choose Light or Dark in booth settings.');
+  return value;
+}
+
+export function saveAppearance(storage, value) {
+  if (!['light', 'dark'].includes(value)) throw new Error('Choose Light or Dark for activation appearance.');
+  storage.setItem(APPEARANCE_KEY, value);
+}
+
 export const SYSTEM_PREFIXES = new Set([
   'assets', 'portraits', 'print', 'thumbnails', 'logs', 'dgr-production',
   'print-templates', 'product-crop-temp',
@@ -97,11 +110,13 @@ export function loadSettings(storage) {
 export function saveSettings(storage, value) {
   const validated = validateSettings(value);
   storage.setItem(SETTINGS_KEY, JSON.stringify(validated));
+  saveAppearance(storage, validated.appearance);
   return validated;
 }
 
 export function clearSettings(storage) {
   storage.removeItem(SETTINGS_KEY);
+  storage.removeItem(APPEARANCE_KEY);
 }
 
 export async function listBlobs(containerSAS, {

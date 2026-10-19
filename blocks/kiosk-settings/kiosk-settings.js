@@ -1,5 +1,6 @@
 import {
   SETTINGS_KEY, parseContainerSAS, listEvents, loadSettings, saveSettings, clearSettings,
+  loadAppearance, saveAppearance,
 } from '../../scripts/kiosk-settings.js';
 
 function node(tag, text, className) {
@@ -103,6 +104,12 @@ export default function decorate(block) {
     status.textContent = message;
     status.setAttribute('role', failed ? 'alert' : 'status');
   }
+  appearance.addEventListener('change', () => {
+    try {
+      saveAppearance(window.localStorage, appearance.value);
+      report('Appearance saved. Open kiosk tabs update immediately. No connection test or booth-settings save is needed.');
+    } catch (error) { report(error.message, true); }
+  });
   function invalidate() {
     controller?.abort();
     testedSAS = '';
@@ -212,5 +219,8 @@ export default function decorate(block) {
       completed.value = saved.showCompletedPortraits ? 'show' : 'hide';
       report(`Saved event: ${saved.eventId}. Access expires ${new Date(saved.expiresAt).toLocaleString()}. You can save changes using this connection. Test again to verify access or discover other events.`);
     } else report('This kiosk is unconfigured.');
+  } catch (error) { report(error.message, true); }
+  try {
+    appearance.value = loadAppearance(window.localStorage, appearance.value);
   } catch (error) { report(error.message, true); }
 }

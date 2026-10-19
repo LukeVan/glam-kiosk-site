@@ -3,9 +3,11 @@
 ## Light and dark activation appearance
 
 In `/drafts/kiosk-settings.html`, **Activation appearance** switches between
-**Light** and **Dark**. The validated booth setting is
-`appearance: "light" | "dark"`; older settings default to light. Saving only
-appearance updates other open kiosk tabs on the same origin immediately,
+**Light** and **Dark**. Selecting an option saves it immediately in the separate
+`glam-kiosk-appearance-v1` browser preference, including for no-SAS offline demos.
+No Test connection or Save booth settings click is needed. Existing booth
+`appearance: "light" | "dark"` values remain the fallback; older settings default
+to light. The preference updates other open kiosk tabs on the same origin immediately,
 without restarting the attendee or losing typed input. Other setup changes
 retain the existing reload requirement.
 

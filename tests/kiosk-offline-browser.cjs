@@ -110,6 +110,16 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       assert.equal(await downloads.locator('.max-download-gallery-item').count(), 4);
       assert.equal(await downloads.locator('.max-download-heading').innerText(), 'Looking good!');
       assert.equal(await downloads.locator('.max-download-sub').innerText(), 'Download and share your personalized ads below.');
+      const downloadButton = downloads.locator('.max-download-gallery-btn').first();
+      assert.deepEqual(await downloadButton.evaluate((link) => ({
+        background: getComputedStyle(link).backgroundColor,
+        color: getComputedStyle(link).color,
+      })), { background: 'rgb(20, 115, 230)', color: 'rgb(255, 255, 255)' });
+      await downloadButton.hover();
+      assert.deepEqual(await downloadButton.evaluate((link) => ({
+        background: getComputedStyle(link).backgroundColor,
+        color: getComputedStyle(link).color,
+      })), { background: 'rgb(13, 102, 208)', color: 'rgb(255, 255, 255)' });
       for (const image of await downloads.locator('.max-download-gallery-item img').all()) {
         await image.evaluate((node) => node.decode());
       }

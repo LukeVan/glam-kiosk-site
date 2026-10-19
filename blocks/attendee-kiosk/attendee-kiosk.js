@@ -11,7 +11,7 @@ import {
 } from './integrations.js';
 import copy from './copy.js';
 import { createPrintRequest, createPreparation } from './fulfillment.js';
-import { blobURL } from '../../scripts/kiosk-settings.js';
+import { APPEARANCE_KEY, blobURL, loadAppearance } from '../../scripts/kiosk-settings.js';
 import { loadCSS } from '../../scripts/aem.js';
 import { darkLockup, darkNameLens } from './dark-artwork.js';
 import playAdEngulf from './engulf.js';
@@ -69,10 +69,12 @@ export default async function decorate(block) {
   }
   let api;
   let boothSettings;
+  let appearance;
   try {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
       || (config.mode === 'demo' ? createOfflineDemoAPI() : createAPI(config));
     if (api.source === 'azure') boothSettings = api.settings();
+    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'light');
   } catch (error) {
     block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
     return;
@@ -188,7 +190,7 @@ export default async function decorate(block) {
   }
   function notifyCoworker() {
     if (resetting || !frame || !portrait) return;
-    sendCoworker({ type: 'KIOSK_SET_THEME', theme: boothSettings?.appearance || 'light' });
+    sendCoworker({ type: 'KIOSK_SET_THEME', theme: appearance });
     let graphMode = 'portrait';
     if (portrait.demoCatalog) graphMode = publicDemo ? 'public-demo' : 'manual-demo';
     sendCoworker({
@@ -234,7 +236,7 @@ export default async function decorate(block) {
     }
   }
   function applyAppearance() {
-    const appearance = boothSettings?.appearance || 'light';
+    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'light');
     block.dataset.appearance = appearance;
     sendCoworker({ type: 'KIOSK_SET_THEME', theme: appearance });
   }
@@ -1417,6 +1419,12 @@ export default async function decorate(block) {
     if (stage) move(stage === 'banners' && state.printRequest ? 'ending' : stage);
   });
   window.addEventListener('storage', (event) => {
+    if (event.key === APPEARANCE_KEY || (event.key === null && api.source !== 'azure')) {
+      try {
+        applyAppearance();
+      } catch (error) { fail(error); }
+      return;
+    }
     if (api.source !== 'azure' || (event.key !== 'glam-kiosk-booth-v1' && event.key !== null)) return;
     try {
       const updated = api.settings();

@@ -60,8 +60,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const requestsBeforeAppearanceSave = methods.length;
     async function choose(theme) {
       await appearance.selectOption(theme);
-      await settings.getByRole('button', { name: 'Save booth settings', exact: true }).click();
       await page.waitForFunction((theme) => document.querySelector('.attendee-kiosk').dataset.appearance === theme, theme);
+      assert.match(await settings.locator('.kiosk-settings-status').innerText(), /Appearance saved/);
     }
     await choose('dark');
     assert.equal(methods.length, requestsBeforeAppearanceSave, 'Appearance-only save must not test Azure');
@@ -187,6 +187,49 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await settings.getByRole('button', { name: 'Test connection', exact: true }).click();
     await settings.waitForFunction(() => !document.querySelector('button[type="submit"]').disabled);
     assert.equal(await settings.getByLabel('Event', { exact: true }).inputValue(), 'TestEvent');
+    const offlineContext = await browser.newContext();
+    let azureCalls = 0;
+    await offlineContext.route('https://ffservices24.blob.core.windows.net/**', (route) => {
+      azureCalls += 1;
+      return route.abort();
+    });
+    const offline = await offlineContext.newPage();
+    await offline.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await offline.locator('.attendee-kiosk[data-appearance="light"]').waitFor();
+    const offlineSettings = await offlineContext.newPage();
+    await offlineSettings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({
+      contentType: 'text/html',
+      body: fs.readFileSync('drafts/kiosk-settings.html', 'utf8')
+        .replace('<body>', '<body><header></header>')
+        .replace('</body>', '<footer></footer></body>'),
+    }));
+    await offlineSettings.goto('http://localhost:3017/drafts/kiosk-settings.html');
+    assert.equal(await offlineSettings.getByRole('button', { name: 'Save booth settings', exact: true }).isDisabled(), true);
+    const offlineAppearance = offlineSettings.getByLabel('Activation appearance', { exact: true });
+    for (const theme of ['dark', 'light', 'dark']) {
+      await offlineAppearance.selectOption(theme);
+      await offline.locator(`.attendee-kiosk[data-appearance="${theme}"]`).waitFor();
+      assert.equal(await offlineSettings.evaluate(() => localStorage.getItem('glam-kiosk-booth-v1')), null);
+    }
+    await offline.reload();
+    await offline.locator('.attendee-kiosk[data-appearance="dark"]').waitFor();
+    await offlineSettings.reload();
+    assert.equal(await offlineAppearance.inputValue(), 'dark');
+    await offlineSettings.evaluate(() => {
+      localStorage.setItem('glam-kiosk-booth-v1', JSON.stringify({
+        version: 1,
+        containerSAS: 'https://ffservices24.blob.core.windows.net/mock-assets?sv=2023-11-03&sr=c&sp=rl&se=2020-01-01T00%3A00%3A00Z&sig=MOCK_ONLY',
+        eventId: 'TestEvent', activationProfile: 'max', formType: 'none',
+      }));
+    });
+    await offlineSettings.reload();
+    assert.match(await offlineSettings.locator('.kiosk-settings-status').innerText(), /expired/);
+    const expiredSetup = await offlineSettings.evaluate(() => localStorage.getItem('glam-kiosk-booth-v1'));
+    await offlineAppearance.selectOption('light');
+    await offline.locator('.attendee-kiosk[data-appearance="light"]').waitFor();
+    assert.equal(await offlineSettings.evaluate(() => localStorage.getItem('glam-kiosk-booth-v1')), expiredSetup);
+    assert.equal(azureCalls, 0, 'Offline and expired-access appearance changes must not contact Azure');
+    await offlineContext.close();
     assert(methods.every((method) => method === 'GET'));
     assert.deepEqual(errors, []);
     console.log('Appearance: settings persistence/live switching, shared copy/state, exact Figma asset geometry, gradient selection, Coworker dark/light/continued, mobile French and zero writes passed.');
