@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @author       Luke Vanderberg
 // @description  Loads the kiosk cutout, adds See your Ads, and hides edit-access/save-copy notices
-// @version      2.0
+// @version      2.1
 // @match        https://firefly.adobe.com/graph/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -206,12 +206,24 @@
     const areas = [];
     for (const element of walk(node)) {
       if (!element.localName.startsWith("adobe-widget-image-") || !element.shadowRoot) continue;
-      const area = element.shadowRoot.querySelector(".dropzone.empty");
-      if (!area) continue;
-      const rect = area.getBoundingClientRect();
-      const style = getComputedStyle(area);
-      if (rect.width > 0 && rect.height > 0 &&
-          style.visibility !== "hidden" && style.display !== "none") areas.push(area);
+      for (const area of element.shadowRoot.querySelectorAll(".dropzone")) {
+        const visible = candidate => {
+          if (!candidate) return false;
+          const rect = candidate.getBoundingClientRect();
+          const style = getComputedStyle(candidate);
+          return rect.width > 0 && rect.height > 0 &&
+            style.visibility !== "hidden" && style.display !== "none";
+        };
+        if (!visible(area) || area.getAttribute("aria-busy") === "true" ||
+            [...walk(element)].some(candidate => ["img", "video", "canvas"].includes(candidate.localName))) continue;
+        const prompt = area.querySelector(".prompt");
+        const browse = area.querySelector("sp-button.browse-button");
+        const emptyPrompt = area.getAttribute("aria-busy") === "false" &&
+          visible(prompt) && visible(prompt.querySelector(".placeholder-icon")) &&
+          visible(prompt.querySelector(".prompt-title")) &&
+          visible(prompt.querySelector(".prompt-subtitle")) && visible(browse);
+        if (area.classList.contains("empty") || emptyPrompt) areas.push(area);
+      }
     }
     if (areas.length > 1) throw new Error("Input image node has multiple upload areas.");
     return areas[0];

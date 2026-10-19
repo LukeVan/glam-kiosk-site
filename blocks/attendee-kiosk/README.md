@@ -134,7 +134,7 @@ Graph without `portraitUrl` or manual-upload instructions. The existing
 Continue to ads action remains available without claiming that Graph completed. Catalog cutouts never
 masquerade as live `azure_*` manifests or receive a container-SAS handoff.
 
-`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.0
+`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.1
 artifact for manual installation, not an EDS-injected script. Replace the old
 activation userscript with it rather than running duplicate return controls.
 It preserves the installed v1.8 return control and edit-access/save-copy notice
@@ -143,6 +143,10 @@ remaining and UTC timestamps with optional fractions or `+00:00`. Rejections
 log fixed reason codes under `[autoload]`, never signed URLs. The upload
 sequence is exercised against a local shadow-DOM fixture; its selectors still
 require verification against live Adobe Graph.
+Upload detection accepts both the legacy empty class and the current nonbusy
+dropzone with visible placeholder, prompt title/subtitle, and Browse files
+control. It remains scoped to the Input image node and rejects populated,
+busy, or ambiguous upload areas.
 
 ### Evergreen permanent-demo cutouts
 

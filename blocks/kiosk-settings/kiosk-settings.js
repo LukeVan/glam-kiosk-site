@@ -13,10 +13,8 @@ export default function decorate(block) {
   block.replaceChildren();
   const heading = node('h1', 'Kiosk booth settings');
   const header = node('div', '', 'kiosk-settings-header');
-  const open = node('a', 'Open kiosk window', 'kiosk-settings-open');
+  const open = node('a', 'Open kiosk', 'kiosk-settings-open');
   open.href = '/drafts/attendee-kiosk.html';
-  open.target = '_blank';
-  open.rel = 'noopener noreferrer';
   header.append(heading, open);
   const help = node('p', 'Staff setup only. Generate “Kiosk/EDS Access” in Glam Creator, paste the read + list container SAS below, then test and choose your event.');
   const warning = node('p', 'This credential permits reading the entire container, including other events and hidden infrastructure folders. It is saved only in this browser on this origin. Do not share it or paste it into page content.', 'kiosk-settings-warning');
@@ -79,7 +77,7 @@ export default function decorate(block) {
   details.append(
     node('summary', 'Access and processing notes'),
     warning,
-    node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration. Open kiosk window uses saved settings, not unsaved edits.'),
+    node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration. Open kiosk uses saved settings, not unsaved edits.'),
   );
   form.append(details);
   const actions = node('div', '', 'kiosk-settings-actions');

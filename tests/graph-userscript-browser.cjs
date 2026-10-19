@@ -22,7 +22,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       se: new Date(Date.now() + 7 * 86400000 - 1000).toISOString(),
     });
     await page.goto(`https://firefly.adobe.com/graph/fixture#${new URLSearchParams({ portraitUrl: cutout.href, keep: 'yes' })}`);
-    await page.evaluate(async ({ publicFixture, badDigest }) => {
+    await page.evaluate(async ({ publicFixture, badDigest, currentWidget, blockedWidget }) => {
       window.unsafeWindow = window;
       window.originalPicker = async () => { throw new Error('Native picker must not open'); };
       window.showOpenFilePicker = window.originalPicker;
@@ -45,11 +45,22 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         window.downloads += 1;
         request.onload({ status: 200, finalUrl: request.url, response: png });
       };
-      const root = document.querySelector('pg-node').attachShadow({ mode: 'open' });
-      root.innerHTML = '<input value="Input image"><adobe-widget-image-input></adobe-widget-image-input>';
-      const upload = root.querySelector('adobe-widget-image-input').attachShadow({ mode: 'open' });
-      upload.innerHTML = '<button class="dropzone empty">Upload</button>';
-      upload.querySelector('button').onclick = () => {
+      const node = document.querySelector('pg-node');
+      const root = node.attachShadow({ mode: 'open' });
+      root.innerHTML = '<input value="Input image"><slot name="widget"></slot>';
+      const list = document.createElement('pg-widget-list');
+      list.slot = 'widget';
+      node.append(list);
+      const widgets = list.attachShadow({ mode: 'open' });
+      widgets.innerHTML = '<adobe-widget-image-1792362854273></adobe-widget-image-1792362854273>';
+      const upload = widgets.firstElementChild.attachShadow({ mode: 'open' });
+      upload.innerHTML = currentWidget
+        ? '<div class="dropzone" aria-busy="false"><div class="content"><svg class="dashed-border"></svg><div class="prompt"><sp-icon-image class="placeholder-icon">Image</sp-icon-image><div class="prompt-text"><span class="prompt-title">Drag and drop your file,</span><span class="prompt-subtitle">or select from your device</span></div></div><sp-button class="browse-button" role="button">Browse files</sp-button></div></div>'
+        : '<button class="dropzone empty">Upload</button>';
+      if (blockedWidget === 'busy') upload.firstElementChild.setAttribute('aria-busy', 'true');
+      if (blockedWidget === 'populated') upload.firstElementChild.append(document.createElement('img'));
+      if (blockedWidget === 'ambiguous') upload.append(upload.firstElementChild.cloneNode(true));
+      upload.querySelector('.dropzone').onclick = () => {
         if (document.querySelector('#device')) return;
         const device = document.createElement('button');
         device.id = 'device';
@@ -73,8 +84,19 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }, {
       publicFixture: Boolean(process.env.PUBLIC_DEMO_FIXTURE),
       badDigest: Boolean(process.env.BAD_DEMO_DIGEST),
+      currentWidget: Boolean(process.env.CURRENT_GRAPH_WIDGET),
+      blockedWidget: process.env.BLOCKED_GRAPH_WIDGET || '',
     });
     await page.addScriptTag({ content: fs.readFileSync('tools/graph-auto-load.user.js', 'utf8') });
+    if (process.env.BLOCKED_GRAPH_WIDGET) {
+      await page.waitForTimeout(1800);
+      assert(logs.some((message) => message.includes('Looking for its upload area.')));
+      assert.equal(await page.evaluate(() => Boolean(window.uploaded)), false);
+      assert.equal(await page.evaluate(() => showOpenFilePicker === window.originalPicker), true);
+      assert.equal(await page.locator('#device').count(), 0);
+      console.log(`Graph ${process.env.BLOCKED_GRAPH_WIDGET} widget rejected without picker/upload.`);
+      return;
+    }
     if (process.env.BAD_DEMO_DIGEST) {
       await page.waitForFunction(() => location.hash === '#keep=yes');
       await page.waitForTimeout(500);
