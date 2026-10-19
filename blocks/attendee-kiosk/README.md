@@ -118,6 +118,10 @@ the offline package; it does not reuse or extend attendee SAS links.
 The preview and download page make no physical printing claim and submit no
 print/prepare/share requests. Both Azure-connected and no-settings demo flows
 use these static endings for the three exact approved demo identities.
+The ending uses the same print-slot reveal animation, status bar, and action layout
+as live attendees. Demo copy retains the journey message and scan instructions
+instead of claiming a physical counter pickup. The download page uses production's
+Looking good heading and personalized-ad copy, with no demo-only heading/disclaimer.
 Generate the derivative previews with `python3 tools/build-demo-print.py`
 (requires Python qrcode and Pillow). Original packaged source previews are retained.
 Print geometry is checked before replacement; browser tests decode all 12 embedded

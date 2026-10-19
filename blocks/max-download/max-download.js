@@ -12,10 +12,10 @@ async function renderDemo(block, slug, banner, links) {
   wrap.className = 'max-download-wrap';
   const heading = document.createElement('h2');
   heading.className = 'max-download-heading';
-  heading.textContent = `${person.name}’s ads`;
+  heading.textContent = 'Looking good!';
   const sub = document.createElement('p');
   sub.className = 'max-download-sub';
-  sub.textContent = 'Download the four AI demo ads. No physical print request was submitted.';
+  sub.textContent = 'Download and share your personalized ads below.';
   const gallery = document.createElement('div');
   gallery.className = 'max-download-gallery';
   gallery.textContent = 'Loading your ads…';

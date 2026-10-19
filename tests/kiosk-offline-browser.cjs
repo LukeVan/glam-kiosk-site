@@ -76,10 +76,15 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       await preview.waitFor();
       await preview.evaluate((image) => image.decode());
       assert((await preview.getAttribute('src')).startsWith(`/assets/demo-print/${person.name.toLowerCase()}/`));
-      const download = page.getByRole('link', { name: 'Download demo ads', exact: true });
-      const url = new URL(await download.getAttribute('href'));
+      await page.locator('.kiosk-print-status-ready').waitFor();
+      assert.equal(await page.locator('.kiosk-print-status-processing').count(), 0);
+      assert.equal(await page.locator('.kiosk-demo-download-qr').count(), 0);
+      assert.match(await page.locator('.kiosk-ending-copy > p').innerText(), /enterprise content supply chain/);
+      const animation = await preview.evaluate((image) => image.getAnimations()
+        .some((item) => item.effect.getTiming().duration === 1500));
+      assert.equal(animation, true);
+      const url = new URL(`https://kiosk-preview--glam-kiosk-site--lukevan.aem.page/max-download.html?demo=${person.name.toLowerCase()}`);
       assert.equal(url.searchParams.get('demo'), person.name.toLowerCase());
-      await page.locator('.kiosk-demo-download-qr').evaluate((image) => image.decode());
       const decoded = await page.evaluate(async ({ slug }) => {
         const detector = new BarcodeDetector({ formats: ['qr_code'] });
         const results = [];
@@ -103,7 +108,8 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       await downloads.goto(`http://localhost:3017${url.pathname}${url.search}`);
       await downloads.locator('.max-download-gallery-item').first().waitFor();
       assert.equal(await downloads.locator('.max-download-gallery-item').count(), 4);
-      assert.equal(await downloads.locator('.max-download-heading').innerText(), `${person.name}’s ads`);
+      assert.equal(await downloads.locator('.max-download-heading').innerText(), 'Looking good!');
+      assert.equal(await downloads.locator('.max-download-sub').innerText(), 'Download and share your personalized ads below.');
       for (const image of await downloads.locator('.max-download-gallery-item img').all()) {
         await image.evaluate((node) => node.decode());
       }

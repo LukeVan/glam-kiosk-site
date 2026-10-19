@@ -961,6 +961,41 @@ export default async function decorate(block) {
     else panel.append(element('p', text().bannerPending));
     panel.append(element('p', text().endings), button(text().refresh, () => render()));
   }
+  function revealPrintPreview(media, previewURL, signal, firstRender, setPrintStatus) {
+    const slot = media.querySelector('.kiosk-print-slot');
+    const bar = media.querySelector('.kiosk-print-status');
+    const preview = picture(previewURL, text().printPreview);
+    preview.className = 'kiosk-print-preview';
+    preview.loading = 'eager';
+    preview.style.opacity = '0';
+    let revealed = false;
+    const reveal = () => {
+      if (revealed || signal.aborted || !preview.isConnected) return;
+      revealed = true;
+      preview.style.opacity = '';
+      if (media.dataset.printState === 'available') setPrintStatus(text().printTakeHome, true);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const animation = preview.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }] : [
+        { transform: 'translateY(-100%)', opacity: 0.25 },
+        { transform: 'translateY(0)', opacity: 1 },
+      ], {
+        duration: reduced ? 180 : 1500,
+        delay: reduced || !firstRender ? 0 : 350,
+        fill: 'backwards',
+        easing: 'cubic-bezier(0.22, 0.75, 0.2, 1)',
+      });
+      signal.addEventListener('abort', () => animation.cancel(), { once: true });
+    };
+    preview.addEventListener('load', reveal, { once: true, signal });
+    preview.addEventListener('error', () => {
+      preview.hidden = true;
+      delete media.dataset.preview;
+      setPrintStatus(text().printPreviewFailed);
+      bar.setAttribute('role', 'alert');
+    }, { once: true, signal });
+    slot.replaceChildren(preview);
+    if (preview.complete && preview.naturalWidth > 0) queueMicrotask(reveal);
+  }
   async function ending(signal, currentEpoch) {
     if (state.portraitId?.startsWith('demo_') && api.demoAssets) {
       const staticPrint = demoPrintAssets(state.portraitId, state.selectedAdId);
@@ -971,27 +1006,25 @@ export default async function decorate(block) {
         const content = element('div', '', 'kiosk-ending-copy');
         const description = staticPrint ? text().demoPrintReady : text().demoPrintPreview;
         content.append(element('h2', text().thankYou), element('p', description));
-        content.append(button(text().startOver, reset));
-        if (staticPrint) {
-          const download = element('a', text().demoDownload);
-          download.href = staticPrint.downloadPage;
-          download.target = '_blank';
-          download.rel = 'noopener noreferrer';
-          const qr = picture(staticPrint.qr, text().demoDownload);
-          qr.className = 'kiosk-demo-download-qr';
-          content.append(qr, download);
-        }
+        const actions = element('div', '', 'kiosk-ending-actions');
+        const refresh = button(text().refreshShort, () => render());
+        refresh.className = 'kiosk-ending-refresh';
+        actions.append(button(text().startOver, reset), refresh);
+        content.append(actions);
         const media = element('div', '', 'kiosk-ending-media kiosk-demo-print');
-        const preview = picture(assets.printPreview.url, text().demoPrintPreview);
-        preview.className = 'kiosk-print-preview';
-        preview.addEventListener('error', () => {
-          preview.hidden = true;
-          const error = element('p', text().printPreviewFailed);
-          error.setAttribute('role', 'alert');
-          media.append(error);
-        }, { once: true, signal });
-        media.append(preview);
+        media.dataset.printState = 'available';
+        const bar = element('div', '', 'kiosk-print-status');
+        bar.setAttribute('role', 'status');
+        bar.setAttribute('aria-live', 'polite');
+        media.append(bar, element('div', '', 'kiosk-print-slot'));
+        const setPrintStatus = (value, complete = false, processing = false) => {
+          bar.textContent = value;
+          bar.classList.toggle('kiosk-print-status-ready', complete);
+          bar.classList.toggle('kiosk-print-status-processing', processing);
+        };
+        setPrintStatus(text().printPreparing, false, true);
         panel.append(content, media);
+        revealPrintPreview(media, assets.printPreview.url, signal, true, setPrintStatus);
         return;
       }
     }
@@ -1046,38 +1079,8 @@ export default async function decorate(block) {
     const selected = result?.render.brands?.[request.selectedBrand];
     if (selected?.status === 'ready' && media.dataset.preview !== selected.blob) {
       const previewURL = blobURL(api.settings().containerSAS, selected.blob);
-      const preview = picture(previewURL, text().printPreview);
-      preview.className = 'kiosk-print-preview';
-      preview.loading = 'eager';
       media.dataset.preview = selected.blob;
-      preview.style.opacity = '0';
-      let revealed = false;
-      const reveal = () => {
-        if (revealed || signal.aborted || !preview.isConnected) return;
-        revealed = true;
-        preview.style.opacity = '';
-        if (media.dataset.printState === 'available') setPrintStatus(text().printTakeHome, true);
-        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const animation = preview.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }] : [
-          { transform: 'translateY(-100%)', opacity: 0.25 },
-          { transform: 'translateY(0)', opacity: 1 },
-        ], {
-          duration: reduced ? 180 : 1500,
-          delay: reduced || !firstRender ? 0 : 350,
-          fill: 'backwards',
-          easing: 'cubic-bezier(0.22, 0.75, 0.2, 1)',
-        });
-        signal.addEventListener('abort', () => animation.cancel(), { once: true });
-      };
-      preview.addEventListener('load', reveal, { once: true, signal });
-      preview.addEventListener('error', () => {
-        preview.hidden = true;
-        delete media.dataset.preview;
-        setPrintStatus(text().printPreviewFailed);
-        bar.setAttribute('role', 'alert');
-      }, { once: true, signal });
-      slot.replaceChildren(preview);
-      if (preview.complete && preview.naturalWidth > 0) queueMicrotask(reveal);
+      revealPrintPreview(media, previewURL, signal, firstRender, setPrintStatus);
     }
     const loadedPreview = slot.querySelector('img');
     const imageReady = loadedPreview?.naturalWidth > 0 && !loadedPreview.hidden;

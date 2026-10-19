@@ -2222,9 +2222,3 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
     font-size: 24px;
   }
 }
-
-.attendee-kiosk .kiosk-demo-download-qr {
-  display: block;
-  width: 160px;
-  margin: 24px 0 12px;
-}
