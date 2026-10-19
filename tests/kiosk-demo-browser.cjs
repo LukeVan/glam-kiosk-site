@@ -147,8 +147,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await workflow.locator('img[src*="/cutouts/2-lorealprofessionnel.png"]').waitFor();
     await workflow.locator('img[src*="/variations/2-lorealprofessionnel/page_1.jpg"]').waitFor();
     await page.locator('.kiosk-workflow-finish').click();
-    await page.locator('.kiosk-panel-welcome').waitFor();
+    await page.locator('.kiosk-demo-print img').waitFor();
     assert.equal(await page.locator('.kiosk-workflow-dialog').count(), 0);
+    await page.getByRole('button', { name: 'Start over', exact: true }).click();
+    await page.locator('.kiosk-panel-welcome').waitFor();
     const resetState = await page.evaluate(() => (
       JSON.parse(sessionStorage.getItem('glam-attendee-v1:azure:TestEvent'))
     ));
@@ -158,7 +160,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await stage('variations');
     await page.locator('.kiosk-variation img').first().waitFor();
     await page.locator('.kiosk-variations-controls').getByRole('button', { name: 'Finish', exact: true }).click();
-    await page.locator('.kiosk-panel-welcome').waitFor();
+    await page.locator('.kiosk-demo-print img').waitFor();
     await stage('variations', 'demo_Person5_1');
     await page.getByRole('status').filter({ hasText: 'Image previews are unavailable' }).waitFor();
     assert.equal(await page.locator('.kiosk-variation').count(), 0);
@@ -185,7 +187,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert(requests.every(({ method, path: requestPath }) => method === 'GET'
       && !requestPath.includes('/requests/') && !requestPath.includes('/9-Graph-Input/')));
     assert.deepEqual(errors, []);
-    console.log('Permanent demos browser: catalog picker/name/ads, no manual upload controls, 23 brand variations, Finish resets both surfaces, no empty fallback, four static endings EN/FR, zero writes/Graph autoload passed.');
+    console.log('Permanent demos browser: catalog picker/name/ads, no manual upload controls, 23 brand variations, Finish opens print preview, no empty fallback, four static endings EN/FR, zero writes/Graph autoload passed.');
   } finally {
     await browser.close();
   }

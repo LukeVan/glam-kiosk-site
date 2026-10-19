@@ -82,10 +82,10 @@ only after generation succeeds. The kiosk keeps one catalog snapshot across
 an attendee journey; refreshing the portrait picker or reloading the page reads
 the newly published catalog. Demo identities never become Azure attendee IDs.
 No demo sends preparation, print, fulfillment or share requests.
-Finish remains available on demo variations and in the workflow panel. It clears
-the attendee session and returns to the welcome screen rather than the live ending.
-The ending displays a labeled static demo print preview, including any static
-demonstration QR from the template; it makes no pickup or share-success claim.
+Finish remains available on demo variations and in the workflow panel. It opens
+the static print-template ending; Start over then clears the attendee session.
+The ending displays a static demo print preview; it makes no physical pickup claim.
+The three packaged AI demos use working public download QR codes as detailed below.
 Story screens do not expose manual Graph upload controls. They never send
 container SAS access to Graph or bypass the live signed-portrait validator.
 The workflow example uses the selected demo brand's cutout and first rendition.
@@ -97,8 +97,8 @@ print previews. The snapshot contains the approved AI people only and requires
 no Azure credentials, calls, generation or fulfillment. Both offline activation
 mappings intentionally use their available MAX square versions.
 The picker, story thumbnails, ads, variations, workflow popout and static endings
-read this package. Finish clears its isolated `glam-attendee-v1:offline-demo`
-session and returns to welcome. Missing/invalid packages show an error rather
+read this package. Start over on the ending clears its isolated
+`glam-attendee-v1:offline-demo` session. Missing/invalid packages show an error rather
 than silently substituting the old people. Refresh keeps a journey on the loaded
 catalog snapshot; restarting the page reads an updated package.
 
@@ -108,6 +108,21 @@ Firefly Graph remains an external Adobe service requiring connectivity; the
 hosted kiosk can still hand off the existing public version-matched cutouts.
 The local workflow illustration uses local cutouts and variation previews.
 Real attendee mode and its protected Azure assets are unchanged.
+
+The approved public synthetic people are Person 1 = Tina, Person 2 = Sarah,
+Person 3 = Greg. Their final print previews in `assets/demo-print/` replace the
+original template QR with a permanent public EDS download URL:
+`https://kiosk-preview--glam-kiosk-site--lukevan.aem.page/max-download.html?demo=tina`
+(or `sarah` / `greg`). Each page serves that person's four original ads from
+the offline package; it does not reuse or extend attendee SAS links.
+The preview and download page make no physical printing claim and submit no
+print/prepare/share requests. Both Azure-connected and no-settings demo flows
+use these static endings for the three exact approved demo identities.
+Generate the derivative previews with `python3 tools/build-demo-print.py`
+(requires Python qrcode and Pillow). Original packaged source previews are retained.
+Print geometry is checked before replacement; browser tests decode all 12 embedded
+QR codes and verify their exact destinations. The public destinations become
+available after the code and derivative assets are deployed to kiosk-preview.
 
 ## Adobe Graph cutout handoff
 

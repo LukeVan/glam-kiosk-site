@@ -1,3 +1,52 @@
+import { readOfflineDemoCatalog } from '../attendee-kiosk/demo-catalog.js';
+import { DEMO_PEOPLE } from '../attendee-kiosk/demo-print.js';
+import { BANNER_BRANDS } from '../attendee-kiosk/banner-assets.js';
+
+async function renderDemo(block, slug, banner, links) {
+  const person = DEMO_PEOPLE.find((item) => item.slug === slug);
+  if (!person) {
+    block.textContent = 'This demo download link is invalid.';
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'max-download-wrap';
+  const heading = document.createElement('h2');
+  heading.className = 'max-download-heading';
+  heading.textContent = `${person.name}’s ads`;
+  const sub = document.createElement('p');
+  sub.className = 'max-download-sub';
+  sub.textContent = 'Download the four AI demo ads. No physical print request was submitted.';
+  const gallery = document.createElement('div');
+  gallery.className = 'max-download-gallery';
+  gallery.textContent = 'Loading your ads…';
+  wrap.append(banner, heading, sub, gallery, links);
+  block.replaceChildren(wrap);
+  try {
+    const catalog = await readOfflineDemoCatalog();
+    const entry = catalog.people.find((item) => item.id === person.id);
+    if (!entry) throw new Error('This demo is no longer available.');
+    gallery.replaceChildren();
+    BANNER_BRANDS.forEach((brand, index) => {
+      const card = document.createElement('div');
+      card.className = 'max-download-gallery-item';
+      const image = document.createElement('img');
+      image.src = entry.profile.ads[brand].url;
+      image.alt = `${person.name} demo ad ${index + 1}`;
+      image.loading = index === 0 ? 'eager' : 'lazy';
+      const download = document.createElement('a');
+      download.className = 'max-download-gallery-btn';
+      download.href = image.src;
+      download.download = `${person.slug}-${brand}.jpg`;
+      download.textContent = 'Download';
+      card.append(image, download);
+      gallery.append(card);
+    });
+  } catch (error) {
+    gallery.textContent = `Demo ads unavailable. ${error.message}`;
+    gallery.setAttribute('role', 'alert');
+  }
+}
+
 function buildBanner() {
   const banner = document.createElement('div');
   banner.className = 'max-download-banner';
@@ -173,6 +222,7 @@ export default function decorate(block) {
   if (sessionUrl) {
     return renderSession(block, sessionUrl, name);
   }
+  if (params.has('demo')) return renderDemo(block, params.get('demo'), buildBanner(), buildLinks());
   block.innerHTML = '<p class="max-download-error">This download link is invalid or has expired.</p>';
   return undefined;
 }

@@ -60,21 +60,59 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       await workflow.locator('img[src*="/assets/offline-demos/"][src*="/cutouts/"]').waitFor();
       await workflow.locator('img[src*="/assets/offline-demos/"][src*="/variations/"]').first().waitFor();
       await page.locator('.kiosk-workflow-finish').click();
+      await page.locator('.kiosk-demo-print img').waitFor();
+      await page.getByRole('button', { name: 'Start over', exact: true }).click();
       await page.locator('.kiosk-panel-welcome').waitFor();
       assert.equal(await page.evaluate(() => {
         const state = JSON.parse(sessionStorage.getItem('glam-attendee-v1:offline-demo'));
         return state?.portraitId ?? null;
       }), null);
+      await stage('variations', person, index);
+      await page.locator('.kiosk-variations-controls')
+        .getByRole('button', { name: 'Finish', exact: true }).click();
+      await page.locator('.kiosk-demo-print img').waitFor();
       await stage('ending', person, index);
       const preview = page.locator('.kiosk-demo-print img');
       await preview.waitFor();
       await preview.evaluate((image) => image.decode());
-      assert((await preview.getAttribute('src')).startsWith(`/assets/offline-demos/${person.id}/`));
+      assert((await preview.getAttribute('src')).startsWith(`/assets/demo-print/${person.name.toLowerCase()}/`));
+      const download = page.getByRole('link', { name: 'Download demo ads', exact: true });
+      const url = new URL(await download.getAttribute('href'));
+      assert.equal(url.searchParams.get('demo'), person.name.toLowerCase());
+      await page.locator('.kiosk-demo-download-qr').evaluate((image) => image.decode());
+      const decoded = await page.evaluate(async ({ slug }) => {
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        const results = [];
+        for (const brand of ['1-larocheposay', '2-lorealprofessionnel', '3-YSLbeauty', '4-lorealparis']) {
+          const image = new Image();
+          image.src = `/assets/demo-print/${slug}/${brand}.jpg`;
+          // Each decode depends on loading its corresponding template.
+          // eslint-disable-next-line no-await-in-loop
+          await image.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = 260;
+          canvas.height = 260;
+          canvas.getContext('2d').drawImage(image, 1240, 920, 260, 260, 0, 0, 260, 260);
+          // eslint-disable-next-line no-await-in-loop
+          results.push((await detector.detect(canvas)).map((code) => code.rawValue));
+        }
+        return results;
+      }, { slug: person.name.toLowerCase() });
+      assert.deepEqual(decoded, Array.from({ length: 4 }, () => [url.href]));
+      const downloads = await context.newPage();
+      await downloads.goto(`http://localhost:3017${url.pathname}${url.search}`);
+      await downloads.locator('.max-download-gallery-item').first().waitFor();
+      assert.equal(await downloads.locator('.max-download-gallery-item').count(), 4);
+      assert.equal(await downloads.locator('.max-download-heading').innerText(), `${person.name}’s ads`);
+      for (const image of await downloads.locator('.max-download-gallery-item img').all()) {
+        await image.evaluate((node) => node.decode());
+      }
+      await downloads.close();
     }
     assert(requests.every((request) => request.method === 'GET'));
     assert(!external.some((host) => host.endsWith('.blob.core.windows.net')));
     const images = requests.filter((request) => request.path.startsWith('/assets/offline-demos/'));
     assert(images.length > 50);
-    console.log('Offline browser: no settings, 3 updated people, ads/story/workflow/variations/static endings and Finish reset, Azure blocked, GET-only passed.');
+    console.log('Offline browser: Tina/Sarah/Greg, Finish → print preview → Start over, 12 embedded QRs decoded to public demo downloads, no Azure or writes passed.');
   } finally { await browser.close(); }
 })().catch((error) => { console.error(error); process.exit(1); });

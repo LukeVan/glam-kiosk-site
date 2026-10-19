@@ -5,6 +5,7 @@ import {
 import { createAPI } from './api.js';
 import createAzureAPI from './azure.js';
 import createOfflineDemoAPI from './offline-demos.js';
+import { demoPrintAssets } from './demo-print.js';
 import {
   coworkerReady, navigation, send, storyBeat,
 } from './integrations.js';
@@ -962,12 +963,24 @@ export default async function decorate(block) {
   }
   async function ending(signal, currentEpoch) {
     if (state.portraitId?.startsWith('demo_') && api.demoAssets) {
-      const assets = await api.demoAssets(state.portraitId, state.selectedAdId, signal);
+      const staticPrint = demoPrintAssets(state.portraitId, state.selectedAdId);
+      const { portraitId, selectedAdId } = state;
+      const assets = staticPrint || await api.demoAssets(portraitId, selectedAdId, signal);
       if (signal.aborted || epoch !== currentEpoch) return;
       if (assets) {
         const content = element('div', '', 'kiosk-ending-copy');
-        content.append(element('h2', text().thankYou), element('p', text().demoPrintPreview));
+        const description = staticPrint ? text().demoPrintReady : text().demoPrintPreview;
+        content.append(element('h2', text().thankYou), element('p', description));
         content.append(button(text().startOver, reset));
+        if (staticPrint) {
+          const download = element('a', text().demoDownload);
+          download.href = staticPrint.downloadPage;
+          download.target = '_blank';
+          download.rel = 'noopener noreferrer';
+          const qr = picture(staticPrint.qr, text().demoDownload);
+          qr.className = 'kiosk-demo-download-qr';
+          content.append(qr, download);
+        }
         const media = element('div', '', 'kiosk-ending-media kiosk-demo-print');
         const preview = picture(assets.printPreview.url, text().demoPrintPreview);
         preview.className = 'kiosk-print-preview';
@@ -1338,7 +1351,7 @@ export default async function decorate(block) {
         const sample = demo && !manifest.demoCatalog
           && !manifest.banners.length;
         let onFinish = null;
-        if (demo) onFinish = reset;
+        if (demo) onFinish = () => move('ending');
         else if (state.printRequest) onFinish = () => move('ending');
         let variationAssets = sample ? sampleVariations() : manifest.banners;
         if (initialResults) {
