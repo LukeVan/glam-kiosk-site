@@ -10,7 +10,7 @@ const MIME_EXTENSIONS = {
   'image/webp': /\.webp$/i,
 };
 
-export function validateDemoCatalog(data, settings) {
+function validateCatalog(data, settings, offline = false) {
   const invalid = () => { throw new Error('The permanent demo catalog is invalid. Ask booth staff to republish it.'); };
   if (!data || data.schemaVersion !== 1 || typeof data.revision !== 'string'
     || !VERSION.test(data.revision) || !data.experienceTemplateSets
@@ -36,7 +36,8 @@ export function validateDemoCatalog(data, settings) {
         || typeof profile.version !== 'string' || !VERSION.test(profile.version)
         || typeof profile.templateFingerprint !== 'string'
         || !/^[a-f0-9]{64}$/.test(profile.templateFingerprint)) invalid();
-      const prefix = `assets/permanent-demos/${person.id}/${setId}/${profile.version}/`;
+      const namespace = offline ? 'offline-demos' : 'permanent-demos';
+      const prefix = `assets/${namespace}/${person.id}/${setId}/${profile.version}/`;
       function asset(value, role, pngOnly = false) {
         if (!value || typeof value.blob !== 'string'
           || !value.blob.startsWith(prefix) || value.blob.length > 1024
@@ -52,7 +53,10 @@ export function validateDemoCatalog(data, settings) {
           if (!path.startsWith(role)
             || !/^page_[1-9]\d*\.(jpg|jpeg|png|webp)$/i.test(path.slice(role.length))) invalid();
         } else if (path.replace(/\.(jpg|jpeg|png|webp)$/i, '') !== role) invalid();
-        return { url: blobURL(settings.containerSAS, value.blob), mimeType: value.mimeType };
+        return {
+          url: offline ? `/${value.blob}` : blobURL(settings.containerSAS, value.blob),
+          mimeType: value.mimeType,
+        };
       }
       function brands(values, parse) {
         if (!values || Object.keys(values).length !== 4
@@ -96,14 +100,24 @@ export function validateDemoCatalog(data, settings) {
   return { revision: data.revision, templateSetId, people };
 }
 
-export async function readDemoCatalog(settings, signal, fetcher = fetch) {
+export function validateDemoCatalog(data, settings) {
+  return validateCatalog(data, settings);
+}
+
+export function validateOfflineDemoCatalog(data) {
+  return validateCatalog(data, { activationProfile: 'max' }, true);
+}
+
+async function readCatalog(settings, signal, fetcher, offline = false) {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
   if (signal?.aborted) abort();
   const timeout = setTimeout(abort, 15000);
   try {
-    const response = await fetcher(blobURL(settings.containerSAS, DEMO_CATALOG), {
+    const url = offline ? '/assets/offline-demos/catalog.json'
+      : blobURL(settings.containerSAS, DEMO_CATALOG);
+    const response = await fetcher(url, {
       method: 'GET',
       mode: 'cors',
       credentials: 'omit',
@@ -112,11 +126,12 @@ export async function readDemoCatalog(settings, signal, fetcher = fetch) {
       referrerPolicy: 'no-referrer',
       signal: controller.signal,
     });
-    if (response.status === 404) return null;
+    if (response.status === 404 && !offline) return null;
     if (!response.ok) throw new Error(`Permanent demo catalog unavailable (HTTP ${response.status}).`);
     const text = await response.text();
     if (text.length > 2000000) throw new Error('The permanent demo catalog is too large.');
-    return validateDemoCatalog(JSON.parse(text), settings);
+    return offline ? validateOfflineDemoCatalog(JSON.parse(text))
+      : validateDemoCatalog(JSON.parse(text), settings);
   } catch (error) {
     if (controller.signal.aborted && !signal?.aborted) {
       throw new Error('Permanent demo catalog request timed out. Try again.');
@@ -126,4 +141,12 @@ export async function readDemoCatalog(settings, signal, fetcher = fetch) {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', abort);
   }
+}
+
+export function readDemoCatalog(settings, signal, fetcher = fetch) {
+  return readCatalog(settings, signal, fetcher);
+}
+
+export function readOfflineDemoCatalog(signal, fetcher = fetch) {
+  return readCatalog(null, signal, fetcher, true);
 }

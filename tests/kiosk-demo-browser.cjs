@@ -139,7 +139,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     ));
     assert.equal(variations.length, 23);
     assert(variations.every((url) => url.includes('/variations/2-lorealprofessionnel/')));
-    assert.match(await page.locator('.kiosk-variations-notice').innerText(), /DEMO/);
+    assert.equal(await page.locator('.kiosk-variations-notice').count(), 0);
     await page.getByRole('button', { name: 'View production workflow', exact: true }).click();
     assert.equal(await page.locator('.kiosk-workflow-dialog').evaluate((node) => getComputedStyle(node).backgroundColor), 'rgb(44, 44, 44)');
     assert.equal(await page.locator('.kiosk-workflow-bar h2').evaluate((node) => getComputedStyle(node).color), 'rgb(255, 255, 255)');

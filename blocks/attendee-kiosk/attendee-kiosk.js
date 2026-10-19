@@ -4,6 +4,7 @@ import {
 } from './state.js';
 import { createAPI } from './api.js';
 import createAzureAPI from './azure.js';
+import createOfflineDemoAPI from './offline-demos.js';
 import {
   coworkerReady, navigation, send, storyBeat,
 } from './integrations.js';
@@ -69,15 +70,17 @@ export default async function decorate(block) {
   let boothSettings;
   try {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
-      || createAPI(config);
+      || (config.mode === 'demo' ? createOfflineDemoAPI() : createAPI(config));
     if (api.source === 'azure') boothSettings = api.settings();
   } catch (error) {
     block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
     return;
   }
   if (api.source === 'azure') config.intakeEnabled = api.intakeEnabled;
-  const key = api.source === 'azure'
-    ? `glam-attendee-v1:azure:${api.eventId}` : storageKey(config);
+  if (api.source === 'offline-demo') config.intakeEnabled = false;
+  let key = storageKey(config);
+  if (api.source === 'azure') key = `glam-attendee-v1:azure:${api.eventId}`;
+  if (api.source === 'offline-demo') key = 'glam-attendee-v1:offline-demo';
   let state = initialState();
   let storageError;
   try {
@@ -1190,7 +1193,7 @@ export default async function decorate(block) {
         );
         next.className = 'kiosk-primary-action';
         cards(
-          api.source === 'azure' ? portraits
+          ['azure', 'offline-demo'].includes(api.source) ? portraits
             : [...portraits].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)),
           state.portraitId,
           (item) => {
@@ -1348,7 +1351,6 @@ export default async function decorate(block) {
           block,
           assets: variationAssets,
           sample,
-          demo: Boolean(manifest.demoCatalog),
           loadResults: api.bannerResults && (!snapshot.portraitId.startsWith('demo_')
             || manifest.demoCatalog)
             ? () => {

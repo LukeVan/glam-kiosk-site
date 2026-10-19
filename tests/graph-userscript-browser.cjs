@@ -22,7 +22,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       se: new Date(Date.now() + 7 * 86400000 - 1000).toISOString(),
     });
     await page.goto(`https://firefly.adobe.com/graph/fixture#${new URLSearchParams({ portraitUrl: cutout.href, keep: 'yes' })}`);
-    await page.evaluate(async ({ publicFixture, badDigest, currentWidget, blockedWidget }) => {
+    await page.evaluate(async ({
+      publicFixture, badDigest, currentWidget, blockedWidget, replacementWidget, runControl,
+      uploadNewOnly,
+    }) => {
       window.unsafeWindow = window;
       window.originalPicker = async () => { throw new Error('Native picker must not open'); };
       window.showOpenFilePicker = window.originalPicker;
@@ -57,10 +60,22 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       upload.innerHTML = currentWidget
         ? '<div class="dropzone" aria-busy="false"><div class="content"><svg class="dashed-border"></svg><div class="prompt"><sp-icon-image class="placeholder-icon">Image</sp-icon-image><div class="prompt-text"><span class="prompt-title">Drag and drop your file,</span><span class="prompt-subtitle">or select from your device</span></div></div><sp-button class="browse-button" role="button">Browse files</sp-button></div></div>'
         : '<button class="dropzone empty">Upload</button>';
+      if (replacementWidget) {
+        upload.innerHTML = '<img alt="Existing image"><sp-button role="button">Upload new</sp-button><button>Reset</button>';
+        const control = upload.querySelector('sp-button');
+        control.attachShadow({ mode: 'open' }).innerHTML = '<button><slot></slot></button>';
+        if (blockedWidget === 'replacement-ambiguous') {
+          upload.append(control.cloneNode(true));
+        }
+        const other = document.createElement('pg-node');
+        other.attachShadow({ mode: 'open' }).innerHTML = '<input value="Other image"><button>Upload new</button>';
+        other.shadowRoot.querySelector('button').onclick = () => { window.wrongNodeClicked = true; };
+        document.body.prepend(other);
+      }
       if (blockedWidget === 'busy') upload.firstElementChild.setAttribute('aria-busy', 'true');
       if (blockedWidget === 'populated') upload.firstElementChild.append(document.createElement('img'));
       if (blockedWidget === 'ambiguous') upload.append(upload.firstElementChild.cloneNode(true));
-      upload.querySelector('.dropzone').onclick = () => {
+      upload.querySelector(replacementWidget ? 'sp-button' : '.dropzone').onclick = () => {
         if (document.querySelector('#device')) return;
         const device = document.createElement('button');
         device.id = 'device';
@@ -72,6 +87,43 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
             name: file.name, type: file.type, size: file.size,
             pageFile: file instanceof window.File,
           };
+          const toolbar = document.createElement('graph-run-toolbar');
+          toolbar.setAttribute('role', 'toolbar');
+          toolbar.setAttribute('aria-label', 'Graph run actions');
+          document.body.append(toolbar);
+          const toolbarRoot = toolbar.attachShadow({ mode: 'open' });
+          const run = document.createElement('sp-button');
+          run.setAttribute('role', 'button');
+          run.setAttribute('aria-label', 'Run Graph');
+          run.attachShadow({ mode: 'open' }).innerHTML = '<button><slot></slot></button>';
+          run.textContent = 'Run all';
+          run.disabled = true;
+          window.runCount = 0;
+          run.onclick = () => {
+            window.runCount += 1;
+            window.ranBeforeReady = !window.imageReady;
+          };
+          toolbarRoot.append(run);
+          if (runControl === 'ambiguous') toolbarRoot.append(run.cloneNode(true));
+          const progress = document.createElement('div');
+          progress.setAttribute('aria-busy', 'true');
+          upload.append(progress);
+          setTimeout(async () => {
+            const preview = document.createElement('img');
+            preview.src = URL.createObjectURL(file);
+            upload.append(preview);
+            await preview.decode();
+            if (uploadNewOnly) {
+              preview.remove();
+              const replace = document.createElement('button');
+              replace.textContent = 'Upload new';
+              upload.append(replace);
+            }
+            window.imageReady = true;
+            progress.setAttribute('aria-busy', 'false');
+            // Keep Run all disabled briefly after the image itself is ready.
+            if (runControl !== 'disabled') setTimeout(() => { run.disabled = false; }, 600);
+          }, 900);
         };
         document.body.append(device);
       };
@@ -86,14 +138,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       badDigest: Boolean(process.env.BAD_DEMO_DIGEST),
       currentWidget: Boolean(process.env.CURRENT_GRAPH_WIDGET),
       blockedWidget: process.env.BLOCKED_GRAPH_WIDGET || '',
+      replacementWidget: Boolean(process.env.REPLACEMENT_GRAPH_WIDGET)
+        || !process.env.CURRENT_GRAPH_WIDGET,
+      runControl: process.env.RUN_CONTROL || '',
+      uploadNewOnly: Boolean(process.env.UPLOAD_NEW_READY),
     });
-    await page.addScriptTag({ content: fs.readFileSync('tools/graph-auto-load.user.js', 'utf8') });
+    const script = fs.readFileSync(process.env.GRAPH_USERSCRIPT || 'tools/graph-auto-load.user.js', 'utf8');
+    await page.addScriptTag({ content: script });
     if (process.env.BLOCKED_GRAPH_WIDGET) {
       await page.waitForTimeout(1800);
       assert(logs.some((message) => message.includes('Looking for its upload area.')));
       assert.equal(await page.evaluate(() => Boolean(window.uploaded)), false);
       assert.equal(await page.evaluate(() => showOpenFilePicker === window.originalPicker), true);
       assert.equal(await page.locator('#device').count(), 0);
+      assert.equal(await page.evaluate(() => Boolean(window.wrongNodeClicked)), false);
       console.log(`Graph ${process.env.BLOCKED_GRAPH_WIDGET} widget rejected without picker/upload.`);
       return;
     }
@@ -109,6 +167,24 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.waitForFunction(() => window.uploaded).catch((error) => {
       throw new Error(`${error.message}\nFixture console: ${logs.join('\n')}\nPage errors: ${errors.join('\n')}`);
     });
+    if (script.includes('const autoRun = true;')) {
+      assert.equal(await page.evaluate(() => window.runCount), 0);
+      if (process.env.RUN_CONTROL) {
+        await page.waitForFunction(() => window.imageReady);
+        await page.waitForTimeout(1500);
+        assert.equal(await page.evaluate(() => window.runCount), 0);
+        if (process.env.RUN_CONTROL === 'ambiguous') {
+          assert(logs.some((message) => message.includes('processing was not started.')));
+        }
+        console.log(`Run all ${process.env.RUN_CONTROL} control does not start processing.`);
+        return;
+      }
+      await page.waitForFunction(() => window.runCount === 1);
+      await page.waitForTimeout(700);
+      assert.equal(await page.evaluate(() => window.runCount), 1);
+      assert.equal(await page.evaluate(() => window.ranBeforeReady), false);
+      assert(logs.some((message) => message.includes('Run all clicked.')));
+    }
     const result = await page.evaluate(() => ({
       uploaded: window.uploaded,
       downloads: window.downloads,
@@ -125,10 +201,15 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(result.downloads, 1);
     assert.equal(result.pickerRestored, true);
     assert.equal(result.hash, '#keep=yes');
+    assert.equal(await page.evaluate(() => Boolean(window.wrongNodeClicked)), false);
     assert.equal(result.dialogClosed, true);
     assert.equal(result.toastHidden, true);
     assert.equal(result.ordinaryVisible, true);
-    assert.equal(await page.locator('#max-see-ads-btn').innerText(), 'See your Ads');
+    assert.equal(await page.locator('#max-see-ads-btn').innerText(), 'Next');
+    assert.deepEqual(await page.locator('#max-see-ads-btn').evaluate((button) => {
+      const style = getComputedStyle(button);
+      return [style.fontSize, style.width, style.minHeight];
+    }), ['24px', '168px', '64px']);
     assert(logs.some((message) => message.includes('Portrait supplied to Graph file picker.')));
     assert(logs.every((message) => !message.includes('MOCK_ONLY')));
     assert.deepEqual(errors, []);

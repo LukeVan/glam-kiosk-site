@@ -89,7 +89,25 @@ demonstration QR from the template; it makes no pickup or share-success claim.
 Story screens do not expose manual Graph upload controls. They never send
 container SAS access to Graph or bypass the live signed-portrait validator.
 The workflow example uses the selected demo brand's cutout and first rendition.
-Without booth settings, the original bundled offline demo remains available.
+Without booth settings, demo-mode kiosks use the packaged Sarah, Tina and Greg
+snapshot at `assets/offline-demos/catalog.json`, not the old Person2/3/5 fixtures.
+All 189 media files are same-origin static assets (about 45.8 MiB total):
+each person has a portrait, four ads, four cutouts, 50 variations and four static
+print previews. The snapshot contains the approved AI people only and requires
+no Azure credentials, calls, generation or fulfillment. Both offline activation
+mappings intentionally use their available MAX square versions.
+The picker, story thumbnails, ads, variations, workflow popout and static endings
+read this package. Finish clears its isolated `glam-attendee-v1:offline-demo`
+session and returns to welcome. Missing/invalid packages show an error rather
+than silently substituting the old people. Refresh keeps a journey on the loaded
+catalog snapshot; restarting the page reads an updated package.
+
+This is an Azure-independent demo package, not a browser offline cache/PWA.
+It runs from a local static server with external network access blocked.
+Firefly Graph remains an external Adobe service requiring connectivity; the
+hosted kiosk can still hand off the existing public version-matched cutouts.
+The local workflow illustration uses local cutouts and variation previews.
+Real attendee mode and its protected Azure assets are unchanged.
 
 ## Adobe Graph cutout handoff
 
@@ -134,7 +152,7 @@ Graph without `portraitUrl` or manual-upload instructions. The existing
 Continue to ads action remains available without claiming that Graph completed. Catalog cutouts never
 masquerade as live `azure_*` manifests or receive a container-SAS handoff.
 
-`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.1
+`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.5
 artifact for manual installation, not an EDS-injected script. Replace the old
 activation userscript with it rather than running duplicate return controls.
 It preserves the installed v1.8 return control and edit-access/save-copy notice
@@ -143,10 +161,23 @@ remaining and UTC timestamps with optional fractions or `+00:00`. Rejections
 log fixed reason codes under `[autoload]`, never signed URLs. The upload
 sequence is exercised against a local shadow-DOM fixture; its selectors still
 require verification against live Adobe Graph.
-Upload detection accepts both the legacy empty class and the current nonbusy
-dropzone with visible placeholder, prompt title/subtitle, and Browse files
-control. It remains scoped to the Input image node and rejects populated,
-busy, or ambiguous upload areas.
+Two standalone variants are available: `tools/graph-auto-load-upload-new.user.js`
+targets Upload new on a prepopulated Input image, intentionally replacing it;
+`tools/graph-auto-load-browse-files.user.js` targets Browse files on an empty input.
+Both continue through Your device. Enable only one variant; disable the original
+script and any other activation userscripts to avoid competing file pickers.
+The Browse files variant then waits for the supplied file to be read and a loaded
+image or visible Upload new control in the nonbusy Input image node, and clicks one visible enabled Run all
+control exactly once. Missing or ambiguous controls stop with a console diagnostic.
+Upload confirmation and Run all availability each have a five-second timeout.
+Run all matches the exact visible button text independently of its accessibility
+label (the current Graph toolbar labels that button Run Graph).
+This starts real Graph processing; it does not report processing completion.
+The Upload new variant does not automatically run the graph.
+The original `graph-auto-load.user.js` now targets Upload new only.
+Controls in other nodes, busy ancestors and ambiguous controls are rejected.
+Browse files also rejects populated image widgets. Regenerate the standalone
+variants after source changes with `node tools/build-graph-userscripts.mjs`.
 
 ### Evergreen permanent-demo cutouts
 

@@ -1,0 +1,1003 @@
+{
+  "schemaVersion": 1,
+  "revision": "106ddd4ff5644118bb56dd7af73c56ed",
+  "experienceTemplateSets": {
+    "main": "max_square",
+    "max": "max_square"
+  },
+  "people": [
+    {
+      "id": "demo_dd5af9bb1ce34c41bcc1a45723d6c343",
+      "name": "Tina",
+      "enabled": true,
+      "order": 0,
+      "profiles": {
+        "max_square": {
+          "demo": true,
+          "version": "cb0f5a4cc4334bad9ef869283b641e9d",
+          "templateFingerprint": "97a1a179b0cd1d27da9008032eb9c89644ce13ead1647d963d8d1eff72cc11b2",
+          "ads": {
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/ads/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/ads/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/ads/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/ads/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "cutouts": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/cutouts/1-larocheposay.png",
+              "mimeType": "image/png"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/cutouts/2-lorealprofessionnel.png",
+              "mimeType": "image/png"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/cutouts/3-YSLbeauty.png",
+              "mimeType": "image/png"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/cutouts/4-lorealparis.png",
+              "mimeType": "image/png"
+            }
+          },
+          "variations": {
+            "1-larocheposay": [
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/1-larocheposay/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "2-lorealprofessionnel": [
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_10.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 10"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_11.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 11"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_12.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 12"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_13.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 13"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_14.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 14"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_15.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 15"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_16.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 16"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_17.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 17"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_18.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 18"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_19.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 19"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_20.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 20"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_21.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 21"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_22.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 22"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/2-lorealprofessionnel/page_23.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 23"
+              }
+            ],
+            "3-YSLbeauty": [
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/3-YSLbeauty/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "4-lorealparis": [
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/variations/4-lorealparis/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ]
+          },
+          "printPreviews": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/print-previews/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/print-previews/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/print-previews/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/print-previews/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "portrait": {
+            "blob": "assets/offline-demos/demo_dd5af9bb1ce34c41bcc1a45723d6c343/max_square/cb0f5a4cc4334bad9ef869283b641e9d/portrait.jpg",
+            "mimeType": "image/jpeg"
+          }
+        }
+      }
+    },
+    {
+      "id": "demo_abbf9c52fbf441519cd16bd672da1ded",
+      "name": "Sarah",
+      "enabled": true,
+      "order": 1,
+      "profiles": {
+        "max_square": {
+          "demo": true,
+          "version": "a3c88aa45cb344fe8e04cd2fca65ae94",
+          "templateFingerprint": "97a1a179b0cd1d27da9008032eb9c89644ce13ead1647d963d8d1eff72cc11b2",
+          "ads": {
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/ads/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/ads/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/ads/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/ads/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "cutouts": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/cutouts/1-larocheposay.png",
+              "mimeType": "image/png"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/cutouts/2-lorealprofessionnel.png",
+              "mimeType": "image/png"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/cutouts/3-YSLbeauty.png",
+              "mimeType": "image/png"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/cutouts/4-lorealparis.png",
+              "mimeType": "image/png"
+            }
+          },
+          "variations": {
+            "1-larocheposay": [
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/1-larocheposay/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "2-lorealprofessionnel": [
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_10.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 10"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_11.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 11"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_12.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 12"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_13.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 13"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_14.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 14"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_15.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 15"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_16.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 16"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_17.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 17"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_18.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 18"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_19.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 19"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_20.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 20"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_21.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 21"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_22.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 22"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/2-lorealprofessionnel/page_23.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 23"
+              }
+            ],
+            "3-YSLbeauty": [
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/3-YSLbeauty/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "4-lorealparis": [
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/variations/4-lorealparis/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ]
+          },
+          "printPreviews": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/print-previews/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/print-previews/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/print-previews/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/print-previews/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "portrait": {
+            "blob": "assets/offline-demos/demo_abbf9c52fbf441519cd16bd672da1ded/max_square/a3c88aa45cb344fe8e04cd2fca65ae94/portrait.jpg",
+            "mimeType": "image/jpeg"
+          }
+        }
+      }
+    },
+    {
+      "id": "demo_e1b7c9151a34433a83e32b3657afc011",
+      "name": "Greg",
+      "enabled": true,
+      "order": 2,
+      "profiles": {
+        "max_square": {
+          "demo": true,
+          "version": "e451a2ef83144c86a3bae78861dba979",
+          "templateFingerprint": "97a1a179b0cd1d27da9008032eb9c89644ce13ead1647d963d8d1eff72cc11b2",
+          "ads": {
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/ads/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/ads/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/ads/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/ads/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "cutouts": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/cutouts/1-larocheposay.png",
+              "mimeType": "image/png"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/cutouts/2-lorealprofessionnel.png",
+              "mimeType": "image/png"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/cutouts/3-YSLbeauty.png",
+              "mimeType": "image/png"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/cutouts/4-lorealparis.png",
+              "mimeType": "image/png"
+            }
+          },
+          "variations": {
+            "1-larocheposay": [
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/1-larocheposay/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "2-lorealprofessionnel": [
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_10.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 10"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_11.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 11"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_12.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 12"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_13.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 13"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_14.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 14"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_15.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 15"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_16.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 16"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_17.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 17"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_18.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 18"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_19.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 19"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_20.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 20"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_21.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 21"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_22.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 22"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/2-lorealprofessionnel/page_23.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 23"
+              }
+            ],
+            "3-YSLbeauty": [
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/3-YSLbeauty/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ],
+            "4-lorealparis": [
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_1.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 1"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_2.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 2"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_3.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 3"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_4.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 4"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_5.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 5"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_6.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 6"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_7.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 7"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_8.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 8"
+              },
+              {
+                "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/variations/4-lorealparis/page_9.jpg",
+                "mimeType": "image/jpeg",
+                "label": "Page 9"
+              }
+            ]
+          },
+          "printPreviews": {
+            "1-larocheposay": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/print-previews/1-larocheposay.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "2-lorealprofessionnel": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/print-previews/2-lorealprofessionnel.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "3-YSLbeauty": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/print-previews/3-YSLbeauty.jpg",
+              "mimeType": "image/jpeg"
+            },
+            "4-lorealparis": {
+              "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/print-previews/4-lorealparis.jpg",
+              "mimeType": "image/jpeg"
+            }
+          },
+          "portrait": {
+            "blob": "assets/offline-demos/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/portrait.jpg",
+            "mimeType": "image/jpeg"
+          }
+        }
+      }
+    }
+  ]
+}

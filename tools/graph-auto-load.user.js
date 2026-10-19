@@ -2,8 +2,8 @@
 // @name         MAX_Activation_AdobeGraph
 // @namespace    http://tampermonkey.net/
 // @author       Luke Vanderberg
-// @description  Loads the kiosk cutout, adds See your Ads, and hides edit-access/save-copy notices
-// @version      2.1
+// @description  Loads the kiosk cutout, adds Next, and hides edit-access/save-copy notices
+// @version      2.5
 // @match        https://firefly.adobe.com/graph/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
@@ -15,6 +15,9 @@
 
 (() => {
   "use strict";
+
+  const uploadControlLabel = "upload new";
+  const autoRun = false;
 
   // Capture before the Graph app can replace its URL. Preserve unrelated hash parameters.
   const params = new URLSearchParams(location.hash.slice(1));
@@ -202,31 +205,76 @@
     throw new Error("Input image title is not inside a Graph node.");
   }
 
-  function findUploadArea(node) {
-    const areas = [];
-    for (const element of walk(node)) {
-      if (!element.localName.startsWith("adobe-widget-image-") || !element.shadowRoot) continue;
-      for (const area of element.shadowRoot.querySelectorAll(".dropzone")) {
-        const visible = candidate => {
-          if (!candidate) return false;
-          const rect = candidate.getBoundingClientRect();
-          const style = getComputedStyle(candidate);
-          return rect.width > 0 && rect.height > 0 &&
-            style.visibility !== "hidden" && style.display !== "none";
-        };
-        if (!visible(area) || area.getAttribute("aria-busy") === "true" ||
-            [...walk(element)].some(candidate => ["img", "video", "canvas"].includes(candidate.localName))) continue;
-        const prompt = area.querySelector(".prompt");
-        const browse = area.querySelector("sp-button.browse-button");
-        const emptyPrompt = area.getAttribute("aria-busy") === "false" &&
-          visible(prompt) && visible(prompt.querySelector(".placeholder-icon")) &&
-          visible(prompt.querySelector(".prompt-title")) &&
-          visible(prompt.querySelector(".prompt-subtitle")) && visible(browse);
-        if (area.classList.contains("empty") || emptyPrompt) areas.push(area);
+  function findUploadArea(node, expectedLabel = uploadControlLabel) {
+    const replacements = [...walk(node)].filter(element => {
+      if (!element.matches("button, sp-button, [role='button']") ||
+          element.disabled || element.getAttribute("aria-disabled") === "true") return false;
+      for (let parent = element; parent && parent !== node;
+        parent = parent.parentElement || parent.getRootNode().host) {
+        if (parent.getAttribute("aria-busy") === "true") return false;
+        if (expectedLabel === "browse files" &&
+            parent.localName.startsWith("adobe-widget-image-") &&
+            [...walk(parent)].some(child => ["img", "video", "canvas"].includes(child.localName))) return false;
       }
+      const label = (element.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const rect = element.getBoundingClientRect();
+      return label === expectedLabel && rect.width > 0 && rect.height > 0 &&
+        getComputedStyle(element).visibility !== "hidden";
+    });
+    // Spectrum controls may contain a native button with the same label.
+    const controls = replacements.filter(element => !replacements.some(other => {
+      if (other === element) return false;
+      for (let parent = element.parentElement || element.getRootNode().host; parent;
+        parent = parent.parentElement || parent.getRootNode().host) {
+        if (parent === other) return true;
+      }
+      return false;
+    }));
+    if (controls.length > 1) throw new Error("Input image node has multiple matching upload controls.");
+    if (controls.length === 1) return controls[0];
+    return null;
+  }
+
+  function uploadedImageReady() {
+    const title = findByText("Input image");
+    if (!title) return false;
+    const node = enclosingGraphNode(title);
+    const contents = [...walk(node)];
+    return !contents.some(element => element.getAttribute("aria-busy") === "true") &&
+      (Boolean(findUploadArea(node, "upload new")) ||
+      contents.some(element => element.localName === "img" &&
+        element.complete && element.naturalWidth > 0 &&
+        element.getBoundingClientRect().width > 0));
+  }
+
+  function findRunAll() {
+    const buttons = [...walk(document)].filter(element => {
+      if (!element.matches("button, sp-button, [role='button']")) return false;
+      const normalize = value => (value || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const text = normalize(element.textContent);
+      const label = normalize(element.getAttribute("aria-label"));
+      const rect = element.getBoundingClientRect();
+      return (text === "run all" || label === "run all") &&
+        rect.width > 0 && rect.height > 0 &&
+        getComputedStyle(element).visibility !== "hidden";
+    });
+    const controls = buttons.filter(element => !buttons.some(other => {
+      if (other === element) return false;
+      for (let parent = element.parentElement || element.getRootNode().host; parent;
+        parent = parent.parentElement || parent.getRootNode().host) {
+        if (parent === other) return true;
+      }
+      return false;
+    }));
+    if (controls.length > 1) throw new Error("Multiple Run all controls found.");
+    const control = controls[0];
+    if (!control) return null;
+    for (const element of [control, ...walk(control)]) {
+      if (element.disabled || element.hasAttribute("disabled") ||
+          element.getAttribute("aria-disabled") === "true" ||
+          element.getAttribute("aria-busy") === "true") return null;
     }
-    if (areas.length > 1) throw new Error("Input image node has multiple upload areas.");
-    return areas[0];
+    return control;
   }
 
   const poll = (fn, ms = 400, timeout = 60000) => new Promise((resolve, reject) => {
@@ -278,7 +326,7 @@
       const node = enclosingGraphNode(title);
       const area = await poll(() => findUploadArea(node))
         .catch(() => {
-          throw new Error("Input image node needs one visible, empty image dropzone.");
+          throw new Error(`Input image node needs one visible ${uploadControlLabel} control.`);
         });
       log("Input image upload area found.");
       clickEl(area);
@@ -287,6 +335,7 @@
         throw new Error("This browser does not support the Graph file picker.");
       }
       let used = false;
+      let fileRead = false;
       fakePicker = async function (options) {
         if (used) return originalPicker.call(unsafeWindow, options);
         used = true;
@@ -295,7 +344,10 @@
         }
         const handle = {
           kind: "file", name: file.name,
-          getFile: async () => file,
+          getFile: async () => {
+            fileRead = true;
+            return file;
+          },
           isSameEntry: async other => other === handle,
           queryPermission: async () => "granted",
           requestPermission: async () => "granted",
@@ -306,6 +358,20 @@
       unsafeWindow.showOpenFilePicker = fakePicker;
       clickEl(device);
       await poll(() => used, 100, 10000);
+      if (autoRun) {
+        log("Waiting for Input image upload to finish.");
+        await poll(() => fileRead && uploadedImageReady(), 200, 5000).catch(() => {
+          throw new Error("Input image upload was not confirmed; Run all was not clicked.");
+        });
+        log("Input image upload confirmed. Looking for Run all.");
+        const run = await poll(findRunAll, 200, 5000).catch(() => {
+          throw new Error("One enabled Run all control was not found; processing was not started.");
+        });
+        // Recheck after waiting for the toolbar; never run on a stale upload state.
+        if (!uploadedImageReady()) throw new Error("Input image is no longer ready; processing was not started.");
+        clickEl(run);
+        log("Run all clicked.");
+      }
     } catch (error) {
       log(error.message);
     } finally {
@@ -324,11 +390,11 @@
       const button = document.createElement("button");
       button.id = "max-see-ads-btn";
       button.type = "button";
-      button.textContent = "See your Ads";
+      button.textContent = "Next";
       Object.assign(button.style, {
         position: "fixed", bottom: "32px", right: "32px", zIndex: "999999",
-        padding: "14px 28px", background: "#1473E6", color: "#fff",
-        border: "none", borderRadius: "24px", fontSize: "16px", fontWeight: "700",
+        padding: "0 28px", width: "168px", minHeight: "64px", background: "#1473E6", color: "#fff",
+        border: "none", borderRadius: "32px", fontSize: "24px", fontWeight: "700",
         fontFamily: 'adobe-clean, "Source Sans Pro", sans-serif', cursor: "pointer",
         boxShadow: "0 4px 20px rgba(0,0,0,0.28)",
         transition: "background 0.15s, transform 0.1s",

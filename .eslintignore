@@ -2,4 +2,6 @@ helix-importer-ui
 *.min.js
 coworker/assets/
 tools/graph-auto-load.user.js
+tools/graph-auto-load-upload-new.user.js
+tools/graph-auto-load-browse-files.user.js
 production-workflow/assets/

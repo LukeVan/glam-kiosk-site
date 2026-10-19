@@ -12,7 +12,7 @@ export function sampleVariations() {
 
 export default function renderVariations({
   panel, block, assets, sample, text, signal, onFinish, workflow, loadResults,
-  portraitId, loadWorkflowPortrait, animateEntrance = false, demo = false,
+  portraitId, loadWorkflowPortrait, animateEntrance = false,
 }) {
   const make = (tag, value, className) => {
     const node = document.createElement(tag);
@@ -27,7 +27,6 @@ export default function renderVariations({
   copyViewport.append(copyText);
   copy.append(copyViewport);
   if (sample) copy.append(make('p', text.variationsSample, 'kiosk-variations-notice'));
-  else if (demo) copy.append(make('p', text.demo, 'kiosk-variations-notice'));
   let currentAssets = assets;
   let syncWorkflow = () => {};
   const controls = make('div', '', 'kiosk-variations-controls');
@@ -253,8 +252,10 @@ export default function renderVariations({
       iframe.contentWindow.postMessage({
         type: 'KIOSK_WORKFLOW_ASSETS',
         portraitId,
-        portraitUrl: workflowPortrait,
-        previewUrl: sample ? null : currentAssets[0]?.url || null,
+        portraitUrl: workflowPortrait
+          ? new URL(workflowPortrait, window.location.origin).href : null,
+        previewUrl: !sample && currentAssets[0]?.url
+          ? new URL(currentAssets[0].url, window.location.origin).href : null,
       }, window.location.origin);
     };
     syncWorkflow = notify;

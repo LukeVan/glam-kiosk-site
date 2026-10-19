@@ -1029,7 +1029,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await demo.getByRole('button', { name: 'Resume showcase', exact: true }).count(), 0);
     assert.equal(await demo.locator('.kiosk-variations-viewport').evaluate((view) => view.scrollTop), 0);
     await demo.setViewportSize({ width: 390, height: 844 });
-    assert.equal(await demo.locator('.kiosk-variation').count(), 18);
+    assert.equal(await demo.locator('.kiosk-variation').count(), 9);
     assert.equal(await demo.locator('.kiosk-panel-variations').evaluate((panel) => (
       panel.scrollWidth <= panel.clientWidth
     )), true);
