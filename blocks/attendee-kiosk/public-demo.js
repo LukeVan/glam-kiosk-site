@@ -22,7 +22,10 @@ export function validatePublicDemo(value) {
 }
 
 async function readIndex(origin, identity, signal, fetcher) {
-  const response = await fetcher(`${origin}${PUBLIC_DEMO_INDEX}`, {
+  const localPreview = typeof window !== 'undefined'
+    && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+  const indexOrigin = localPreview ? window.location.origin : origin;
+  const response = await fetcher(`${indexOrigin}${PUBLIC_DEMO_INDEX}`, {
     signal, credentials: 'omit', redirect: 'error', cache: 'no-store', referrerPolicy: 'no-referrer',
   });
   if (response.status === 404) return null;

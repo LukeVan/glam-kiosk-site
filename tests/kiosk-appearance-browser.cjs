@@ -129,17 +129,11 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await coworker.locator('html[data-color-scheme="dark"]').waitFor();
     await page.locator('.kiosk-coworker-jump').click();
     await page.locator('.kiosk-ad-grid button').nth(1).click();
-    const selected = page.locator('.kiosk-ad-grid [aria-pressed="true"]');
-    assert.match(await selected.evaluate((node) => getComputedStyle(node).backgroundImage), /linear-gradient/);
-    assert.equal(await selected.evaluate((node) => getComputedStyle(node, '::before').display), 'none');
-    await screenshot('dark-ad-selection');
-    const darkWords = await page.locator('.kiosk-ad-copy').innerText();
+    await page.locator('.kiosk-panel-continued').waitFor();
+    const darkWords = await page.locator('.kiosk-panel-continued').innerText();
     await choose('light');
-    assert.equal(await page.locator('.kiosk-ad-copy').innerText(), darkWords);
-    assert.equal(await selected.evaluate((node) => getComputedStyle(node).backgroundImage), 'none');
-    await screenshot('light-ad-selection');
+    assert.equal(await page.locator('.kiosk-panel-continued').innerText(), darkWords);
     await choose('dark');
-    await page.locator('.kiosk-composer-send').click();
     await coworker.locator('html[data-color-scheme="dark"]').waitFor();
     for (const theme of ['light', 'dark']) {
       await choose(theme);

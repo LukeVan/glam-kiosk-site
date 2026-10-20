@@ -10,10 +10,19 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
     const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
     const requests = [];
     const external = [];
+    await context.addInitScript(() => {
+      window.publicDemoMessages = [];
+      window.addEventListener('message', ({ data }) => {
+        if (data?.type === 'KIOSK_SET_GRAPH_MODE') window.publicDemoMessages.push(data);
+      });
+    });
     await context.route('**/*', async (route) => {
       const request = route.request();
       const url = new URL(request.url());
-      if (['localhost', '127.0.0.1'].includes(url.hostname)) {
+      if (url.pathname.startsWith('/.rum/')) {
+        // aem.js samples RUM beacons; they are telemetry, not kiosk writes.
+        await route.fulfill({ status: 204 });
+      } else if (['localhost', '127.0.0.1'].includes(url.hostname)) {
         requests.push({ path: url.pathname, method: request.method() });
         await route.continue();
       } else {
@@ -45,6 +54,12 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       await stage('name', person);
       await page.locator('.kiosk-name .kiosk-primary-action').click();
       await page.frameLocator('.kiosk-frame-slot iframe').getByRole('button', { name: 'Send', exact: true }).waitFor();
+      const child = page.frames().find((frame) => frame.url().includes('/coworker/index.html'));
+      await child.waitForFunction(() => window.publicDemoMessages.some((message) => message.mode === 'public-demo'));
+      const mode = await child.evaluate(() => window.publicDemoMessages.findLast((message) => message.mode === 'public-demo'));
+      assert.equal(mode.demo.personId, person.id);
+      assert.equal(mode.demo.version, person.profiles.max_square.version);
+      assert.equal(mode.demo.brand, '4-lorealparis');
       assert.equal(await page.locator('.kiosk-demo-cutouts').count(), 0);
       await stage('ads', person);
       await page.locator('.kiosk-ad-grid img').first().waitFor();

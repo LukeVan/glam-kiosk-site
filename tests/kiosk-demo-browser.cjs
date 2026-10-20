@@ -19,13 +19,13 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') await route.continue();
       else await route.abort();
     });
-    if (publicFixture) {
-      await page.route('**/drafts/attendee-kiosk.html', (route) => route.fulfill({
+    await page.route('**/drafts/attendee-kiosk.html', (route) => route.fulfill({
         contentType: 'text/html',
         body: fs.readFileSync('drafts/attendee-kiosk.html', 'utf8')
-          .replace('window.GLAM_KIOSK_CONFIG = {', `window.GLAM_KIOSK_CONFIG = { publicDemoOrigin: '${publicOrigin}',`),
+          .replace(`publicDemoOrigin: '${publicOrigin}'`, `publicDemoOrigin: '${publicFixture ? publicOrigin : ''}'`),
       }));
-      await page.route(`${publicOrigin}/assets/permanent-demo-cutouts/index.json`, (route) => {
+    if (publicFixture) {
+      await page.route('http://localhost:3017/assets/permanent-demo-cutouts/index.json', (route) => {
         const person = catalog.people[0];
         const setId = catalog.experienceTemplateSets.max;
         const profile = person.profiles[setId];
@@ -130,7 +130,6 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert(adURLs.every((url) => new URL(url).pathname.includes('/custom_max/')));
     assert(adURLs.some((url) => new URL(url).pathname.endsWith('/ads/3-YSLbeauty.jpg')));
     await page.locator('.kiosk-ad-grid button').nth(1).click();
-    await page.locator('.kiosk-composer-send').click();
     await page.locator('.kiosk-panel-continued').waitFor();
     await stage('variations');
     await page.locator('.kiosk-variation img').first().waitFor();

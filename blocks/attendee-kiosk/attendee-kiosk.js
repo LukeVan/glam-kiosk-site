@@ -228,10 +228,8 @@ export default async function decorate(block) {
           adIndex: index + 1,
           brand: ['roche', 'keratin', 'ysl', 'paris'][index],
           adUrl: new URL(manifest.ads[index].url, window.location.origin).href,
+          autoAdvance: true,
         });
-        if (config.coworker.packaged) {
-          sendCoworker({ type: 'KIOSK_FOCUS_SIMULATION_COMPOSER' });
-        }
       }
     }
   }
@@ -846,8 +844,9 @@ export default async function decorate(block) {
       if (!event.repeat) next.click();
     }, { signal: controller.signal });
     cards(manifest.ads, state.selectedAdId, (ad) => {
+      if (submitting) return;
       try {
-        if (state.printRequest) {
+        if (state.printRequest && state.selectedAdId !== ad.id) {
           throw new Error(text().selectionLocked);
         }
         persist({ ...state, selectedAdId: ad.id });
@@ -859,6 +858,7 @@ export default async function decorate(block) {
         });
         next.disabled = false;
         updateDock();
+        next.click();
       } catch (error) { fail(error); }
     }, 'kiosk-ad-grid');
     updateDock();

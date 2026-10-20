@@ -1,5 +1,11 @@
 # Hosted attendee kiosk frontend
 
+The demo draft explicitly configures the approved hosted public-cutout origin.
+Localhost previews read the bundled public-cutout index on their own origin
+(EDS does not grant cross-origin index reads), but Graph receives only validated
+HTTPS URLs on that approved hosted origin. This applies only to synthetic demos;
+live portrait access and genuine missing-mapping fallback are unchanged.
+
 ## Light and dark activation appearance
 
 In `/drafts/kiosk-settings.html`, **Activation appearance** switches between
@@ -533,16 +539,15 @@ On initial story entry, the shell sends `KIOSK_FOCUS_HOME_SEND` once per ready
 frame after identity. The child focuses its enabled home Send after rendering
 and acknowledges with `KIOSK_HOME_SEND_FOCUSED`. Attendee interaction cancels
 pending child focus; continued simulation does not receive this request.
-Simulation return instead sends `KIOSK_SIMULATE` followed by
-`KIOSK_FOCUS_SIMULATION_COMPOSER` once per selected-ad/frame pairing.
-The child waits for the guided prompt and enabled editor, focuses it, and emits
-`KIOSK_SIMULATION_COMPOSER_FOCUSED`. Native Enter advances its existing beat;
-shell rerenders do not restart simulation or steal focus.
+Simulation return sends `KIOSK_SIMULATE` with `autoAdvance: true` once per
+selected-ad/frame pairing. Coworker streams setup and continues automatically
+to audience results without an Enter/Send pause. Standalone simulation without
+this explicit flag retains its manual setup step.
 Ad selection attaches a thumbnail to a Spectrum AI prompt-field composer
 (Spectrum AI Toolkit, light theme, 540 px) under the subhead on the left; the
-enlarged 2×2 ad grid fills the right column. The thumbnail's close button
-clears the selection unless a print request has locked it.
-Its Send button and panel-scoped Enter share one guarded submission path.
+enlarged 2×2 ad grid fills the right column. Clicking an ad immediately invokes
+the guarded submission path and locks further selection while submitting;
+no separate Send or Enter is required.
 Real requests must be accepted before transitioning; failed submissions retain
 their immutable request for retry and never animate a successful handoff.
 On desktop the handoff uses the prototype's 806 ms floating-image shrink/fade,

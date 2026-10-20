@@ -370,31 +370,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert(Math.abs(sendBox.x + sendBox.width / 2 - sendIconBox.x - sendIconBox.width / 2) < 0.5);
     assert(Math.abs(sendBox.y + sendBox.height / 2 - sendIconBox.y - sendIconBox.height / 2) < 0.5);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), null);
-    await page.locator('.kiosk-ad-grid button').first().click();
+    await page.locator('.kiosk-ad-grid button').nth(selectedBrandIndex).click();
     const favoriteHistory = await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent'));
     assert.equal(JSON.parse(favoriteHistory).length, 1);
-    assert.equal(writes, 0);
-    await page.locator('.kiosk-ad-grid button').nth(3).click();
-    assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
-    assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 1);
-    assert((await page.locator('.kiosk-composer-thumbnail-image').getAttribute('src'))
-      .includes('lorealparis'));
-    const gridBox = await page.locator('.kiosk-ad-grid').boundingBox();
-    const dockBox = await page.locator('.kiosk-composer').boundingBox();
-    const adCopyBox = await page.locator('.kiosk-ad-copy').boundingBox();
-    assert(dockBox.x + dockBox.width < gridBox.x);
-    assert(dockBox.y >= adCopyBox.y + adCopyBox.height);
-    assert.equal(Math.round(dockBox.width), 540);
-    assert(gridBox.width > 800);
-    await page.getByRole('button', { name: 'Remove selected ad', exact: true }).click();
-    assert.equal(await page.locator('.kiosk-composer.has-selection').count(), 0);
-    assert.equal(await page.locator('.kiosk-composer-send').isDisabled(), true);
-    assert.equal(await page.locator('.kiosk-ad-grid [aria-pressed="true"]').count(), 0);
-    await page.locator('.kiosk-ad-grid button').nth(selectedBrandIndex).click();
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'engulf-ads.png') });
     }
-    await page.locator('.kiosk-composer-send').click();
     await page.getByRole('alert').waitFor();
     assert.equal(writes, 1);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-completed-v1:TestEvent')), favoriteHistory);
@@ -418,8 +399,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         post(message, ...args);
       };
     });
-    await page.locator('.kiosk-composer-send').focus();
-    await page.keyboard.press('Enter');
+    await page.locator('.kiosk-ad-grid button').nth(selectedBrandIndex).click();
     await page.locator('.kiosk-engulf-ghost').waitFor();
     assert.equal(await page.locator('.kiosk-engulf-overlay').getAttribute('aria-hidden'), 'true');
     await page.waitForFunction(() => document.querySelector('.kiosk-engulf-settle'));
@@ -436,6 +416,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-engulf-overlay').count(), 0);
     await page.waitForFunction(() => window.simulationMessages.length === 1);
     assert.equal((await page.evaluate(() => window.simulationMessages)).length, 1);
+    assert.equal((await page.evaluate(() => window.simulationMessages))[0].autoAdvance, true);
     await page.waitForFunction(() => window.graphMessages.some((message) => message.url));
     const graph = await page.evaluate(() => window.graphMessages.find((message) => message.url));
     assert.equal(new URL(graph.url).searchParams.get('sr'), 'b');
@@ -459,17 +440,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'story-simulate.png') });
     }
     assert.equal(await page.locator('.kiosk-panel-continued .kiosk-coworker-copy > button').count(), 0);
-    await coworker.locator('[contenteditable="true"]').waitFor();
-    await coworker.getByRole('button', { name: 'Send', exact: true }).waitFor();
-    await page.waitForFunction(() => {
-      const child = document.querySelector('.kiosk-frame-slot iframe').contentDocument;
-      return child.activeElement?.getAttribute('contenteditable') === 'true';
-    });
     assert.equal(await page.evaluate(() => window.scrollY), 0);
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'engulf-continued.png') });
     }
-    await page.keyboard.press('Enter');
     await coworker.getByRole('button', { name: 'Open full results', exact: true }).waitFor();
     await page.locator('.kiosk-story-text:not([aria-hidden]) h2').getByText('See what resonates', { exact: true }).waitFor();
     assert.equal(await page.locator('.kiosk-story-text:not([aria-hidden]) p').innerText(),
@@ -1012,13 +986,11 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await demo.locator('.kiosk-graph-video').waitFor({ state: 'detached' });
     assert.equal(await demo.locator('.kiosk-ad-selection-copy h2').innerText(), 'Tell your unique story.');
     await demo.setViewportSize({ width: 1920, height: 1080 });
-    await demo.locator('.kiosk-ad-grid button').first().click();
     await demo.setViewportSize({ width: 390, height: 844 });
     const mobileGrid = await demo.locator('.kiosk-ad-grid').boundingBox();
     const mobileDock = await demo.locator('.kiosk-composer').boundingBox();
     assert(mobileDock.y >= mobileGrid.y + mobileGrid.height);
-    await demo.setViewportSize({ width: 1920, height: 1080 });
-    await demo.locator('.kiosk-composer-send').click();
+    await demo.locator('.kiosk-ad-grid button').first().click();
     await demo.locator('.kiosk-panel-continued').waitFor();
     assert.equal(await demo.locator('.kiosk-engulf-ghost').count(), 0);
     assert.equal(await demo.locator('.kiosk-engulf-overlay').count(), 0);

@@ -162,7 +162,7 @@ const copy = {
     pacing: 'Creative at the speed of now.',
     pacingSub: 'Experience interstitial only — this timer does not indicate Firefly progress or start generation.',
     ads: 'Tell your unique story.',
-    adsSub: 'Select the hero ad that speaks to you, test your thinking, and send to print.',
+    adsSub: 'Select the hero ad that speaks to you, simulate predicted performance, and send to print.',
     pending: 'Assets are pending. The independent workstation publishes them; this browser does not generate images.',
     partial: 'Some assets are available. All four ads are required before selection.',
     failed: 'Asset processing failed. Ask booth staff or refresh.',
