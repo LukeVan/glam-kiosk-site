@@ -1,7 +1,6 @@
 const copy = {
   en: {
     demo: 'DEMO · sample content only',
-    demoContent: 'Demo Content',
     settings: 'Settings',
     reset: 'Reset',
     azure: 'AZURE · event assets',
@@ -179,7 +178,6 @@ const copy = {
   },
   fr: {
     demo: 'DÉMO · contenu exemple uniquement',
-    demoContent: 'Contenu de démonstration',
     settings: 'Réglages',
     reset: 'Réinitialiser',
     azure: 'AZURE · contenus de l’événement',

@@ -377,10 +377,10 @@ export default async function decorate(block) {
     if (state.stage === 'welcome') tools.append(language);
 
     const eventName = api.source === 'azure' && api.eventId !== 'invalid-settings'
-      ? api.eventId : text().demoContent;
+      ? api.eventId : '';
     const settingsLink = element('a', text().settings);
     settingsLink.href = '/drafts/kiosk-settings.html';
-    badge.replaceChildren(element('span', eventName), settingsLink);
+    badge.replaceChildren(...(eventName ? [element('span', eventName)] : []), settingsLink);
     if (confirmRestart) {
       badge.append(
         element('span', text().confirm),

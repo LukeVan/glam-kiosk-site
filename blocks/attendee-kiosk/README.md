@@ -353,7 +353,7 @@ The welcome screen has one Start your creative workflow action. Checking consent
 enables and focuses it; native Enter advances. Selected portrait Enter advances
 to name entry, whose input autofocuses on entry and refresh. IME composition
 Enter does not submit the name form.
-The lower-right controls show the configured event name (or Demo Content),
+The lower-right controls show the configured event name (omitted when unconfigured),
 a Settings link to booth configuration, and Reset with attendee-clear confirmation.
 The text remains subject to owner/legal approval.
 The other shell stages and hosted-app integrations are not a pixel-identical
