@@ -12,7 +12,7 @@ export function sampleVariations() {
 
 export default function renderVariations({
   panel, block, assets, sample, text, signal, onFinish, workflow, loadResults,
-  portraitId, loadWorkflowPortrait, animateEntrance = false,
+  portraitId, brand = null, loadWorkflowPortrait, animateEntrance = false,
 }) {
   const make = (tag, value, className) => {
     const node = document.createElement(tag);
@@ -55,6 +55,9 @@ export default function renderVariations({
     columns = [];
     const count = Math.min(items.length, window.matchMedia('(min-width: 900px)').matches ? 3 : 2);
     columnCount = count;
+    // Single-page InDesign templates render one tall page that loops on its own.
+    const single = items.length === 1;
+    grid.classList.toggle('kiosk-variations-single', single);
     grid.style.gridTemplateColumns = `repeat(${Math.max(1, count)}, minmax(0, 1fr))`;
     const createTile = (asset, repeated) => {
       const tile = make('figure', '', 'kiosk-variation');
@@ -84,7 +87,7 @@ export default function renderVariations({
       assigned.forEach((asset) => sequence.append(createTile(asset, false)));
       const reordered = [...assigned].reverse();
       if (reordered.length > 1) reordered.push(reordered.shift());
-      reordered.forEach((asset) => sequence.append(createTile(asset, true)));
+      if (!single) reordered.forEach((asset) => sequence.append(createTile(asset, true)));
       track.append(sequence);
       // Repeat each column independently so different aspect ratios have no shared end.
       for (let repeat = 0; repeat < 2; repeat += 1) {
@@ -252,6 +255,7 @@ export default function renderVariations({
       iframe.contentWindow.postMessage({
         type: 'KIOSK_WORKFLOW_ASSETS',
         portraitId,
+        brand,
         portraitUrl: workflowPortrait
           ? new URL(workflowPortrait, window.location.origin).href : null,
         previewUrl: !sample && currentAssets[0]?.url

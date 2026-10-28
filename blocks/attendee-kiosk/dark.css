@@ -1,7 +1,57 @@
+@font-face {
+  font-family: "Adobe Clean MAX";
+  src: url("/blocks/attendee-kiosk/assets/AdobeClean-Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Adobe Clean MAX";
+  src: url("/blocks/attendee-kiosk/assets/AdobeClean-Bold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Adobe Clean Display";
+  src: url("/blocks/attendee-kiosk/assets/AdobeCleanDisplay-ExtraBold.otf") format("opentype");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Adobe Clean Display";
+  src: url("/blocks/attendee-kiosk/assets/AdobeCleanDisplay-Black.otf") format("opentype");
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
 .attendee-kiosk[data-appearance="dark"] {
   color-scheme: dark;
   background: #000;
   color: #fff;
+  font-family: "Adobe Clean MAX", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.attendee-kiosk[data-appearance="dark"] .kiosk-panel h2 {
+  font-family: "Adobe Clean Display", "Adobe Clean MAX", sans-serif;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.attendee-kiosk[data-appearance="dark"] h3,
+.attendee-kiosk[data-appearance="dark"] .kiosk-workflow-bar h2,
+.attendee-kiosk[data-appearance="dark"] .kiosk-release-header h2,
+.attendee-kiosk[data-appearance="dark"] .kiosk-connection-dialog h2 {
+  font-family: "Adobe Clean Display", "Adobe Clean MAX", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 0.95;
 }
 
 .attendee-kiosk[data-appearance="dark"]::before {

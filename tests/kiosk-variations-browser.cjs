@@ -64,7 +64,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const portrait = page.locator('.kiosk-variation img[src*="160x600"]').first();
     const portraitBox = await portrait.boundingBox();
     const tileBox = await portrait.locator('..').boundingBox();
-    assert(Math.abs(tileBox.width - portraitBox.width - 20) < 1);
+    assert(Math.abs(tileBox.width - portraitBox.width) < 1);
+    assert.equal(await portrait.locator('..').evaluate((tile) => getComputedStyle(tile).backgroundColor), 'rgba(0, 0, 0, 0)');
     assert(Math.abs(portraitBox.width / portraitBox.height - 160 / 600) < 0.001);
     assert(portraitBox.height > 380);
     await page.waitForFunction(() => new DOMMatrix(getComputedStyle(

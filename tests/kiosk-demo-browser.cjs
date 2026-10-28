@@ -7,7 +7,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+    const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } });
+    const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     let catalog = fixture();
@@ -106,10 +107,38 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         return { closed: false, focus() {} };
       };
     });
+    if (process.env.CAPSULE_GRAPH_VIEW) {
+      await coworker.locator('body').evaluate(() => {
+        window.graphViews = [];
+        window.addEventListener('message', ({ data }) => {
+          if (data?.type === 'KIOSK_SET_GRAPH_VIEW') window.graphViews.push(data.view);
+        });
+      });
+      const settings = await page.context().newPage();
+      await settings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({
+        contentType: 'text/html',
+        body: fs.readFileSync('drafts/kiosk-settings.html', 'utf8')
+          .replace('<body>', '<body><header></header>')
+          .replace('</body>', '<footer></footer></body>'),
+      }));
+      await settings.goto('http://localhost:3017/drafts/kiosk-settings.html');
+      const graphView = settings.getByLabel('Firefly Graph view', { exact: true });
+      assert.equal(await graphView.inputValue(), 'editor');
+      await graphView.selectOption('capsule');
+      const child = page.frames().find((frame) => frame.url().includes('/coworker/index.html'));
+      await child.waitForFunction(() => window.graphViews.includes('capsule'));
+      await settings.reload();
+      await graphView.waitFor();
+      assert.equal(await graphView.inputValue(), 'capsule');
+      await settings.close();
+    }
     await coworker.getByRole('button', { name: 'Open Firefly Graph', exact: true }).click();
     const graphLaunches = await coworker.locator('body').evaluate(() => window.graphOpened);
     assert.equal(graphLaunches.length, 1);
     assert.equal(new URL(graphLaunches[0]).origin, 'https://firefly.adobe.com');
+    assert.equal(new URL(graphLaunches[0]).pathname, process.env.CAPSULE_GRAPH_VIEW
+      ? '/graph/capsule/id/urn:aaid:sc:US:45c92fd6-df31-4aba-8d1b-3d8135c2d998'
+      : '/graph/edit/id/urn:aaid:sc:US:08944592-9145-526f-8b43-75400178e5ee');
     if (publicFixture) {
       const parameters = new URLSearchParams(new URL(graphLaunches[0]).hash.slice(1));
       const metadata = JSON.parse(parameters.get('publicDemo'));
@@ -145,6 +174,11 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const workflow = page.frameLocator('.kiosk-workflow-dialog iframe');
     await workflow.locator('img[src*="/cutouts/2-lorealprofessionnel.png"]').waitFor();
     await workflow.locator('img[src*="/variations/2-lorealprofessionnel/page_1.jpg"]').waitFor();
+    const validateBrand = workflow.locator('.react-flow__node[data-id="banner-validate-brand"]');
+    await validateBrand.locator('select').first().waitFor();
+    assert.deepEqual(await validateBrand.locator('select').evaluateAll((nodes) => nodes.map((node) => node.value)), [
+      'L\'Oreal Professionnel', 'New Customers', 'L\'Oreal Prof - Keratin Alpha Sleek', 'Display/Demand Conversion',
+    ]);
     await page.locator('.kiosk-workflow-finish').click();
     await page.locator('.kiosk-demo-print img').waitFor();
     assert.equal(await page.locator('.kiosk-workflow-dialog').count(), 0);

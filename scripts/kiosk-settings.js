@@ -1,5 +1,18 @@
 export const SETTINGS_KEY = 'glam-kiosk-booth-v1';
 export const APPEARANCE_KEY = 'glam-kiosk-appearance-v1';
+export const GRAPH_VIEW_KEY = 'glam-kiosk-graph-view-v1';
+
+export function loadGraphView(storage) {
+  const value = storage.getItem(GRAPH_VIEW_KEY) ?? 'editor';
+  if (!['editor', 'capsule'].includes(value)) throw new Error('Saved Graph view is invalid. Choose Current editor or New capsule in booth settings.');
+  return value;
+}
+
+export function saveGraphView(storage, value) {
+  if (!['editor', 'capsule'].includes(value)) throw new Error('Choose Current editor or New capsule for Firefly Graph view.');
+  storage.setItem(GRAPH_VIEW_KEY, value);
+}
+
 export function loadAppearance(storage, fallback = 'light') {
   const value = storage.getItem(APPEARANCE_KEY);
   if (value === null) return fallback;
@@ -117,6 +130,7 @@ export function saveSettings(storage, value) {
 export function clearSettings(storage) {
   storage.removeItem(SETTINGS_KEY);
   storage.removeItem(APPEARANCE_KEY);
+  storage.removeItem(GRAPH_VIEW_KEY);
 }
 
 export async function listBlobs(containerSAS, {

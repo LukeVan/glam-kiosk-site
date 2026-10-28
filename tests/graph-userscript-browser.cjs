@@ -24,7 +24,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.goto(`https://firefly.adobe.com/graph/fixture#${new URLSearchParams({ portraitUrl: cutout.href, keep: 'yes' })}`);
     await page.evaluate(async ({
       publicFixture, badDigest, currentWidget, blockedWidget, replacementWidget, runControl,
-      uploadNewOnly,
+      uploadNewOnly, capsuleUI,
     }) => {
       window.unsafeWindow = window;
       window.originalPicker = async () => { throw new Error('Native picker must not open'); };
@@ -61,8 +61,10 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         ? '<div class="dropzone" aria-busy="false"><div class="content"><svg class="dashed-border"></svg><div class="prompt"><sp-icon-image class="placeholder-icon">Image</sp-icon-image><div class="prompt-text"><span class="prompt-title">Drag and drop your file,</span><span class="prompt-subtitle">or select from your device</span></div></div><sp-button class="browse-button" role="button">Browse files</sp-button></div></div>'
         : '<button class="dropzone empty">Upload</button>';
       if (replacementWidget) {
-        upload.innerHTML = '<img alt="Existing image"><sp-button role="button">Upload new</sp-button><button>Reset</button>';
-        const control = upload.querySelector('sp-button');
+        upload.innerHTML = capsuleUI
+          ? '<img alt="Existing image"><sp-action-button aria-label="Upload new image" role="button"><sp-icon-upload slot="icon"></sp-icon-upload>Upload new</sp-action-button><button>Reset</button>'
+          : '<img alt="Existing image"><sp-button role="button">Upload new</sp-button><button>Reset</button>';
+        const control = upload.querySelector('sp-button, sp-action-button');
         control.attachShadow({ mode: 'open' }).innerHTML = '<button><slot></slot></button>';
         if (blockedWidget === 'replacement-ambiguous') {
           upload.append(control.cloneNode(true));
@@ -72,31 +74,47 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         other.shadowRoot.querySelector('button').onclick = () => { window.wrongNodeClicked = true; };
         document.body.prepend(other);
       }
+      if (capsuleUI) {
+        const panel = document.createElement('section');
+        panel.setAttribute('aria-label', 'Input');
+        const field = document.createElement('div');
+        const label = document.createElement('label');
+        label.textContent = 'Input Image';
+        field.append(label, list);
+        panel.append(field);
+        node.replaceWith(panel);
+        const other = document.querySelector('pg-node');
+        if (other) other.replaceWith(Object.assign(document.createElement('button'), {
+          textContent: 'Upload new',
+          onclick: () => { window.wrongNodeClicked = true; },
+        }));
+      }
       if (blockedWidget === 'busy') upload.firstElementChild.setAttribute('aria-busy', 'true');
       if (blockedWidget === 'populated') upload.firstElementChild.append(document.createElement('img'));
       if (blockedWidget === 'ambiguous') upload.append(upload.firstElementChild.cloneNode(true));
-      upload.querySelector(replacementWidget ? 'sp-button' : '.dropzone').onclick = () => {
-        if (document.querySelector('#device')) return;
-        const device = document.createElement('button');
+      upload.querySelector(replacementWidget ? 'sp-button, sp-action-button' : '.dropzone').onclick = () => {
+        const doc = upload.ownerDocument;
+        if (doc.querySelector('#device')) return;
+        const device = doc.createElement('button');
         device.id = 'device';
         device.textContent = 'Your device';
         device.onclick = async () => {
-          const [handle] = await window.showOpenFilePicker();
+          const [handle] = await doc.defaultView.showOpenFilePicker();
           const file = await handle.getFile();
           window.uploaded = {
             name: file.name, type: file.type, size: file.size,
-            pageFile: file instanceof window.File,
+            pageFile: file instanceof doc.defaultView.File,
           };
-          const toolbar = document.createElement('graph-run-toolbar');
+          const toolbar = document.createElement(capsuleUI ? 'capsule-run-controls' : 'graph-run-toolbar');
           toolbar.setAttribute('role', 'toolbar');
           toolbar.setAttribute('aria-label', 'Graph run actions');
-          document.body.append(toolbar);
+          doc.body.append(toolbar);
           const toolbarRoot = toolbar.attachShadow({ mode: 'open' });
           const run = document.createElement('sp-button');
           run.setAttribute('role', 'button');
           run.setAttribute('aria-label', 'Run Graph');
           run.attachShadow({ mode: 'open' }).innerHTML = '<button><slot></slot></button>';
-          run.textContent = 'Run all';
+          run.textContent = capsuleUI ? 'Run' : 'Run all';
           run.disabled = true;
           window.runCount = 0;
           run.onclick = () => {
@@ -104,6 +122,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
             window.ranBeforeReady = !window.imageReady;
           };
           toolbarRoot.append(run);
+          if (capsuleUI) {
+            const unrelatedRun = document.createElement('button');
+            unrelatedRun.textContent = 'Run';
+            unrelatedRun.onclick = () => { window.wrongRunClicked = true; };
+            document.body.prepend(unrelatedRun);
+          }
           if (runControl === 'ambiguous') toolbarRoot.append(run.cloneNode(true));
           const progress = document.createElement('div');
           progress.setAttribute('aria-busy', 'true');
@@ -125,7 +149,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
             if (runControl !== 'disabled') setTimeout(() => { run.disabled = false; }, 600);
           }, 900);
         };
-        document.body.append(device);
+        doc.body.append(device);
       };
       const notices = document.querySelector('#notices').attachShadow({ mode: 'open' });
       notices.innerHTML = '<div role="status" style="width:300px;height:80px">Save a copy to edit this graph</div>';
@@ -142,12 +166,29 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         || !process.env.CURRENT_GRAPH_WIDGET,
       runControl: process.env.RUN_CONTROL || '',
       uploadNewOnly: Boolean(process.env.UPLOAD_NEW_READY),
+      capsuleUI: Boolean(process.env.CAPSULE_GRAPH_UI),
     });
+    if (process.env.CAPSULE_GRAPH_FRAME) {
+      await page.evaluate(async () => {
+        const host = document.createElement('graph-studio-capsule-host');
+        document.body.append(host);
+        const root = host.attachShadow({ mode: 'open' });
+        const frame = document.createElement('iframe');
+        frame.style.cssText = 'width:900px;height:700px';
+        const loaded = new Promise((resolve) => frame.addEventListener('load', resolve, { once: true }));
+        frame.srcdoc = '<!doctype html><html><body></body></html>';
+        root.append(frame);
+        await loaded;
+        frame.contentWindow.showOpenFilePicker = window.originalPicker;
+        frame.contentDocument.body.append(document.querySelector('section[aria-label="Input"]'));
+        window.capsuleFrame = frame;
+      });
+    }
     const script = fs.readFileSync(process.env.GRAPH_USERSCRIPT || 'tools/graph-auto-load.user.js', 'utf8');
     await page.addScriptTag({ content: script });
     if (process.env.BLOCKED_GRAPH_WIDGET) {
       await page.waitForTimeout(1800);
-      assert(logs.some((message) => message.includes('Looking for its upload area.')));
+      assert(logs.some((message) => message.includes('Waiting for its upload area.')));
       assert.equal(await page.evaluate(() => Boolean(window.uploaded)), false);
       assert.equal(await page.evaluate(() => showOpenFilePicker === window.originalPicker), true);
       assert.equal(await page.locator('#device').count(), 0);
@@ -167,7 +208,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await page.waitForFunction(() => window.uploaded).catch((error) => {
       throw new Error(`${error.message}\nFixture console: ${logs.join('\n')}\nPage errors: ${errors.join('\n')}`);
     });
-    if (script.includes('const autoRun = true;')) {
+    if (script.includes('const autoRun = true;') || process.env.CAPSULE_GRAPH_UI) {
       assert.equal(await page.evaluate(() => window.runCount), 0);
       if (process.env.RUN_CONTROL) {
         await page.waitForFunction(() => window.imageReady);
@@ -183,12 +224,18 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       await page.waitForTimeout(700);
       assert.equal(await page.evaluate(() => window.runCount), 1);
       assert.equal(await page.evaluate(() => window.ranBeforeReady), false);
-      assert(logs.some((message) => message.includes('Run all clicked.')));
+      assert(logs.some((message) => message.includes(process.env.CAPSULE_GRAPH_UI ? 'Run clicked.' : 'Run all clicked.')));
+      assert.equal(await page.evaluate(() => Boolean(window.wrongRunClicked)), false);
+    } else {
+      await page.waitForFunction(() => window.imageReady);
+      await page.waitForTimeout(900);
+      assert.equal(await page.evaluate(() => window.runCount), 0);
     }
     const result = await page.evaluate(() => ({
       uploaded: window.uploaded,
       downloads: window.downloads,
-      pickerRestored: showOpenFilePicker === window.originalPicker,
+      pickerRestored: showOpenFilePicker === window.originalPicker
+        && (!window.capsuleFrame || window.capsuleFrame.contentWindow.showOpenFilePicker === window.originalPicker),
       hash: location.hash,
       dialogClosed: !document.querySelector('dialog').open,
       toastHidden: getComputedStyle(document.querySelector('#notices').shadowRoot.querySelector('[role="status"]')).display === 'none',
@@ -205,6 +252,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(result.dialogClosed, true);
     assert.equal(result.toastHidden, true);
     assert.equal(result.ordinaryVisible, true);
+    await page.waitForSelector('#max-see-ads-btn', { timeout: 8000 });
     assert.equal(await page.locator('#max-see-ads-btn').innerText(), 'Next');
     assert.deepEqual(await page.locator('#max-see-ads-btn').evaluate((button) => {
       const style = getComputedStyle(button);

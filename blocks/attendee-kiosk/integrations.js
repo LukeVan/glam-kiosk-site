@@ -34,6 +34,15 @@ export function storyBeat(event, source, integration, stage) {
   return event.data.beat;
 }
 
+export function graphHold(event, source, integration, stage) {
+  if (!integration.enabled || !source || event.source !== source
+    || event.origin !== integration.origin || !event.data || typeof event.data !== 'object'
+    || Array.isArray(event.data) || event.data.type !== 'KIOSK_GRAPH_HOLD'
+    || typeof event.data.active !== 'boolean') return null;
+  if (event.data.active && !['story', 'continued'].includes(stage)) return null;
+  return event.data.active;
+}
+
 export function graphReturn(event, source, integration, state) {
   return integration.enabled && !!source && event.source === source
     && event.origin === integration.origin && event.data?.type === 'GLAM_GRAPH_RETURN'

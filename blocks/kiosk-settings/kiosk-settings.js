@@ -1,6 +1,6 @@
 import {
   SETTINGS_KEY, parseContainerSAS, listEvents, loadSettings, saveSettings, clearSettings,
-  loadAppearance, saveAppearance,
+  loadAppearance, saveAppearance, loadGraphView, saveGraphView,
 } from '../../scripts/kiosk-settings.js';
 
 function node(tag, text, className) {
@@ -58,6 +58,9 @@ export default function decorate(block) {
   const appearance = field('Activation appearance', node('select'));
   appearance.append(new Option('Light', 'light'));
   appearance.append(new Option('Dark', 'dark'));
+  const graphView = field('Firefly Graph view', node('select'));
+  graphView.append(new Option('Current editor', 'editor'));
+  graphView.append(new Option('New capsule', 'capsule'));
   const intake = field('Lead capture', node('select'));
   intake.append(new Option('None / separate handheld scanners', 'none'));
   intake.append(new Option('Marketo (integration requires owner validation)', 'marketo'));
@@ -108,6 +111,12 @@ export default function decorate(block) {
     try {
       saveAppearance(window.localStorage, appearance.value);
       report('Appearance saved. Open kiosk tabs update immediately. No connection test or booth-settings save is needed.');
+    } catch (error) { report(error.message, true); }
+  });
+  graphView.addEventListener('change', () => {
+    try {
+      saveGraphView(window.localStorage, graphView.value);
+      report('Graph view saved. Open kiosk tabs update immediately. Reopen Graph from Coworker to use the selected view.');
     } catch (error) { report(error.message, true); }
   });
   function invalidate() {
@@ -222,5 +231,6 @@ export default function decorate(block) {
   } catch (error) { report(error.message, true); }
   try {
     appearance.value = loadAppearance(window.localStorage, appearance.value);
+    graphView.value = loadGraphView(window.localStorage);
   } catch (error) { report(error.message, true); }
 }

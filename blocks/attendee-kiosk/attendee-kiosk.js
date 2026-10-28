@@ -7,11 +7,13 @@ import createAzureAPI from './azure.js';
 import createOfflineDemoAPI from './offline-demos.js';
 import { demoPrintAssets } from './demo-print.js';
 import {
-  coworkerReady, navigation, send, storyBeat,
+  coworkerReady, graphHold, navigation, send, storyBeat,
 } from './integrations.js';
 import copy from './copy.js';
 import { createPrintRequest, createPreparation } from './fulfillment.js';
-import { APPEARANCE_KEY, blobURL, loadAppearance } from '../../scripts/kiosk-settings.js';
+import {
+  APPEARANCE_KEY, GRAPH_VIEW_KEY, blobURL, loadAppearance, loadGraphView,
+} from '../../scripts/kiosk-settings.js';
 import { loadCSS } from '../../scripts/aem.js';
 import { darkLockup, darkNameLens } from './dark-artwork.js';
 import playAdEngulf from './engulf.js';
@@ -70,11 +72,13 @@ export default async function decorate(block) {
   let api;
   let boothSettings;
   let appearance;
+  let graphView;
   try {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
       || (config.mode === 'demo' ? createOfflineDemoAPI() : createAPI(config));
     if (api.source === 'azure') boothSettings = api.settings();
     appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'light');
+    graphView = loadGraphView(window.localStorage);
   } catch (error) {
     block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
     return;
@@ -103,6 +107,7 @@ export default async function decorate(block) {
   let frame;
   let currentStoryBeat = 'home';
   let currentContinuedBeat = 'simulate';
+  let graphHoldStage = null;
   const loadedFrames = new WeakSet();
   const readyFrames = new WeakSet();
   const homeFocusFrames = new WeakSet();
@@ -152,6 +157,12 @@ export default async function decorate(block) {
       fail(error);
     }
   }
+  // While Graph is open in its own tab, show only the background and the
+  // iframe's reopen control so closing the tab doesn't flash Coworker.
+  function setGraphHold(active) {
+    graphHoldStage = active ? state.stage : null;
+    block.classList.toggle('kiosk-graph-hold', active);
+  }
   function title(heading, sub) {
     const h = element('h2', heading);
     h.tabIndex = -1;
@@ -191,6 +202,7 @@ export default async function decorate(block) {
   function notifyCoworker() {
     if (resetting || !frame || !portrait) return;
     sendCoworker({ type: 'KIOSK_SET_THEME', theme: appearance });
+    sendCoworker({ type: 'KIOSK_SET_GRAPH_VIEW', view: graphView });
     let graphMode = 'portrait';
     if (portrait.demoCatalog) graphMode = publicDemo ? 'public-demo' : 'manual-demo';
     sendCoworker({
@@ -1121,6 +1133,8 @@ export default async function decorate(block) {
     }
   }
   render = async () => {
+    // A Graph hold only covers the stage that started it.
+    if (graphHoldStage && state.stage !== graphHoldStage) setGraphHold(false);
     if (state.stage !== 'continued') cancelEngulf();
     epoch += 1;
     const currentEpoch = epoch;
@@ -1383,6 +1397,8 @@ export default async function decorate(block) {
           signal,
           workflow: config.productionWorkflow,
           portraitId: snapshot.portraitId,
+          brand: BANNER_BRANDS[manifest.ads.findIndex((ad) => ad.id === snapshot.selectedAdId)]
+            || null,
           loadWorkflowPortrait: async (workflowSignal) => {
             if (snapshot.portraitId.startsWith('demo_')) {
               if (manifest.demoCatalog) {
@@ -1415,10 +1431,22 @@ export default async function decorate(block) {
       updateStoryCopy(beat);
       return;
     }
+    const hold = graphHold(event, frame?.contentWindow, config.coworker, state.stage);
+    if (hold !== null) {
+      setGraphHold(hold);
+      return;
+    }
     const stage = navigation(event, frame?.contentWindow, config.coworker, state.stage);
     if (stage) move(stage === 'banners' && state.printRequest ? 'ending' : stage);
   });
   window.addEventListener('storage', (event) => {
+    if (event.key === GRAPH_VIEW_KEY || event.key === null) {
+      try {
+        graphView = loadGraphView(window.localStorage);
+        sendCoworker({ type: 'KIOSK_SET_GRAPH_VIEW', view: graphView });
+      } catch (error) { fail(error); }
+      if (event.key !== null) return;
+    }
     if (event.key === APPEARANCE_KEY || (event.key === null && api.source !== 'azure')) {
       try {
         applyAppearance();

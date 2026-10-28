@@ -41,6 +41,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await activation.locator('.kiosk-name input').waitFor();
     assert.equal(await activation.getAttribute('data-appearance'), 'light');
     const lightCopy = await page.locator('.kiosk-name-copy').innerText();
+    const lightHeadingFont = await page.locator('.kiosk-panel-name h2')
+      .evaluate((node) => getComputedStyle(node).fontFamily);
     await page.locator('.kiosk-name input').fill('Shared Visitor');
     const settings = await context.newPage();
     // The static settings draft omits EDS header/footer placeholders.
@@ -54,6 +56,13 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const appearance = settings.getByLabel('Activation appearance', { exact: true });
     assert.equal(await appearance.inputValue(), 'light');
     assert.deepEqual(await appearance.locator('option').allTextContents(), ['Light', 'Dark']);
+    const graphView = settings.getByLabel('Firefly Graph view', { exact: true });
+    assert.equal(await graphView.inputValue(), 'editor');
+    assert.deepEqual(await graphView.locator('option').allTextContents(), ['Current editor', 'New capsule']);
+    await graphView.selectOption('capsule');
+    assert.match(await settings.locator('.kiosk-settings-status').innerText(), /Graph view saved/);
+    assert.equal(await settings.evaluate(() => localStorage.getItem('glam-kiosk-graph-view-v1')), 'capsule');
+    assert.equal(await page.locator('.kiosk-name input').inputValue(), 'Shared Visitor');
     const saveSettingsButton = settings.getByRole('button', { name: 'Save booth settings', exact: true });
     assert.equal(await saveSettingsButton.isEnabled(), true);
     assert.equal(await settings.getByLabel('Event', { exact: true }).inputValue(), 'TestEvent');
@@ -68,6 +77,32 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-name input').inputValue(), 'Shared Visitor');
     assert.equal(await page.locator('.kiosk-name-copy').innerText(), lightCopy);
     assert.equal(await page.locator('.kiosk-panel-name h2').evaluate((node) => getComputedStyle(node).color), 'rgb(255, 255, 255)');
+    const typography = await page.evaluate(async () => {
+      await Promise.all([
+        document.fonts.load('900 80px "Adobe Clean Display"'),
+        document.fonts.load('800 32px "Adobe Clean Display"'),
+        document.fonts.load('400 28px "Adobe Clean MAX"'),
+        document.fonts.load('700 28px "Adobe Clean MAX"'),
+      ]);
+      const heading = getComputedStyle(document.querySelector('.kiosk-panel-name h2'));
+      const body = getComputedStyle(document.querySelector('.kiosk-name-copy > p'));
+      const button = getComputedStyle(document.querySelector('.kiosk-name .kiosk-primary-action'));
+      return {
+        heading: [heading.fontFamily, heading.fontWeight, heading.letterSpacing],
+        body: [body.fontFamily, body.fontWeight],
+        button: [button.fontFamily, button.fontWeight],
+        faces: [...document.fonts]
+          .filter((face) => ['Adobe Clean Display', 'Adobe Clean MAX'].includes(face.family.replaceAll('"', '')))
+          .map((face) => face.status),
+      };
+    });
+    assert.match(typography.heading[0], /^"Adobe Clean Display"/);
+    assert.deepEqual(typography.heading.slice(1), ['900', 'normal']);
+    assert.match(typography.body[0], /^"Adobe Clean MAX"/);
+    assert.equal(typography.body[1], '400');
+    assert.match(typography.button[0], /^"Adobe Clean MAX"/);
+    assert.equal(typography.button[1], '700');
+    assert.deepEqual(typography.faces, ['loaded', 'loaded', 'loaded', 'loaded']);
     for (const selector of ['.kiosk-name-photo']) {
       await page.locator(selector).evaluate((image) => image.decode());
     }
@@ -99,6 +134,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await screenshot('dark-name');
     await choose('light');
+    assert.equal(await page.locator('.kiosk-panel-name h2')
+      .evaluate((node) => getComputedStyle(node).fontFamily), lightHeadingFont);
     assert.equal(await page.locator('.kiosk-name input').inputValue(), 'Shared Visitor');
     assert.equal(await page.locator('.kiosk-name-lens').isVisible(), false);
     assert((await page.locator('.kiosk-header img').getAttribute('src')).endsWith('/lockup.png'));

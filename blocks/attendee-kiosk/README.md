@@ -30,12 +30,32 @@ lens. The selected portrait remains dynamic inside that lens. Ad selection
 uses a gradient border without changing ad order or selection behavior.
 The original light styling and assets remain the default.
 
+Dark typography follows the MAX 2026 hierarchy: Adobe Clean Display Black for
+page headlines, Display ExtraBold for section/dialog headings, and Adobe Clean
+Regular/Bold for body copy and controls. The required font files are self-hosted
+in this block's `assets/` directory; `dark.css` declares the faces and keeps their
+use scoped to the dark activation. Light typography and embedded application
+fonts are unchanged.
+
 The packaged Coworker receives `KIOSK_SET_THEME {theme: "light" | "dark"}` after
 ready and on parent appearance changes. Coworker validates exact parent source,
 origin and enum before applying its shared ThemeProvider. Repeated notifications
 of the same activation default preserve the attendee's manual Coworker theme
 toggle; a changed activation default applies immediately. A fresh iframe or
 reset reapplies the activation default. No copy or story flow is duplicated.
+
+## Firefly Graph destination
+
+In booth settings, **Firefly Graph view** selects **Current editor** (the default)
+or **New capsule**. This independent browser preference
+(`glam-kiosk-graph-view-v1`) saves immediately without Azure access and updates
+open kiosk tabs without resetting the attendee. Reopen Graph from Coworker to
+use a changed destination; already-open Graph tabs are not redirected.
+The shell sends `KIOSK_SET_GRAPH_VIEW {view: "editor" | "capsule"}` on Coworker
+readiness and preference changes. Coworker retains its existing editor URL or uses
+`https://firefly.adobe.com/graph/capsule/id/urn:aaid:sc:US:45c92fd6-df31-4aba-8d1b-3d8135c2d998`,
+with the same portrait handoff and return behavior. Clearing booth settings resets
+the selection to the current editor.
 
 ## Opening screen transitions
 
@@ -179,7 +199,7 @@ Graph without `portraitUrl` or manual-upload instructions. The existing
 Continue to ads action remains available without claiming that Graph completed. Catalog cutouts never
 masquerade as live `azure_*` manifests or receive a container-SAS handoff.
 
-`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.5
+`/tools/graph-auto-load.user.js` is the combined Tampermonkey v2.9
 artifact for manual installation, not an EDS-injected script. Replace the old
 activation userscript with it rather than running duplicate return controls.
 It preserves the installed v1.8 return control and edit-access/save-copy notice
@@ -196,11 +216,34 @@ script and any other activation userscripts to avoid competing file pickers.
 The Browse files variant then waits for the supplied file to be read and a loaded
 image or visible Upload new control in the nonbusy Input image node, and clicks one visible enabled Run all
 control exactly once. Missing or ambiguous controls stop with a console diagnostic.
-Upload confirmation and Run all availability each have a five-second timeout.
+Upload confirmation and run-button availability each have a sixty-second timeout.
 Run all matches the exact visible button text independently of its accessibility
 label (the current Graph toolbar labels that button Run Graph).
 This starts real Graph processing; it does not report processing completion.
-The Upload new variant does not automatically run the graph.
+In the old node view, the Upload new variant does not automatically run the graph.
+In capsule view, all variants wait for upload readiness and click exactly one
+enabled Run button inside `capsule-run-controls` (including its shadow root).
+Unrelated Run buttons are ignored; disabled or ambiguous controls do not run.
+Both Graph node view and the newer capsule Input Image view are supported.
+Lookup traverses visible same-origin iframes as well as open shadow roots.
+The hosted capsule is a cross-origin `https://graph.adobe.com` iframe, so the
+userscript also matches that origin. The Firefly parent validates and clears the
+portrait handoff, then relays it only to an attached iframe whose ready message
+has the exact Graph origin and iframe window source. The child accepts the relay
+only from its top window at the exact Firefly origin and revalidates the portrait
+access before downloading. The handshake times out after sixty seconds with a
+diagnostic. Tampermonkey must allow the script on both origins and in frames;
+after updating it, reopen Graph from the kiosk to supply a new handoff.
+Cross-origin DOM is never accessed. The one-use picker override and returned File
+use the input frame's page realm; device-menu and run-button lookup stay within
+that document. Only the outer Firefly page adds Next.
+Capsule Spectrum action buttons support the accessible
+name `Upload new image` as well as visible `Upload new` text.
+Capsule lookup uses the nearest Input Image group containing upload controls,
+including shadow-root controls; it never searches the whole page for a replacement
+button. The existing Your device popup, one-use picker override, and Next
+behavior are unchanged. Actual hosted capsule compatibility still needs a booth
+check; the browser fixture covers the capsule structure without contacting Graph.
 The original `graph-auto-load.user.js` now targets Upload new only.
 Controls in other nodes, busy ancestors and ambiguous controls are rejected.
 Browse files also rejects populated image widgets. Regenerate the standalone
@@ -777,7 +820,10 @@ The gallery omits the personalized count and ready confirmation; pending,
 partial, failed and unavailable states remain visible, as does the demo label.
 The workflow child announces `KIOSK_WORKFLOW_READY`; the shell validates its
 exact window and same origin, then replies to that origin with
-`KIOSK_WORKFLOW_ASSETS {portraitId, portraitUrl, previewUrl}`. The portrait is
+`KIOSK_WORKFLOW_ASSETS {portraitId, brand, portraitUrl, previewUrl}`. `brand`
+is the selected ad's banner brand key (`1-larocheposay`, `2-lorealprofessionnel`,
+`3-YSLbeauty`, `4-lorealparis`) or `null`; the workflow uses it to preset the
+Validate brand node's Campaign/Audience/Product/Channel pickers. The portrait is
 read again from the selected attendee's validated Graph cutout manifest on
 each modal open. The preview is the first current banner result, updated if
 gallery results change. Missing/expired cutouts and missing previews remain

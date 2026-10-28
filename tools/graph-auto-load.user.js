@@ -3,8 +3,9 @@
 // @namespace    http://tampermonkey.net/
 // @author       Luke Vanderberg
 // @description  Loads the kiosk cutout, adds Next, and hides edit-access/save-copy notices
-// @version      2.5
+// @version      3.0
 // @match        https://firefly.adobe.com/graph/*
+// @match        https://graph.adobe.com/*
 // @run-at       document-start
 // @grant        GM_xmlhttpRequest
 // @grant        unsafeWindow
@@ -13,14 +14,38 @@
 // @connect      main--glam-kiosk-site--lukevan.aem.live
 // ==/UserScript==
 
-(() => {
+(async () => {
   "use strict";
 
   const uploadControlLabel = "upload new";
   const autoRun = false;
 
   // Capture before the Graph app can replace its URL. Preserve unrelated hash parameters.
-  const params = new URLSearchParams(location.hash.slice(1));
+  const capsuleFrame = location.origin === "https://graph.adobe.com";
+  if (capsuleFrame && window === window.top) return;
+  const params = capsuleFrame ? await new Promise(resolve => {
+    let timer;
+    const stop = setTimeout(() => {
+      clearInterval(timer);
+      window.removeEventListener("message", receive);
+      console.error("[autoload] No trusted capsule handoff received. Reopen Graph from the kiosk.");
+      resolve(null);
+    }, 60000);
+    function receive(event) {
+      if (event.source !== window.top || event.origin !== "https://firefly.adobe.com" ||
+          event.data?.type !== "MAX_GRAPH_HANDOFF" ||
+          typeof event.data.parameters !== "string") return;
+      clearTimeout(stop);
+      clearInterval(timer);
+      window.removeEventListener("message", receive);
+      resolve(new URLSearchParams(event.data.parameters));
+    }
+    window.addEventListener("message", receive);
+    const ready = () => window.top.postMessage({ type: "MAX_GRAPH_FRAME_READY" }, "https://firefly.adobe.com");
+    timer = setInterval(ready, 400);
+    ready();
+  }) : new URLSearchParams(location.hash.slice(1));
+  if (!params) return;
   const supplied = params.getAll("portraitUrl");
   const publicMetadata = params.getAll("publicDemo");
   if (!supplied.length) return;
@@ -28,10 +53,12 @@
   params.delete("publicDemo");
   const remaining = params.toString();
   try {
-    history.replaceState(
-      history.state, "",
-      location.pathname + location.search + (remaining ? `#${remaining}` : "")
-    );
+    if (!capsuleFrame) {
+      history.replaceState(
+        history.state, "",
+        location.pathname + location.search + (remaining ? `#${remaining}` : "")
+      );
+    }
   } catch {
     console.error("[autoload] Could not clear portrait handoff from address bar.");
     return;
@@ -130,6 +157,29 @@
     return;
   }
 
+  if (!capsuleFrame && location.pathname.startsWith("/graph/capsule/")) {
+    const parameters = new URLSearchParams({ portraitUrl: supplied[0] });
+    if (publicDemo) parameters.set("publicDemo", JSON.stringify(publicDemo));
+    log("Waiting for the trusted graph.adobe.com capsule frame.");
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", relay);
+      log("Capsule frame handoff timed out. Enable this userscript on graph.adobe.com and reopen Graph.");
+    }, 60000);
+    function relay(event) {
+      if (event.origin !== "https://graph.adobe.com" ||
+          event.data?.type !== "MAX_GRAPH_FRAME_READY" ||
+          ![...walk(document)].some(element =>
+            element.localName === "iframe" && element.contentWindow === event.source)) return;
+      event.source.postMessage({ type: "MAX_GRAPH_HANDOFF", parameters: parameters.toString() },
+        "https://graph.adobe.com");
+      window.removeEventListener("message", relay);
+      clearTimeout(timeout);
+      log("Portrait handoff sent to the trusted capsule frame.");
+    }
+    window.addEventListener("message", relay);
+    return;
+  }
+
   function fetchFile() {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
@@ -181,12 +231,18 @@
     for (const el of root.querySelectorAll("*")) {
       yield el;
       if (el.shadowRoot) yield* walk(el.shadowRoot);
+      if (el.localName === "iframe") {
+        // Cross-origin frame documents are intentionally inaccessible.
+        const doc = el.contentDocument;
+        if (doc && el.getBoundingClientRect().width > 0 &&
+            el.getBoundingClientRect().height > 0) yield* walk(doc);
+      }
     }
   }
-  const findByText = text => {
+  function* findAllByText(text, root = document) {
     const normalize = value => (value || "").replace(/\s+/g, " ").trim().toLowerCase();
     const expected = normalize(text);
-    for (const el of walk(document)) {
+    for (const el of walk(root)) {
       const rect = el.getBoundingClientRect();
       if (!rect.width || !rect.height || getComputedStyle(el).visibility === "hidden") continue;
       const editableTitle = (el.tagName === "INPUT" || el.tagName === "TEXTAREA")
@@ -194,15 +250,33 @@
       const exactText = normalize(el.textContent) === expected;
       if (editableTitle || (exactText && ![...el.children].some(
         child => normalize(child.textContent) === expected
-      ))) return el;
+      ))) yield el;
     }
-  };
+  }
+  const findByText = (text, root = document) => findAllByText(text, root).next().value;
+  function uploadLabel(element) {
+    const text = (element.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const label = (element.getAttribute("aria-label") || "").trim().toLowerCase();
+    return label === "upload new image" ? "upload new" : text;
+  }
   function enclosingGraphNode(element) {
     for (let current = element; current;
       current = current.parentElement || current.getRootNode().host) {
       if (current.localName === "pg-node") return current;
     }
-    throw new Error("Input image title is not inside a Graph node.");
+    // Capsule view groups the label and uploader without a pg-node wrapper.
+    // Use the nearest group containing an upload control, not the whole input/output page.
+    for (let current = element; current && current !== element.ownerDocument.body &&
+      current !== element.ownerDocument.documentElement;
+      current = current.parentElement || current.getRootNode().host) {
+      const controls = [...walk(current)].filter(child =>
+        child.matches("button, sp-button, [role='button']") &&
+        ["upload new", "browse files"].includes(
+          uploadLabel(child)
+        ));
+      if (controls.length) return current;
+    }
+    throw new Error("Input image upload group was not found.");
   }
 
   function findUploadArea(node, expectedLabel = uploadControlLabel) {
@@ -216,7 +290,7 @@
             parent.localName.startsWith("adobe-widget-image-") &&
             [...walk(parent)].some(child => ["img", "video", "canvas"].includes(child.localName))) return false;
       }
-      const label = (element.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      const label = uploadLabel(element);
       const rect = element.getBoundingClientRect();
       return label === expectedLabel && rect.width > 0 && rect.height > 0 &&
         getComputedStyle(element).visibility !== "hidden";
@@ -235,8 +309,7 @@
     return null;
   }
 
-  function uploadedImageReady() {
-    const title = findByText("Input image");
+  function uploadedImageReady(title) {
     if (!title) return false;
     const node = enclosingGraphNode(title);
     const contents = [...walk(node)];
@@ -247,14 +320,22 @@
         element.getBoundingClientRect().width > 0));
   }
 
-  function findRunAll() {
-    const buttons = [...walk(document)].filter(element => {
+  function findRunControl(capsuleView, root) {
+    const buttons = [...walk(root)].filter(element => {
       if (!element.matches("button, sp-button, [role='button']")) return false;
       const normalize = value => (value || "").replace(/\s+/g, " ").trim().toLowerCase();
       const text = normalize(element.textContent);
       const label = normalize(element.getAttribute("aria-label"));
       const rect = element.getBoundingClientRect();
-      return (text === "run all" || label === "run all") &&
+      let capsuleControl = false;
+      for (let parent = element; parent;
+        parent = parent.parentElement || parent.getRootNode().host) {
+        if (parent.localName === "capsule-run-controls") capsuleControl = true;
+      }
+      const matches = capsuleView
+        ? capsuleControl && (text === "run" || label === "run")
+        : text === "run all" || label === "run all";
+      return matches &&
         rect.width > 0 && rect.height > 0 &&
         getComputedStyle(element).visibility !== "hidden";
     });
@@ -266,7 +347,7 @@
       }
       return false;
     }));
-    if (controls.length > 1) throw new Error("Multiple Run all controls found.");
+    if (controls.length > 1) throw new Error("Multiple Graph run controls found.");
     const control = controls[0];
     if (!control) return null;
     for (const element of [control, ...walk(control)]) {
@@ -310,43 +391,80 @@
   // Keep the user's existing shadow-DOM upload sequence. Override the picker
   // only around the final "Your device" click, restoring it after one use.
   (async () => {
-    const originalPicker = unsafeWindow.showOpenFilePicker;
+    let pickerWindow;
+    let originalPicker;
     let fakePicker;
     try {
       log("Downloading kiosk cutout.");
       const file = await fetchFile();
       log("Looking for Input image node.");
-      let title;
-      try {
-        title = await poll(() => findByText("Input image"));
-      } catch {
-        throw new Error("Input image title was not found. Check that its node is visible.");
+      // The label can render before its uploader, so retry title + group together.
+      let sawTitle = false;
+      let attempts = 0;
+      const located = await poll(() => {
+        attempts += 1;
+        for (const candidate of findAllByText("Input image")) {
+          if (!sawTitle) {
+            sawTitle = true;
+            log("Input image title found. Waiting for its upload area.");
+          }
+          try {
+            return { title: candidate, node: enclosingGraphNode(candidate) };
+          } catch {
+            // Uploader not rendered yet; keep polling.
+          }
+        }
+        if (attempts % 25 === 0) log("Still waiting for the Input image upload area.");
+        return null;
+      }, 400, 60000).catch(() => {
+        throw new Error(sawTitle
+          ? "Input image upload group was not found after 60 seconds."
+          : "Input image title was not found. Check that its node is visible and its frame is same-origin.");
+      });
+      const { title, node } = located;
+      const capsuleView = node.localName !== "pg-node";
+      // Resolve the page realm through unsafeWindow, including nested capsule frames.
+      function pageWindow(root) {
+        if (root.document === title.ownerDocument) return root;
+        for (const element of walk(root.document)) {
+          if (element.localName === "iframe" && element.contentDocument === title.ownerDocument) {
+            return element.contentWindow;
+          }
+        }
+        throw new Error("Input image frame is not accessible.");
       }
-      log("Input image title found. Looking for its upload area.");
-      const node = enclosingGraphNode(title);
+      pickerWindow = pageWindow(unsafeWindow);
+      originalPicker = pickerWindow.showOpenFilePicker;
       const area = await poll(() => findUploadArea(node))
         .catch(() => {
           throw new Error(`Input image node needs one visible ${uploadControlLabel} control.`);
         });
       log("Input image upload area found.");
-      clickEl(area);
-      const device = await poll(() => findByText("Your device"));
+      let device;
+      for (let attempt = 1; attempt <= 3 && !device; attempt++) {
+        clickEl(area);
+        device = await poll(() => findByText("Your device", title.ownerDocument), 200, 8000)
+          .catch(() => null);
+        if (!device && attempt < 3) log(`Your device option did not appear; retrying (${attempt}/3).`);
+      }
+      if (!device) throw new Error("Your device option did not appear after 3 attempts.");
       if (typeof originalPicker !== "function") {
         throw new Error("This browser does not support the Graph file picker.");
       }
       let used = false;
       let fileRead = false;
       fakePicker = async function (options) {
-        if (used) return originalPicker.call(unsafeWindow, options);
+        if (used) return originalPicker.call(pickerWindow, options);
         used = true;
-        if (unsafeWindow.showOpenFilePicker === fakePicker) {
-          unsafeWindow.showOpenFilePicker = originalPicker;
+        if (pickerWindow.showOpenFilePicker === fakePicker) {
+          pickerWindow.showOpenFilePicker = originalPicker;
         }
         const handle = {
           kind: "file", name: file.name,
           getFile: async () => {
             fileRead = true;
-            return file;
+            const bytes = new pickerWindow.Uint8Array(await file.arrayBuffer());
+            return new pickerWindow.File([bytes], file.name, { type: file.type });
           },
           isSameEntry: async other => other === handle,
           queryPermission: async () => "granted",
@@ -355,28 +473,29 @@
         log("Portrait supplied to Graph file picker.");
         return [handle];
       };
-      unsafeWindow.showOpenFilePicker = fakePicker;
+      pickerWindow.showOpenFilePicker = fakePicker;
       clickEl(device);
       await poll(() => used, 100, 10000);
-      if (autoRun) {
+      if (autoRun || capsuleView) {
+        const runLabel = capsuleView ? "Run" : "Run all";
         log("Waiting for Input image upload to finish.");
-        await poll(() => fileRead && uploadedImageReady(), 200, 5000).catch(() => {
-          throw new Error("Input image upload was not confirmed; Run all was not clicked.");
+        await poll(() => fileRead && uploadedImageReady(title), 200, 60000).catch(() => {
+          throw new Error(`Input image upload was not confirmed; ${runLabel} was not clicked.`);
         });
-        log("Input image upload confirmed. Looking for Run all.");
-        const run = await poll(findRunAll, 200, 5000).catch(() => {
-          throw new Error("One enabled Run all control was not found; processing was not started.");
+        log(`Input image upload confirmed. Looking for ${runLabel}.`);
+        const run = await poll(() => findRunControl(capsuleView, title.ownerDocument), 200, 60000).catch(() => {
+          throw new Error(`One enabled ${runLabel} control was not found; processing was not started.`);
         });
         // Recheck after waiting for the toolbar; never run on a stale upload state.
-        if (!uploadedImageReady()) throw new Error("Input image is no longer ready; processing was not started.");
+        if (!uploadedImageReady(title)) throw new Error("Input image is no longer ready; processing was not started.");
         clickEl(run);
-        log("Run all clicked.");
+        log(`${runLabel} clicked.`);
       }
     } catch (error) {
       log(error.message);
     } finally {
-      if (fakePicker && unsafeWindow.showOpenFilePicker === fakePicker) {
-        unsafeWindow.showOpenFilePicker = originalPicker;
+      if (fakePicker && pickerWindow.showOpenFilePicker === fakePicker) {
+        pickerWindow.showOpenFilePicker = originalPicker;
       }
     }
   })();
@@ -384,8 +503,13 @@
 
   (() => {
     "use strict";
+    if (location.origin === "https://graph.adobe.com") return;
 
+    // Give Graph time to load before offering Next.
+    const NEXT_DELAY_MS = 5000;
+    const nextReadyAt = Date.now() + NEXT_DELAY_MS;
     function addButton() {
+      if (Date.now() < nextReadyAt) return;
       if (!document.body || document.getElementById("max-see-ads-btn")) return;
       const button = document.createElement("button");
       button.id = "max-see-ads-btn";
@@ -480,5 +604,5 @@
     });
     window.addEventListener("popstate", refresh);
     addButton();
-    for (const delay of [300, 800, 1500]) setTimeout(refresh, delay);
+    for (const delay of [300, 800, 1500, NEXT_DELAY_MS + 50]) setTimeout(refresh, delay);
   })();

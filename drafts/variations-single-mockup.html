@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Content production — single-image mockup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+      // Mockup only: open the offline demo directly on the Content production stage.
+      (() => {
+        const tina = (new URLSearchParams(window.location.search).get('person') || 'tina') === 'tina';
+        const id = tina ? 'demo_dd5af9bb1ce34c41bcc1a45723d6c343' : 'demo_e1b7c9151a34433a83e32b3657afc011';
+        sessionStorage.setItem('glam-attendee-v1:offline-demo', JSON.stringify({
+          version: 1,
+          language: 'en',
+          stage: 'variations',
+          consent: true,
+          portraitId: id,
+          name: tina ? 'Tina' : 'Greg',
+          selectedAdId: `${id}_4`,
+          sessionId: 'mockup-session',
+          printRequest: null,
+          prepareRequest: null,
+          prepareSubmitted: false,
+        }));
+      })();
+      window.GLAM_KIOSK_CONFIG = {
+        publicDemoOrigin: 'https://kiosk-preview--glam-kiosk-site--lukevan.aem.page',
+        coworker: { enabled: true, packaged: true, allowInDemo: true },
+        productionWorkflow: { enabled: true, packaged: true },
+      };
+    </script>
+    <script src="/scripts/aem.js" type="module"></script>
+    <script src="/scripts/scripts.js" type="module"></script>
+    <link rel="stylesheet" href="/styles/styles.css">
+    <style>
+      .mockup-switch {
+        position: fixed;
+        z-index: 10;
+        bottom: 16px;
+        left: 16px;
+        display: flex;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 999px;
+        background: rgb(0 0 0 / 55%);
+        font: 600 13px/1 system-ui, sans-serif;
+      }
+
+      .mockup-switch button {
+        padding: 8px 12px;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      .mockup-switch button[aria-pressed='true'] {
+        background: #fff;
+        color: #000;
+      }
+
+      .attendee-kiosk .kiosk-variations-grid.mockup-single .kiosk-variation {
+        padding: 0;
+        border-radius: 16px;
+        background: none;
+      }
+
+      .attendee-kiosk .kiosk-variations-grid.mockup-single .kiosk-variation img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <header></header>
+    <main>
+      <div>
+        <div class="attendee-kiosk">
+          <div><div>Mode</div><div>demo</div></div>
+        </div>
+      </div>
+    </main>
+    <footer></footer>
+    <script type="module">
+      // Mockup only: replace the multi-column gallery with one tall composited image.
+      // The kiosk's own autoscroll keeps driving the first column's track.
+      const images = ['tina', 'person-1', 'person-2', 'person-3'];
+      const requested = new URLSearchParams(window.location.search).get('person') || 'tina';
+      let current = requested === 'tina' ? 1 : (Number(requested) + 1 || 1);
+      const bust = Date.now();
+      const src = () => `/drafts/mockup-variations/${images[current - 1]}.jpg?v=${bust}`;
+
+      function apply(grid) {
+        const column = grid.querySelector('.kiosk-variations-column');
+        const track = column?.querySelector('.kiosk-variations-track');
+        const sequence = track?.querySelector('.kiosk-variations-sequence');
+        if (!sequence) return;
+        grid.classList.add('mockup-single');
+        grid.style.gridTemplateColumns = 'minmax(0, 1fr)';
+        [...grid.children].forEach((node) => { if (node !== column) node.remove(); });
+        const tile = document.createElement('figure');
+        tile.className = 'kiosk-variation';
+        const img = document.createElement('img');
+        img.alt = 'Brand banner variations';
+        img.draggable = false;
+        img.src = src();
+        tile.append(img);
+        sequence.replaceChildren(tile);
+        const copies = [1, 2].map(() => {
+          const copy = sequence.cloneNode(true);
+          copy.setAttribute('aria-hidden', 'true');
+          copy.querySelector('img').alt = '';
+          return copy;
+        });
+        track.replaceChildren(sequence, ...copies);
+      }
+
+      const observer = new MutationObserver(() => {
+        const grid = document.querySelector('.kiosk-variations-grid');
+        if (grid && (grid.children.length !== 1 || !grid.querySelector(`img[src="${src()}"]`))) apply(grid);
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+
+      const bar = document.createElement('div');
+      bar.className = 'mockup-switch';
+      images.forEach((name, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = name === 'tina' ? 'Tina' : `Mockup ${index}`;
+        button.setAttribute('aria-pressed', String(index + 1 === current));
+        button.addEventListener('click', () => {
+          current = index + 1;
+          bar.querySelectorAll('button').forEach((node, i) => node.setAttribute('aria-pressed', String(i === index)));
+          const grid = document.querySelector('.kiosk-variations-grid');
+          if (grid) apply(grid);
+        });
+        bar.append(button);
+      });
+      if (new URLSearchParams(window.location.search).has('controls')) document.body.append(bar);
+    </script>
+  </body>
+</html>

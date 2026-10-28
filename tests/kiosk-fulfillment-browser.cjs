@@ -333,7 +333,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await popup.close();
     await page.locator('.kiosk-graph-video').waitFor();
     assert.equal(await page.locator('.kiosk-ad-intro-copy h2').innerText(), 'Scaling your heros.\nBuilding your ads');
-    assert.equal(await page.locator('.kiosk-ad-intro-copy p').innerText(), 'Still your creative, just faster.');
+    assert.equal(await page.locator('.kiosk-ad-intro-copy p').innerText(), 'Adapt your hero assets for different brands and campaigns, with the ability to scale production across workflows without starting over.');
     assert.equal(await page.locator('.kiosk-ad-grid').evaluate((node) => node.inert), true);
     const videoBox = await page.locator('.kiosk-graph-video').boundingBox();
     const hiddenAdsBox = await page.locator('.kiosk-ad-grid').boundingBox();
@@ -505,7 +505,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await coworker.getByRole('button', { name: 'Open Workflow Results', exact: true }).click();
     await page.locator('.kiosk-panel-variations').waitFor();
     assert.equal(await page.locator('.kiosk-variations-copy .kiosk-story-text p').innerText(),
-      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand');
+      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand.');
     const reveal = await page.evaluate(() => window.handoffAnimations);
     assert(reveal.some((animation) => animation.className.includes('kiosk-frame-slot')
       && animation.duration === 1000));
@@ -557,7 +557,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const workflowRequests = [];
     assert.equal(await page.locator('.kiosk-variations-copy h2').innerText(), 'Beauty, amplified');
     assert.equal(await page.locator('.kiosk-variations-intro p').innerText(),
-      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand');
+      'Turn your approved hero ad into campaign-ready variations, without rebuilding each asset by hand.');
     const trackWorkflow = (request) => {
       if (/\/api\/|\/production-workflow\//.test(request.url())) workflowRequests.push(request.url());
     };
@@ -954,10 +954,42 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     }
     await beatFrame.getByRole('button', { name: 'Home', exact: true }).click();
     await liveHeading.getByText('CX Enterprise Coworker', { exact: true }).waitFor();
+    const holdState = () => demo.evaluate(() => {
+      const block = document.querySelector('.attendee-kiosk');
+      const slot = block.querySelector('.kiosk-frame-slot');
+      return {
+        hold: block.classList.contains('kiosk-graph-hold'),
+        copy: getComputedStyle(block.querySelector('.kiosk-coworker-copy')).visibility,
+        slot: getComputedStyle(slot).backgroundColor,
+        frame: getComputedStyle(slot.querySelector('iframe')).backgroundColor,
+        mounted: !slot.hidden && slot.querySelector('iframe').isConnected,
+        clickable: getComputedStyle(slot).pointerEvents !== 'none',
+      };
+    });
+    const postHold = (data) => beatFrame.locator('body').evaluate((body, value) => {
+      window.parent.postMessage(value, window.location.origin);
+    }, data);
+    // Untrusted shapes and same-window messages are ignored.
+    await demo.evaluate(() => window.postMessage({ type: 'KIOSK_GRAPH_HOLD', active: true }, '*'));
+    await postHold({ type: 'KIOSK_GRAPH_HOLD', active: 'yes' });
+    await demo.waitForTimeout(150);
+    assert.equal((await holdState()).hold, false);
+    await postHold({ type: 'KIOSK_GRAPH_HOLD', active: true });
+    await demo.waitForFunction(() => document.querySelector('.attendee-kiosk').classList.contains('kiosk-graph-hold'));
+    assert.deepEqual(await holdState(), {
+      hold: true, copy: 'hidden', slot: 'rgba(0, 0, 0, 0)', frame: 'rgba(0, 0, 0, 0)', mounted: true, clickable: true,
+    });
+    await postHold({ type: 'KIOSK_GRAPH_HOLD', active: false });
+    await demo.waitForFunction(() => !document.querySelector('.attendee-kiosk').classList.contains('kiosk-graph-hold'));
+    assert.equal((await holdState()).copy, 'visible');
+    // A stage change clears the hold even before active:false arrives.
+    await postHold({ type: 'KIOSK_GRAPH_HOLD', active: true });
+    await demo.waitForFunction(() => document.querySelector('.attendee-kiosk').classList.contains('kiosk-graph-hold'));
     await beatFrame.locator('body').evaluate(() => {
       window.parent.postMessage({ type: 'KIOSK_NAV', target: 'view-graph-return' }, window.location.origin);
     });
     await demo.locator('.kiosk-graph-video').waitFor();
+    assert.equal(await demo.evaluate(() => document.querySelector('.attendee-kiosk').classList.contains('kiosk-graph-hold')), false);
     await demo.addInitScript(() => {
       const play = HTMLMediaElement.prototype.play;
       HTMLMediaElement.prototype.play = function playWithAutoplayBlock() {

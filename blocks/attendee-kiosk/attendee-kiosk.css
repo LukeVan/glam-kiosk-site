@@ -2016,10 +2016,10 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   justify-content: center;
   min-height: 0;
   margin: 0 0 16px;
-  padding: 10px;
+  padding: 0;
   overflow: hidden;
   border-radius: 16px;
-  background: rgb(255 255 255 / 75%);
+  background: none;
   break-inside: avoid;
 }
 
@@ -2221,4 +2221,21 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   .attendee-kiosk .kiosk-panel-ending .kiosk-ending-copy p {
     font-size: 24px;
   }
+}
+
+/* Graph is open in its own tab: keep only the background, logos and the
+   iframe's transparent reopen control (KIOSK_GRAPH_HOLD). */
+.attendee-kiosk.kiosk-graph-hold .kiosk-panel-coworker .kiosk-coworker-copy {
+  visibility: hidden;
+}
+
+.attendee-kiosk.kiosk-graph-hold .kiosk-panel ~ .kiosk-frame-slot,
+.attendee-kiosk.kiosk-graph-hold .kiosk-frame-slot iframe {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* A color-scheme mismatch with the embedded document paints an opaque backdrop. */
+.attendee-kiosk.kiosk-graph-hold .kiosk-frame-slot iframe {
+  color-scheme: light;
 }
