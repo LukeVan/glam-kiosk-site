@@ -124,7 +124,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-ending-actions').getByRole('button', { name: 'Exit the experience', exact: true }).count(), 0);
     const printURL = new URL(await image.getAttribute('src'));
     assert.equal(printURL.pathname, `/mock-assets/${templateBlob}`);
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your print is ready for pickup');
     await image.evaluate((node) => { window.originalPrint = node; });
     await page.waitForTimeout(5200);
     assert(await image.evaluate((node) => node === window.originalPrint));
@@ -142,8 +142,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     completed = true;
     await page.reload();
     const pickup = page.locator('.kiosk-ending-copy > p');
-    await pickup.filter({ hasText: 'Please pick up your print at the counter as you leave.' }).waitFor();
-    assert.equal(await pickup.innerText(), 'I hope your enjoyed this enterprise content supply chain journey.\n\nPlease pick up your print at the counter as you leave.');
+    await pickup.filter({ hasText: 'don’t forget to pick up your print.' }).waitFor();
+    assert.equal(await pickup.innerText(), 'Scan the QR code on your ad to download all your personalized ads, and don’t forget to pick up your print.');
     assert.equal(await pickup.evaluate((node) => getComputedStyle(node).whiteSpace), 'pre-line');
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
@@ -156,7 +156,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     imageFailed = false;
     await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0
       && !document.querySelector('.kiosk-print-preview').hidden, null, { timeout: 10000 });
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your print is ready for pickup');
     statusFailed = true;
     await page.reload();
     await page.getByText('We couldn’t check your print status. Retrying automatically…', { exact: true }).waitFor();
@@ -164,14 +164,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     statusFailed = false;
     await image.waitFor({ timeout: 10000 });
     await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your print is ready for pickup');
     completed = false;
     ready = false;
     await page.reload();
     await page.locator('.kiosk-ending-copy h2').waitFor();
     assert.equal(await image.count(), 0);
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Preparing your take-home ad');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Printing...');
     assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'kiosk-print-processing');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'none');
@@ -179,7 +179,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     ready = true;
     await image.waitFor({ timeout: 10000 });
     await page.waitForFunction(() => document.querySelector('.kiosk-print-preview')?.naturalWidth > 0);
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your ad is ready to take home');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Your print is ready for pickup');
     assert.equal(await page.locator('.kiosk-print-status').evaluate((node) => getComputedStyle(node, '::after').animationName), 'none');
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.reload();

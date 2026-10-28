@@ -983,9 +983,17 @@ export default async function decorate(block) {
     preview.loading = 'eager';
     preview.style.opacity = '0';
     let revealed = false;
+    // Keep the status bar out of the transition unless the print is genuinely slow to load.
+    const showStatus = () => media.classList.remove('kiosk-print-awaiting');
+    if (firstRender) {
+      media.classList.add('kiosk-print-awaiting');
+      const graceTimer = setTimeout(showStatus, 2500);
+      signal.addEventListener('abort', () => clearTimeout(graceTimer), { once: true });
+    }
     const reveal = () => {
       if (revealed || signal.aborted || !preview.isConnected) return;
       revealed = true;
+      showStatus();
       preview.style.opacity = '';
       if (media.dataset.printState === 'available') setPrintStatus(text().printTakeHome, true);
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1003,6 +1011,7 @@ export default async function decorate(block) {
     preview.addEventListener('load', reveal, { once: true, signal });
     preview.addEventListener('error', () => {
       preview.hidden = true;
+      showStatus();
       delete media.dataset.preview;
       setPrintStatus(text().printPreviewFailed);
       bar.setAttribute('role', 'alert');
@@ -1010,7 +1019,7 @@ export default async function decorate(block) {
     slot.replaceChildren(preview);
     if (preview.complete && preview.naturalWidth > 0) queueMicrotask(reveal);
   }
-  async function ending(signal, currentEpoch) {
+  async function ending(signal, currentEpoch, covered = false) {
     if (state.portraitId?.startsWith('demo_') && api.demoAssets) {
       const staticPrint = demoPrintAssets(state.portraitId, state.selectedAdId);
       const { portraitId, selectedAdId } = state;
@@ -1042,7 +1051,7 @@ export default async function decorate(block) {
         return;
       }
     }
-    if (!panel.children.length) title(text().thankYou, text().printPreparing);
+    if (!panel.children.length && !covered) title(text().thankYou, text().printPreparing);
     if (!state.printRequest || !api.printStatus) {
       title(text().thankYou, text().printPickup);
       panel.append(element('p', text().unavailable));
@@ -1180,7 +1189,7 @@ export default async function decorate(block) {
         }
         preparePanel();
         try {
-          await ending(signal, currentEpoch);
+          await ending(signal, currentEpoch, Boolean(outgoing));
         } catch (error) {
           outgoing?.remove();
           throw error;

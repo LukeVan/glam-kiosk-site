@@ -338,8 +338,14 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const videoBox = await page.locator('.kiosk-graph-video').boundingBox();
     const hiddenAdsBox = await page.locator('.kiosk-ad-grid').boundingBox();
     assert(Math.abs(videoBox.width - videoBox.height) < 1);
-    assert(Math.abs(videoBox.x - hiddenAdsBox.x) < 1 && Math.abs(videoBox.y - hiddenAdsBox.y) < 1);
-    assert(Math.abs(videoBox.width - hiddenAdsBox.width) < 1 && Math.abs(videoBox.height - hiddenAdsBox.height) < 1);
+    // The video's final-frame 2x2 ads occupy px 73-925 of its 1000px frame.
+    const frameAds = {
+      x: videoBox.x + (videoBox.width * 73) / 1000,
+      y: videoBox.y + (videoBox.height * 73) / 1000,
+      size: (videoBox.width * 852) / 1000,
+    };
+    assert(Math.abs(frameAds.x - hiddenAdsBox.x) < 3 && Math.abs(frameAds.y - hiddenAdsBox.y) < 3);
+    assert(Math.abs(frameAds.size - hiddenAdsBox.width) < 3);
     await storyFrame.locator('body').evaluate(() => {
       window.postMessage({ type: 'ADOBE_GRAPH_DONE' }, window.location.origin);
     });
@@ -728,7 +734,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     assert.equal(await page.locator('.kiosk-print-preview').count(), 0);
-    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Preparing your take-home ad');
+    assert.equal(await page.locator('.kiosk-print-status').innerText(), 'Printing...');
     preparationOnly = false;
     qrPublished = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -748,7 +754,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-share-qr').count(), 0);
     completed = true;
     await page.locator('.kiosk-panel-ending').getByRole('button', { name: 'Refresh', exact: true }).click();
-    await page.getByText('I hope your enjoyed this enterprise content supply chain journey.', { exact: false }).waitFor();
+    await page.getByText('Scan the QR code on your ad to download all your personalized ads', { exact: false }).waitFor();
     assert.equal(await page.locator('.kiosk-qr-link').count(), 0);
     assert.equal(await page.locator('.kiosk-ending-media img').count(), 1);
     assert.equal(await page.locator('.kiosk-ending-copy h2').innerText(), 'Thank you');
@@ -775,7 +781,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       return [style.fontSize, style.fontWeight, style.color, style.backgroundColor];
     });
     assert.deepEqual(refreshStyle, ['11px', '600', 'rgba(255, 255, 255, 0.42)', 'rgba(0, 0, 0, 0)']);
-    assert((await page.locator('.kiosk-panel-ending').innerText()).includes('Please pick up your print at the counter as you leave.'));
+    assert((await page.locator('.kiosk-panel-ending').innerText()).includes('don’t forget to pick up your print.'));
     const imageSource = await page.locator('.kiosk-print-preview').getAttribute('src');
     assert.equal(new URL(imageSource).searchParams.get('sr'), 'c');
     assert.equal(new URL(new URL(downloadURL()).searchParams.get('session')).searchParams.get('sr'), 'b');
@@ -1008,7 +1014,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const mobileVideoBox = await demo.locator('.kiosk-graph-video').boundingBox();
     const mobileHiddenGrid = await demo.locator('.kiosk-ad-grid').boundingBox();
     assert(Math.abs(mobileVideoBox.width - mobileVideoBox.height) < 1);
-    assert(Math.abs(mobileVideoBox.y - mobileHiddenGrid.y) < 1);
+    assert(Math.abs(mobileVideoBox.y + (mobileVideoBox.height * 73) / 1000 - mobileHiddenGrid.y) < 3);
     await demo.locator('.kiosk-graph-video').evaluate((video) => {
       video.pause();
       video.dispatchEvent(new Event('error'));

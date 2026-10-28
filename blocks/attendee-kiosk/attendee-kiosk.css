@@ -98,6 +98,10 @@
   animation: kiosk-print-processing 1600ms ease-in-out infinite;
 }
 
+.attendee-kiosk .kiosk-print-awaiting .kiosk-print-status {
+  visibility: hidden;
+}
+
 @keyframes kiosk-print-processing {
   0%, 100% { opacity: 0.45; }
   50% { opacity: 1; }
@@ -703,6 +707,9 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   width: 100%;
   height: 100%;
   object-fit: contain;
+
+  /* final frame's 2x2 ads span px 73-924 of 1000; scale so they land on the live ad grid */
+  transform: scale(1.174);
 }
 
 .attendee-kiosk .kiosk-graph-video-status {
