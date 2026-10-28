@@ -1169,7 +1169,13 @@ export default async function decorate(block) {
           outgoing.style.zIndex = '3';
           outgoing.style.pointerEvents = 'none';
           outgoing.style.position = 'absolute';
+          // Cloned nodes replay CSS entrance animations; freeze them to match what was on screen.
+          outgoing.querySelectorAll('.kiosk-variations-intro').forEach((node) => { node.style.animation = 'none'; });
+          outgoing.querySelectorAll('img').forEach((img) => { img.decoding = 'sync'; });
           block.append(outgoing);
+          const liveViewport = panel.querySelector('.kiosk-variations-viewport');
+          const ghostViewport = outgoing.querySelector('.kiosk-variations-viewport');
+          if (liveViewport && ghostViewport) ghostViewport.scrollTop = liveViewport.scrollTop;
           signal.addEventListener('abort', () => outgoing.remove(), { once: true });
         }
         preparePanel();
