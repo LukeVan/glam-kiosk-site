@@ -3,7 +3,7 @@ export const APPEARANCE_KEY = 'glam-kiosk-appearance-v1';
 export const GRAPH_VIEW_KEY = 'glam-kiosk-graph-view-v1';
 
 export function loadGraphView(storage) {
-  const value = storage.getItem(GRAPH_VIEW_KEY) ?? 'editor';
+  const value = storage.getItem(GRAPH_VIEW_KEY) ?? 'capsule';
   if (!['editor', 'capsule'].includes(value)) throw new Error('Saved Graph view is invalid. Choose Current editor or New capsule in booth settings.');
   return value;
 }
@@ -13,7 +13,7 @@ export function saveGraphView(storage, value) {
   storage.setItem(GRAPH_VIEW_KEY, value);
 }
 
-export function loadAppearance(storage, fallback = 'light') {
+export function loadAppearance(storage, fallback = 'dark') {
   const value = storage.getItem(APPEARANCE_KEY);
   if (value === null) return fallback;
   if (!['light', 'dark'].includes(value)) throw new Error('Saved activation appearance is invalid. Choose Light or Dark in booth settings.');
@@ -97,7 +97,7 @@ export function validateSettings(value) {
     containerSAS: value.containerSAS,
     eventId: value.eventId,
     activationProfile: 'max',
-    appearance: value.appearance || 'light',
+    appearance: value.appearance || 'dark',
     formType: value.formType,
     introMode: value.formType === 'none' ? 'normal' : 'registration-form',
     requestSAS: value.requestSAS || '',

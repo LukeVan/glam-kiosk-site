@@ -24,14 +24,27 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     });
     const page = await context.newPage();
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await page.waitForFunction(() => document.querySelector('.attendee-kiosk')?.dataset.appearance === 'dark');
+    const freshSettings = await context.newPage();
+    await freshSettings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({
+      contentType: 'text/html',
+      body: fs.readFileSync('drafts/kiosk-settings.html', 'utf8')
+        .replace('<body>', '<body><header></header>')
+        .replace('</body>', '<footer></footer></body>'),
+    }));
+    await freshSettings.goto('http://localhost:3017/drafts/kiosk-settings.html');
+    assert.equal(await freshSettings.getByLabel('Activation appearance', { exact: true }).inputValue(), 'dark');
+    assert.equal(await freshSettings.getByLabel('Firefly Graph view', { exact: true }).inputValue(), 'capsule');
+    await freshSettings.close();
     await page.evaluate(async () => {
-      const { saveSettings } = await import('/scripts/kiosk-settings.js');
+      const { saveSettings, saveGraphView } = await import('/scripts/kiosk-settings.js');
       const { initialState } = await import('/blocks/attendee-kiosk/state.js');
       saveSettings(localStorage, {
         version: 1,
         containerSAS: `https://ffservices24.blob.core.windows.net/mock-assets?sv=2023-11-03&sr=c&sp=rl&se=${encodeURIComponent(new Date(Date.now() + 86400000).toISOString())}&sig=MOCK_ONLY`,
-        eventId: 'TestEvent', activationProfile: 'max', formType: 'none',
+        eventId: 'TestEvent', activationProfile: 'max', formType: 'none', appearance: 'light',
       });
+      saveGraphView(localStorage, 'editor');
       sessionStorage.setItem('glam-attendee-v1:azure:TestEvent', JSON.stringify({
         ...initialState(), consent: true, stage: 'name', portraitId: 'demo_Person5',
       }));
@@ -226,7 +239,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     });
     const offline = await offlineContext.newPage();
     await offline.goto('http://localhost:3017/drafts/attendee-kiosk.html');
-    await offline.locator('.attendee-kiosk[data-appearance="light"]').waitFor();
+    await offline.locator('.attendee-kiosk[data-appearance="dark"]').waitFor();
     const offlineSettings = await offlineContext.newPage();
     await offlineSettings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({
       contentType: 'text/html',

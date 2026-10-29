@@ -77,7 +77,7 @@ export default async function decorate(block) {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
       || (config.mode === 'demo' ? createOfflineDemoAPI() : createAPI(config));
     if (api.source === 'azure') boothSettings = api.settings();
-    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'light');
+    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'dark');
     graphView = loadGraphView(window.localStorage);
   } catch (error) {
     block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
@@ -246,7 +246,7 @@ export default async function decorate(block) {
     }
   }
   function applyAppearance() {
-    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'light');
+    appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'dark');
     block.dataset.appearance = appearance;
     sendCoworker({ type: 'KIOSK_SET_THEME', theme: appearance });
   }

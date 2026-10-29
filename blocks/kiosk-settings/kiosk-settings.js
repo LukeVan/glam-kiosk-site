@@ -58,6 +58,7 @@ export default function decorate(block) {
   const appearance = field('Activation appearance', node('select'));
   appearance.append(new Option('Light', 'light'));
   appearance.append(new Option('Dark', 'dark'));
+  appearance.value = 'dark';
   const graphView = field('Firefly Graph view', node('select'));
   graphView.append(new Option('Current editor', 'editor'));
   graphView.append(new Option('New capsule', 'capsule'));

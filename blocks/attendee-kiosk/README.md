@@ -13,7 +13,7 @@ In `/drafts/kiosk-settings.html`, **Activation appearance** switches between
 `glam-kiosk-appearance-v1` browser preference, including for no-SAS offline demos.
 No Test connection or Save booth settings click is needed. Existing booth
 `appearance: "light" | "dark"` values remain the fallback; older settings default
-to light. The preference updates other open kiosk tabs on the same origin immediately,
+to dark. The preference updates other open kiosk tabs on the same origin immediately,
 without restarting the attendee or losing typed input. Other setup changes
 retain the existing reload requirement.
 
@@ -28,7 +28,7 @@ paths. Dark styling lives in `dark.css`, scoped by
 black patterned background, red Adobe/white L'Oréal lockup and MAX name-page
 lens. The selected portrait remains dynamic inside that lens. Ad selection
 uses a gradient border without changing ad order or selection behavior.
-The original light styling and assets remain the default.
+Dark is the default; explicitly saved Light preferences remain respected.
 
 Dark typography follows the MAX 2026 hierarchy: Adobe Clean Display Black for
 page headlines, Display ExtraBold for section/dialog headings, and Adobe Clean
@@ -46,8 +46,9 @@ reset reapplies the activation default. No copy or story flow is duplicated.
 
 ## Firefly Graph destination
 
-In booth settings, **Firefly Graph view** selects **Current editor** (the default)
-or **New capsule**. This independent browser preference
+In booth settings, **Firefly Graph view** selects **Current editor**
+or **New capsule** (the default). Explicitly saved editor preferences remain respected.
+This independent browser preference
 (`glam-kiosk-graph-view-v1`) saves immediately without Azure access and updates
 open kiosk tabs without resetting the attendee. Reopen Graph from Coworker to
 use a changed destination; already-open Graph tabs are not redirected.
