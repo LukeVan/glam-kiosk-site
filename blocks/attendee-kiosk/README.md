@@ -751,6 +751,12 @@ does not duplicate or clear that record. The default picker
 hides those IDs. Settings' Show completed portraits toggle reveals them without
 deleting history or Azure assets. History is scoped by event and browser origin,
 persists through restart/reload/settings clearing, and is not shared across Macs.
+Cross-kiosk hiding uses orchestrator-published markers: when the request worker
+sees a kiosk's ad-selection request (`{event}/requests/{requestId}.json`), it
+writes an empty blob `{event}/portraits/used/{portraitId}` to the kiosk-readable
+container. Every picker load lists that prefix with the read/list SAS and hides
+matching IDs (invalid names are ignored). If the listing fails, the picker shows
+the event-photos-unavailable warning rather than revealing used portraits.
 Reset before favorite-ad selection does not mark completion; reset afterward
 does not undo it. All three demo portraits remain available and are never recorded
 as completed. Their Demo badges appear only without configured Azure booth

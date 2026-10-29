@@ -94,6 +94,14 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     }
     return portraits.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   }
+  // The orchestrator publishes an empty marker per portrait once any kiosk submits its ad.
+  async function sharedUsedPortraits(signal) {
+    const saved = settings();
+    const prefix = `${saved.eventId}/portraits/used/`;
+    const blobs = await listBlobs(saved.containerSAS, { prefix, fetcher, signal });
+    return blobs.map(({ name }) => name.slice(prefix.length))
+      .filter((id) => /^azure_[0-9a-f]{64}$/.test(id));
+  }
   async function selectedPortrait(id, signal) {
     if (id.startsWith('demo_')) return (await demos(signal)).find((item) => item.id === id);
     const selected = (await azurePortraits(signal)).find((item) => item.id === id);
@@ -142,9 +150,14 @@ export default function createAzureAPI(demo, storage, fetcher = fetch) {
     selectedPortrait,
     async portraits(signal) {
       const samples = (await demos(signal, true)).map((item) => ({ ...item, demo: true }));
-      const hidden = settings().showCompletedPortraits ? [] : completedPortraits(storage, eventId);
+      const showCompleted = settings().showCompletedPortraits;
+      const hidden = showCompleted ? [] : completedPortraits(storage, eventId);
       try {
-        const portraits = await azurePortraits(signal);
+        const [portraits, used] = await Promise.all([
+          azurePortraits(signal),
+          showCompleted ? [] : sharedUsedPortraits(signal),
+        ]);
+        hidden.push(...used);
         warning = '';
         return [...portraits.filter((item) => !hidden.includes(item.id)), ...samples];
       } catch (error) {
