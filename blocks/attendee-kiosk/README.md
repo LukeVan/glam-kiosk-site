@@ -8,6 +8,43 @@ live portrait access and genuine missing-mapping fallback are unchanged.
 
 ## Light and dark activation appearance
 
+The clean kiosk entry page is `/max2026.html` (lowercase), for example
+`https://main--glam-kiosk-site--lukevan.aem.live/max2026.html`.
+It uses the same kiosk configuration and origin-scoped booth settings as
+`/drafts/attendee-kiosk.html`, which remains available for existing bookmarks.
+The settings page's **Open kiosk** link uses the clean entry page.
+
+### Importing booth access from Glam Creator
+
+In `/drafts/kiosk-settings.html`, drop the exported access `.txt` file into
+**Import kiosk access file**, or use its file picker. Import validates the whole
+file before populating either SAS URL and the event. Invalid imports leave the
+current fields and saved settings unchanged. Import does not contact Azure,
+save credentials, change the appearance/Graph preferences, or open the kiosk.
+Click **Test connection** to discover events and verify that the imported event
+exists, then **Save booth settings**. If the event is not listed, select the
+correct event before saving. Existing manual setup remains available.
+
+The UTF-8 `.txt` file contains JSON with exactly these six keys:
+`schemaVersion` (1), `type` (`"glam-kiosk-access"`), `eventPrefix`,
+`assetContainerSasUrl`, `requestContainerSasUrl`, and `expiresAt` (UTC ISO timestamp).
+Both SAS expiry times must match `expiresAt`. The existing account/container,
+expiry, read/list-only asset permissions, and create-only request permissions
+are validated. Files must be nonempty and no larger than 16 KB.
+
+The file contains private bearer credentials, not just configuration. AirDrop it
+only to authorized booth Macs; do not attach it to issues, commit it, put it in
+CMS content, or include it in screenshots/logs. After saving settings, delete the
+file from Downloads and empty Trash. Import errors do not display file contents
+or credential values. Saving still stores the SAS credentials in this browser,
+on this origin, under the existing booth-settings policy.
+
+Offline validation:
+`node --experimental-default-type=module tests/kiosk-access-import.mjs` and
+`node tests/kiosk-access-import-browser.cjs /path/to/playwright/cli.js`
+(with the static fixture server on port 3017). The browser fixture mocks Azure;
+it makes no live Azure or Adobe calls.
+
 In `/drafts/kiosk-settings.html`, **Activation appearance** switches between
 **Light** and **Dark**. Selecting an option saves it immediately in the separate
 `glam-kiosk-appearance-v1` browser preference, including for no-SAS offline demos.

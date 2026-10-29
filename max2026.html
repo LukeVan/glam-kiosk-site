@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Adobe MAX 2026 attendee kiosk</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script>
+      window.GLAM_KIOSK_CONFIG = {
+        publicDemoOrigin: 'https://kiosk-preview--glam-kiosk-site--lukevan.aem.page',
+        coworker: { enabled: true, packaged: true, allowInDemo: true },
+        productionWorkflow: { enabled: true, packaged: true },
+      };
+    </script>
+    <script src="/scripts/aem.js" type="module"></script>
+    <script src="/scripts/scripts.js" type="module"></script>
+    <link rel="stylesheet" href="/styles/styles.css">
+  </head>
+  <body>
+    <header></header>
+    <main>
+      <div>
+        <div class="attendee-kiosk">
+          <div><div>Mode</div><div>demo</div></div>
+        </div>
+      </div>
+    </main>
+    <footer></footer>
+  </body>
+</html>

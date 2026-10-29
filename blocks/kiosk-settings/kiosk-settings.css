@@ -77,6 +77,19 @@
   justify-self: start;
 }
 
+.kiosk-settings .kiosk-settings-import {
+  padding: 16px;
+  border: 2px dashed #777;
+  border-radius: 8px;
+  background: #f5f8fc;
+}
+
+.kiosk-settings .kiosk-settings-import:focus-within,
+.kiosk-settings .kiosk-settings-dragging {
+  border-color: #1473e6;
+  background: #eaf3ff;
+}
+
 .kiosk-settings button:disabled {
   background: #ddd;
   color: #555;

@@ -2,6 +2,7 @@ import {
   SETTINGS_KEY, parseContainerSAS, listEvents, loadSettings, saveSettings, clearSettings,
   loadAppearance, saveAppearance, loadGraphView, saveGraphView,
 } from '../../scripts/kiosk-settings.js';
+import { readAccessFile } from '../../scripts/kiosk-access-import.js';
 
 function node(tag, text, className) {
   const el = document.createElement(tag);
@@ -15,9 +16,9 @@ export default function decorate(block) {
   const heading = node('h1', 'Kiosk booth settings');
   const header = node('div', '', 'kiosk-settings-header');
   const open = node('a', 'Open kiosk', 'kiosk-settings-open');
-  open.href = '/drafts/attendee-kiosk.html';
+  open.href = '/max2026.html';
   header.append(heading, open);
-  const help = node('p', 'Staff setup only. Generate “Kiosk/EDS Access” in Glam Creator, paste the read + list container SAS below, then test and choose your event.');
+  const help = node('p', 'Staff setup only. Import the access .txt file exported by Glam Creator, or paste the SAS URLs manually. Then test the connection and save.');
   const warning = node('p', 'This credential permits reading the entire container, including other events and hidden infrastructure folders. It is saved only in this browser on this origin. Do not share it or paste it into page content.', 'kiosk-settings-warning');
   const form = node('form');
   const status = node('p', '', 'kiosk-settings-status');
@@ -27,6 +28,24 @@ export default function decorate(block) {
   let testing = false;
   let controller;
   let savedEvent = '';
+  let importRevision = 0;
+  const importer = node('div', '', 'kiosk-settings-import kiosk-settings-wide');
+  const importHelp = node('p', 'Drop a Glam Creator access .txt file here, or choose a file.');
+  importHelp.id = 'kiosk-access-import-help';
+  const accessFile = node('input');
+  accessFile.type = 'file';
+  accessFile.accept = '.txt,text/plain';
+  accessFile.id = 'kiosk-access-import-file';
+  accessFile.setAttribute('aria-describedby', importHelp.id);
+  const importLabel = node('label', 'Import kiosk access file');
+  importLabel.htmlFor = accessFile.id;
+  importer.append(
+    importLabel,
+    importHelp,
+    accessFile,
+    node('p', 'Contains private access credentials. AirDrop only to authorized booth Macs. After saving, delete the file from Downloads and empty Trash. Import does not save settings or contact Azure.'),
+  );
+  form.append(importer);
   let fieldIndex = 0;
   function field(labelText, input) {
     fieldIndex += 1;
@@ -121,6 +140,7 @@ export default function decorate(block) {
     } catch (error) { report(error.message, true); }
   });
   function invalidate() {
+    importRevision += 1;
     controller?.abort();
     testedSAS = '';
     event.replaceChildren(new Option('Test connection to discover events', ''));
@@ -131,7 +151,55 @@ export default function decorate(block) {
     invalidate();
     report('SAS changed. Test the connection before saving.');
   });
-  event.addEventListener('change', () => { save.disabled = !event.value || !testedSAS; });
+  requests.addEventListener('input', () => { importRevision += 1; });
+  async function importFiles(files) {
+    if (testing) {
+      report('Wait for the connection test to finish before importing a file.', true);
+      return;
+    }
+    importRevision += 1;
+    const revision = importRevision;
+    if (files.length !== 1) {
+      report('Choose exactly one Glam Creator .txt access file.', true);
+      return;
+    }
+    report('Reading access file…');
+    try {
+      const imported = await readAccessFile(files[0]);
+      if (revision !== importRevision) return;
+      invalidate();
+      sas.value = imported.containerSAS;
+      requests.value = imported.requestSAS;
+      savedEvent = imported.eventId;
+      event.replaceChildren(new Option(imported.eventId, imported.eventId));
+      report('Access file imported. Nothing saved yet. Click Test connection to verify the event, then Save booth settings.');
+      test.focus();
+    } catch (error) {
+      if (revision === importRevision) report(error.message, true);
+    } finally {
+      accessFile.value = '';
+    }
+  }
+  accessFile.addEventListener('change', () => importFiles([...accessFile.files]));
+  importer.addEventListener('dragover', (dragEvent) => {
+    dragEvent.preventDefault();
+    dragEvent.dataTransfer.dropEffect = 'copy';
+    importer.classList.add('kiosk-settings-dragging');
+  });
+  importer.addEventListener('dragleave', (dragEvent) => {
+    if (!importer.contains(dragEvent.relatedTarget)) {
+      importer.classList.remove('kiosk-settings-dragging');
+    }
+  });
+  importer.addEventListener('drop', (dropEvent) => {
+    dropEvent.preventDefault();
+    importer.classList.remove('kiosk-settings-dragging');
+    importFiles([...dropEvent.dataTransfer.files]);
+  });
+  event.addEventListener('change', () => {
+    importRevision += 1;
+    save.disabled = !event.value || !testedSAS;
+  });
   test.addEventListener('click', async () => {
     if (testing) return;
     invalidate();
@@ -164,6 +232,7 @@ export default function decorate(block) {
   });
   form.addEventListener('submit', (submitEvent) => {
     submitEvent.preventDefault();
+    importRevision += 1;
     try {
       if (!testedSAS || testedSAS !== sas.value.trim() || !event.value) {
         throw new Error('Test the connection and choose an event before saving.');
