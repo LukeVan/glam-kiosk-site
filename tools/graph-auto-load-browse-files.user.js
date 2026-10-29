@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @author       Luke Vanderberg
 // @description  Loads the kiosk cutout, adds Next, and hides edit-access/save-copy notices
-// @version      3.0
+// @version      3.1
 // @match        https://firefly.adobe.com/graph/*
 // @match        https://graph.adobe.com/*
 // @run-at       document-start
@@ -12,7 +12,12 @@
 // @connect      ffservices24.blob.core.windows.net
 // @connect      kiosk-preview--glam-kiosk-site--lukevan.aem.page
 // @connect      main--glam-kiosk-site--lukevan.aem.live
+// @updateURL    https://main--glam-kiosk-site--lukevan.aem.live/tools/graph-auto-load-browse-files.user.js
+// @downloadURL  https://main--glam-kiosk-site--lukevan.aem.live/tools/graph-auto-load-browse-files.user.js
 // ==/UserScript==
+
+// Captured before the handoff below clears it, so Open Graph can reuse the same portrait.
+const maxLaunchHash = location.hash;
 
 (async () => {
   "use strict";
@@ -507,6 +512,7 @@
 
     // Give Graph time to load before offering Next.
     const NEXT_DELAY_MS = 5000;
+    const OLD_GRAPH_PATH = "/graph/edit/id/urn:aaid:sc:US:08944592-9145-526f-8b43-75400178e5ee";
     const nextReadyAt = Date.now() + NEXT_DELAY_MS;
     function addButton() {
       if (Date.now() < nextReadyAt) return;
@@ -514,10 +520,10 @@
       const button = document.createElement("button");
       button.id = "max-see-ads-btn";
       button.type = "button";
-      button.textContent = "Next";
+      button.textContent = "Scale Your Ads";
       Object.assign(button.style, {
         position: "fixed", bottom: "32px", right: "32px", zIndex: "999999",
-        padding: "0 28px", width: "168px", minHeight: "64px", background: "#1473E6", color: "#fff",
+        padding: "0 28px", minWidth: "168px", minHeight: "64px", background: "#1473E6", color: "#fff",
         border: "none", borderRadius: "32px", fontSize: "24px", fontWeight: "700",
         fontFamily: 'adobe-clean, "Source Sans Pro", sans-serif', cursor: "pointer",
         boxShadow: "0 4px 20px rgba(0,0,0,0.28)",
@@ -536,6 +542,27 @@
           window.opener.postMessage({ type: "ADOBE_GRAPH_DONE" }, "*");
         }
         window.close();
+      });
+      document.body.appendChild(button);
+      if (location.pathname !== OLD_GRAPH_PATH) addOpenGraphButton(button);
+    }
+
+    function addOpenGraphButton(nextButton) {
+      if (document.getElementById("max-open-graph-btn")) return;
+      const button = document.createElement("button");
+      button.id = "max-open-graph-btn";
+      button.type = "button";
+      button.textContent = "Open Graph";
+      Object.assign(button.style, {
+        position: "fixed", bottom: "32px", zIndex: "999999",
+        right: `${32 + nextButton.offsetWidth + 16}px`,
+        padding: "0 28px", minWidth: "168px", minHeight: "64px", background: "#fff", color: "#1473E6",
+        border: "2px solid #1473E6", borderRadius: "32px", fontSize: "24px", fontWeight: "700",
+        fontFamily: 'adobe-clean, "Source Sans Pro", sans-serif', cursor: "pointer",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.28)",
+      });
+      button.addEventListener("click", () => {
+        window.open(`https://firefly.adobe.com${OLD_GRAPH_PATH}${maxLaunchHash}`, "_blank", "noopener");
       });
       document.body.appendChild(button);
     }

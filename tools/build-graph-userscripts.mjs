@@ -8,6 +8,7 @@ for (const [suffix, title, label] of [
   const script = source
     .replace('// @name         MAX_Activation_AdobeGraph', `// @name         MAX_Activation_AdobeGraph - ${title}`)
     .replace('const uploadControlLabel = "upload new";', `const uploadControlLabel = "${label}";`)
-    .replace('const autoRun = false;', `const autoRun = ${suffix === 'browse-files'};`);
+    .replace('const autoRun = false;', `const autoRun = ${suffix === 'browse-files'};`)
+    .replaceAll('/tools/graph-auto-load.user.js', `/tools/graph-auto-load-${suffix}.user.js`);
   await writeFile(new URL(`./graph-auto-load-${suffix}.user.js`, import.meta.url), script);
 }

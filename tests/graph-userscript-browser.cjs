@@ -253,11 +253,29 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(result.toastHidden, true);
     assert.equal(result.ordinaryVisible, true);
     await page.waitForSelector('#max-see-ads-btn', { timeout: 8000 });
-    assert.equal(await page.locator('#max-see-ads-btn').innerText(), 'Next');
+    assert.equal(await page.locator('#max-see-ads-btn').innerText(), 'Scale Your Ads');
     assert.deepEqual(await page.locator('#max-see-ads-btn').evaluate((button) => {
       const style = getComputedStyle(button);
-      return [style.fontSize, style.width, style.minHeight];
+      return [style.fontSize, style.minWidth, style.minHeight];
     }), ['24px', '168px', '64px']);
+    assert.equal(await page.locator('#max-open-graph-btn').innerText(), 'Open Graph');
+    const buttonsOverlap = await page.evaluate(() => {
+      const a = document.querySelector('#max-see-ads-btn').getBoundingClientRect();
+      const b = document.querySelector('#max-open-graph-btn').getBoundingClientRect();
+      return b.right > a.left;
+    });
+    assert.equal(buttonsOverlap, false);
+    const opened = await page.evaluate(() => {
+      const calls = [];
+      window.open = (...args) => { calls.push(args); return null; };
+      document.querySelector('#max-open-graph-btn').click();
+      return calls;
+    });
+    assert.equal(opened.length, 1);
+    const openedUrl = new URL(opened[0][0]);
+    assert.equal(openedUrl.origin + openedUrl.pathname, 'https://firefly.adobe.com/graph/edit/id/urn:aaid:sc:US:08944592-9145-526f-8b43-75400178e5ee');
+    assert(new URLSearchParams(openedUrl.hash.slice(1)).getAll('portraitUrl').length > 0);
+    assert.equal(opened[0][2], 'noopener');
     assert(logs.some((message) => message.includes('Portrait supplied to Graph file picker.')));
     assert(logs.every((message) => !message.includes('MOCK_ONLY')));
     assert.deepEqual(errors, []);
