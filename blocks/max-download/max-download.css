@@ -70,6 +70,7 @@ body:has(.max-download) > footer {
 }
 
 .max-download .max-download-sub {
+  max-width: 520px;
   margin: 0 16px 20px;
   color: #afafaf;
   font-size: 14px;

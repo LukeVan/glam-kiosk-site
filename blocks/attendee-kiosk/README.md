@@ -667,10 +667,20 @@ absolute image URLs; `adIndex` is 1-based, with `brand` keys `roche`, `keratin`,
 the configured iframe's `contentWindow`, exact origin and expected stage:
 `view-select` requests ad selection directly from initial or continued story;
 `view-graph-return` enters the video interstitial from either story stage.
+While a live Graph cutout is pending or temporarily unreadable, attendee copy
+says "Your Photo is getting ready. Please try again." The shell continues retrying
+every five seconds.
+An explicit null portrait handoff clears Coworker's image into a waiting state,
+not a validation error. Valid late handoffs restore Graph availability without
+restarting the story. Graph controls remain disabled without usable access;
+identity, origin, URL and expiry checks still apply. Technical reason codes stay
+in diagnostics rather than attendee-facing copy.
 The interstitial uses `Loreal Interstitial_Max26_v2`, optimized to a muted
 1000×1000 H.264 MP4 with fast-start metadata (about 2.8 MB, 20 seconds).
 Its poster is regenerated from the opening frame, and the video scale aligns the
 final frame's ad-grid outer edges (pixels 46–954) with the live selection grid.
+The final frame crossfades into ad selection over one second; reduced-motion
+visitors see the selection immediately without the animation.
 Packaged Coworker watches only its tracked Graph popup's `closed` property and
 shares an idempotent completion handler with validated `ADOBE_GRAPH_DONE`;
 neither duplicate completion nor a blocked popup starts a second return.

@@ -45,6 +45,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const address = `http://localhost:3017/max-download.html?session=${encodeURIComponent(sessionURL)}`;
     await page.goto(address);
     await page.waitForFunction(() => document.querySelectorAll('.max-download-gallery-item').length === 4);
+    const subhead = 'Grab your ads below. Then come see us at the Adobe Enterprise Booth at MAX or read the blog posts below to learn more.';
+    assert.equal(await page.locator('.max-download-heading').innerText(), 'Looking good!');
+    assert.equal(await page.locator('.max-download-sub').innerText(), subhead);
     await page.evaluate(async () => {
       await document.fonts.ready;
       await Promise.all([...document.querySelectorAll('.max-download img')].map((image) => image.decode()));
@@ -64,6 +67,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       return {
         logo: rect('.max-download-banner img'),
         title: rect('.max-download-heading'),
+        sub: rect('.max-download-sub'),
         card: rect('.max-download-gallery-item'),
         button: rect('.max-download-gallery-btn'),
         footer: rect('.max-download-links'),
@@ -78,7 +82,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(geometry.logo.y, 62);
     assert.equal(geometry.title.y, 142);
     assert.equal(geometry.card.width, 303);
-    assert.equal(geometry.card.y, 225);
+    assert.equal(geometry.card.y, geometry.sub.bottom + 20);
     assert.equal(geometry.button.x, geometry.card.x + 4);
     assert.equal(geometry.button.y, geometry.card.y + 4);
     assert.equal(geometry.button.width, 32);
@@ -151,6 +155,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.max-download-links').evaluate((nav) => getComputedStyle(nav).position), 'fixed');
     await page.goto('http://localhost:3017/max-download.html?demo=tina');
     await page.waitForFunction(() => document.querySelectorAll('.max-download-gallery-item').length === 4);
+    assert.equal(await page.locator('.max-download-sub').innerText(), subhead);
     assert.equal(await page.getByRole('link', { name: /^Download ad / }).count(), 4);
     await page.goto('http://localhost:3017/max-download.html');
     await page.getByText('This download link is invalid or has expired.', { exact: true }).waitFor();

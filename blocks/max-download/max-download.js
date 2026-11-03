@@ -31,7 +31,7 @@ async function renderDemo(block, slug, banner, links) {
   heading.textContent = 'Looking good!';
   const sub = document.createElement('p');
   sub.className = 'max-download-sub';
-  sub.textContent = 'Download and share your personalized ads below.';
+  sub.textContent = 'Grab your ads below. Then come see us at the Adobe Enterprise Booth at MAX or read the blog posts below to learn more.';
   const gallery = document.createElement('div');
   gallery.className = 'max-download-gallery';
   gallery.textContent = 'Loading your ads…';
@@ -100,7 +100,7 @@ async function renderSession(block, sessionUrl, name) {
 
   const sub = document.createElement('p');
   sub.className = 'max-download-sub';
-  sub.textContent = 'Download and share your personalized ads below.';
+  sub.textContent = 'Grab your ads below. Then come see us at the Adobe Enterprise Booth at MAX or read the blog posts below to learn more.';
 
   const gallery = document.createElement('div');
   gallery.className = 'max-download-gallery';
