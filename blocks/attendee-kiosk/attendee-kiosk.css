@@ -262,6 +262,39 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   cursor: not-allowed;
 }
 
+.attendee-kiosk .kiosk-startup-error {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  align-self: center;
+  width: min(680px, calc(100% - 48px));
+  margin: auto;
+  padding: 28px;
+  border-radius: 20px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.attendee-kiosk .kiosk-startup-error h2 {
+  margin-top: 0;
+  font-size: 32px;
+}
+
+.attendee-kiosk .kiosk-startup-error a {
+  min-height: 44px;
+  margin-right: 20px;
+  background: transparent;
+  color: #054ada;
+  text-decoration: underline;
+}
+
+.attendee-kiosk .kiosk-startup-error button {
+  min-height: 44px;
+  font-size: 20px;
+}
+
 .attendee-kiosk .kiosk-tools .kiosk-language {
   display: flex;
   align-items: center;
@@ -708,7 +741,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   height: 100%;
   object-fit: contain;
 
-  /* v2 final-frame ads span px 46-954 of 1000; align their outer edges to the grid */
+  /* Initial scale; the interstitial fits this to the actual image-content bounds. */
   transform: scale(1.1013);
 }
 
@@ -1540,6 +1573,31 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+.attendee-kiosk .kiosk-graph-recovery {
+  position: absolute;
+  z-index: 20;
+  bottom: 42px;
+  left: 4%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 90%;
+  padding: 8px;
+  border-radius: 12px;
+  background: #111;
+}
+
+.attendee-kiosk .kiosk-graph-recovery[hidden] {
+  display: none;
+}
+
+.attendee-kiosk .kiosk-panel-coworker .kiosk-graph-recovery button {
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 16px;
 }
 
 .attendee-kiosk .kiosk-panel-coworker .kiosk-coworker-next {

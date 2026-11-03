@@ -337,6 +337,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await page.locator('.kiosk-ad-grid').evaluate((node) => node.inert), true);
     const videoBox = await page.locator('.kiosk-graph-video').boundingBox();
     const hiddenAdsBox = await page.locator('.kiosk-ad-grid').boundingBox();
+    const firstAdImage = await page.locator('.kiosk-ad-grid img').first().boundingBox();
+    const lastAdImage = await page.locator('.kiosk-ad-grid img').last().boundingBox();
     assert(Math.abs(videoBox.width - videoBox.height) < 1);
     // The v2 video's final-frame 2x2 ads occupy px 46-954 of its 1000px frame.
     const frameAds = {
@@ -344,8 +346,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       y: videoBox.y + (videoBox.height * 46) / 1000,
       size: (videoBox.width * 908) / 1000,
     };
-    assert(Math.abs(frameAds.x - hiddenAdsBox.x) < 3 && Math.abs(frameAds.y - hiddenAdsBox.y) < 3);
-    assert(Math.abs(frameAds.size - hiddenAdsBox.width) < 3);
+    assert(Math.abs(frameAds.x - firstAdImage.x) < 3 && Math.abs(frameAds.y - firstAdImage.y) < 3);
+    assert(Math.abs(frameAds.size - (lastAdImage.x + lastAdImage.width - firstAdImage.x)) < 3);
     await storyFrame.locator('body').evaluate(() => {
       window.postMessage({ type: 'ADOBE_GRAPH_DONE' }, window.location.origin);
     });
@@ -1013,9 +1015,9 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     assert.equal(await demo.locator('.kiosk-ad-intro-copy h2').innerText(), 'Scaling your heros.\nBuilding your ads');
     await demo.setViewportSize({ width: 390, height: 844 });
     const mobileVideoBox = await demo.locator('.kiosk-graph-video').boundingBox();
-    const mobileHiddenGrid = await demo.locator('.kiosk-ad-grid').boundingBox();
+    const mobileFirstImage = await demo.locator('.kiosk-ad-grid img').first().boundingBox();
     assert(Math.abs(mobileVideoBox.width - mobileVideoBox.height) < 1);
-    assert(Math.abs(mobileVideoBox.y + (mobileVideoBox.height * 46) / 1000 - mobileHiddenGrid.y) < 3);
+    assert(Math.abs(mobileVideoBox.y + (mobileVideoBox.height * 46) / 1000 - mobileFirstImage.y) < 3);
     await demo.locator('.kiosk-graph-video').evaluate((video) => {
       video.pause();
       video.dispatchEvent(new Event('error'));

@@ -196,6 +196,10 @@ available after the code and derivative assets are deployed to kiosk-preview.
 
 ## Adobe Graph cutout handoff
 
+The ad selection grid displays L’Oréal Professionnel, L’Oréal Paris, YSL Beauty,
+then La Roche-Posay. This is presentation order only: canonical ad IDs and brand
+indexes used by Coworker, print requests, and asset manifests remain unchanged.
+
 For Azure portraits, story screens read
 `{eventId}/9-Graph-Input/{portraitId}/manifest.json` every five seconds.
 The worker publishes the original shared cutout from
@@ -467,6 +471,22 @@ Settings survive browser restarts but are not shared between localhost, preview,
 or different browsers. Never put a SAS in Git, DA.live, a page URL, analytics,
 or logs. A shared-origin script can access this browser credential; this is a
 dedicated-booth-machine deployment, not an attendee security boundary.
+
+If startup shows **Booth settings unavailable**, use **Update credentials** on
+the error card. Expired access requires a newly exported Glam Creator access
+`.txt` file: import it, **Test connection**, then **Save booth settings**, and
+**Open kiosk**. Do not delete browser data: that removes the live configuration
+instead of renewing its access. Both SAS credentials are validated against their
+actual `se` expiry; a saved `expiresAt` field cannot extend them. There is no
+newer server-side booth configuration to override this browser's saved setup.
+On demo-capable entry pages, **Remove credentials and use demo** offers a
+confirmation before removing only `glam-kiosk-booth-v1` and reloading the bundled
+demos. It does not revoke access or modify Azure files. Cancelling leaves the
+saved connection untouched; live-only entry pages do not offer demo mode.
+A startup-blocked tab also reloads when valid replacement settings are saved in another same-origin
+tab. Importing without saving does not unblock it. Appearance, Graph view,
+attendee session state, and unrelated browser data remain untouched.
+
 Clear SAS and settings requires staff confirmation and removes only the
 namespaced booth configuration; it does not delete Azure assets or revoke the
 token. Attendee restart does not erase booth setup.
@@ -670,6 +690,12 @@ the configured iframe's `contentWindow`, exact origin and expected stage:
 While a live Graph cutout is pending or temporarily unreadable, attendee copy
 says "Your Photo is getting ready. Please try again." The shell continues retrying
 every five seconds.
+For live portraits, missing or unreadable Graph input also exposes **Refresh**,
+**Continue to ads** (in the first story), and **Reset** outside the story copy,
+so Graph's hold screen cannot hide the recovery controls. Refresh rereads the
+manifest without restarting the story or requesting production; concurrent reads
+are prevented. Continue skips Graph without claiming it completed. Reset uses
+the existing confirmation and clears only this browser's attendee session.
 An explicit null portrait handoff clears Coworker's image into a waiting state,
 not a validation error. Valid late handoffs restore Graph availability without
 restarting the story. Graph controls remain disabled without usable access;
@@ -677,9 +703,11 @@ identity, origin, URL and expiry checks still apply. Technical reason codes stay
 in diagnostics rather than attendee-facing copy.
 The interstitial uses `Loreal Interstitial_Max26_v2`, optimized to a muted
 1000×1000 H.264 MP4 with fast-start metadata (about 2.8 MB, 20 seconds).
-Its poster is regenerated from the opening frame, and the video scale aligns the
-final frame's ad-grid outer edges (pixels 46–954) with the live selection grid.
-The final frame crossfades into ad selection over one second; reduced-motion
+Its poster is regenerated from the opening frame. The video scale fits the
+final frame's outer edges (pixels 46–954) to the live image-content bounds,
+including dark-mode card padding, and updates when the layout resizes.
+The final frame fades away over one second above an already opaque ad grid,
+avoiding the dark dip caused by fading both layers simultaneously; reduced-motion
 visitors see the selection immediately without the animation.
 Packaged Coworker watches only its tracked Graph popup's `closed` property and
 shares an idempotent completion handler with validated `ADOBE_GRAPH_DONE`;

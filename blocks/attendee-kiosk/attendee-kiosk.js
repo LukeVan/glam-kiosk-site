@@ -12,7 +12,8 @@ import {
 import copy from './copy.js';
 import { createPrintRequest, createPreparation } from './fulfillment.js';
 import {
-  APPEARANCE_KEY, GRAPH_VIEW_KEY, blobURL, loadAppearance, loadGraphView,
+  APPEARANCE_KEY, GRAPH_VIEW_KEY, SETTINGS_KEY, blobURL, loadAppearance, loadGraphView,
+  loadSettings,
 } from '../../scripts/kiosk-settings.js';
 import { loadCSS } from '../../scripts/aem.js';
 import { darkLockup, darkNameLens } from './dark-artwork.js';
@@ -80,7 +81,65 @@ export default async function decorate(block) {
     appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'dark');
     graphView = loadGraphView(window.localStorage);
   } catch (error) {
-    block.append(element('h2', 'Booth settings unavailable'), element('p', error.message));
+    const recovery = element('section', '', 'kiosk-startup-error');
+    const heading = element('h2', 'Booth settings unavailable');
+    heading.id = 'kiosk-startup-error-title';
+    recovery.setAttribute('aria-labelledby', heading.id);
+    const detail = element('p', error.message);
+    detail.setAttribute('role', 'alert');
+    const settings = element('a', 'Update credentials');
+    settings.href = '/drafts/kiosk-settings.html';
+    recovery.append(
+      heading,
+      detail,
+      element('p', 'Booth access is saved in this browser for this site. If it has expired, export a new access .txt file from Glam Creator. Open booth settings, import it, test the connection, then save. You do not need to delete browser data.'),
+      settings,
+    );
+    if (config.mode === 'demo') {
+      const remove = element('button', 'Remove credentials and use demo');
+      remove.type = 'button';
+      const confirmation = element('div');
+      confirmation.hidden = true;
+      const confirm = element('button', 'Confirm and load demo');
+      confirm.type = 'button';
+      const cancel = element('button', 'Cancel');
+      cancel.type = 'button';
+      confirmation.append(
+        element('p', 'Remove the saved booth connection from this browser and load the bundled demos? Appearance and Graph preferences are kept. Azure files are not changed and access is not revoked.'),
+        confirm,
+        cancel,
+      );
+      remove.addEventListener('click', () => {
+        confirmation.hidden = false;
+        confirm.focus();
+      });
+      cancel.addEventListener('click', () => {
+        confirmation.hidden = true;
+        remove.focus();
+      });
+      confirm.addEventListener('click', () => {
+        try {
+          window.localStorage.removeItem(SETTINGS_KEY);
+          window.location.reload();
+        } catch {
+          detail.textContent = 'Saved credentials could not be removed. Check browser storage permissions, then try again.';
+        }
+      });
+      recovery.append(remove, confirmation);
+    }
+    block.append(recovery);
+    window.addEventListener('storage', (event) => {
+      if (![SETTINGS_KEY, APPEARANCE_KEY, GRAPH_VIEW_KEY].includes(event.key)) return;
+      try {
+        const updated = loadSettings(window.localStorage);
+        if (!updated) return;
+        loadAppearance(window.localStorage, updated.appearance);
+        loadGraphView(window.localStorage);
+        window.location.reload();
+      } catch (changedError) {
+        detail.textContent = changedError.message;
+      }
+    });
     return;
   }
   if (api.source === 'azure') config.intakeEnabled = api.intakeEnabled;
@@ -281,6 +340,9 @@ export default async function decorate(block) {
     const warning = element('p', '', 'kiosk-graph-input-status');
     warning.setAttribute('role', 'status');
     panel.querySelector('.kiosk-coworker-copy').append(warning);
+    let recovery;
+    let retry;
+    let checking = false;
     const diagnose = (reason) => {
       if (warning.dataset.graphInputReason !== reason && reason !== 'ready') {
         // Only fixed reason codes; never log the signed URL or attendee identity.
@@ -290,6 +352,10 @@ export default async function decorate(block) {
       warning.dataset.graphInputReason = reason;
     };
     const refresh = async () => {
+      if (checking || signal.aborted) return;
+      checking = true;
+      retry.disabled = true;
+      clearTimeout(graphTimer);
       try {
         const result = await api.graphInput(id, signal);
         if (signal.aborted || epoch !== currentEpoch || state.portraitId !== id) return;
@@ -301,10 +367,27 @@ export default async function decorate(block) {
         graphPortrait = null;
         warning.textContent = text().graphPortraitReadFailed;
         diagnose(error.graphInputCode || 'manifest_read_failed');
+      } finally {
+        checking = false;
+        retry.disabled = false;
       }
+      if (signal.aborted || epoch !== currentEpoch) return;
+      recovery.hidden = Boolean(graphPortrait);
       notifyCoworker();
       graphTimer = setTimeout(refresh, 5000);
     };
+    recovery = element('div', '', 'kiosk-graph-recovery');
+    recovery.hidden = true;
+    retry = button(text().refreshShort, refresh);
+    recovery.append(retry);
+    if (state.stage === 'story') {
+      recovery.append(button(text().continueToAds, () => move('ads')));
+    }
+    recovery.append(button(text().reset, () => {
+      confirmRestart = true;
+      render();
+    }));
+    panel.append(recovery);
     refresh();
     signal.addEventListener('abort', () => {
       clearTimeout(graphTimer);
@@ -743,6 +826,12 @@ export default async function decorate(block) {
   }
   function ads() {
     ensureCoworker();
+    const displayOrder = [2, 4, 3, 1].map((number) => `${state.portraitId}_${number}`);
+    const rank = (ad) => {
+      const index = displayOrder.indexOf(ad.id);
+      return index < 0 ? displayOrder.length : index;
+    };
+    const displayAds = [...manifest.ads].sort((a, b) => rank(a) - rank(b));
     const copyPane = element('div', '', 'kiosk-ad-copy');
     const heading = element('h2', text().ads);
     heading.tabIndex = -1;
@@ -754,7 +843,7 @@ export default async function decorate(block) {
         element('p', text()[manifest.status]),
         button(text().refreshShort, () => render()),
       );
-      cards(manifest.ads, null, null, 'kiosk-ad-grid');
+      cards(displayAds, null, null, 'kiosk-ad-grid');
       return;
     }
     let submitting = false;
@@ -855,7 +944,7 @@ export default async function decorate(block) {
       event.preventDefault();
       if (!event.repeat) next.click();
     }, { signal: controller.signal });
-    cards(manifest.ads, state.selectedAdId, (ad) => {
+    cards(displayAds, state.selectedAdId, (ad) => {
       if (submitting) return;
       try {
         if (state.printRequest && state.selectedAdId !== ad.id) {
@@ -865,8 +954,8 @@ export default async function decorate(block) {
         if (api.source === 'azure' && !state.portraitId.startsWith('demo_')) {
           markCompleted(window.localStorage, api.eventId, state.portraitId);
         }
-        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((tile, index) => {
-          tile.setAttribute('aria-pressed', String(manifest.ads[index].id === ad.id));
+        panel.querySelectorAll('.kiosk-ad-grid .kiosk-card').forEach((tile) => {
+          tile.setAttribute('aria-pressed', String(tile.dataset.assetId === ad.id));
         });
         next.disabled = false;
         updateDock();
@@ -910,6 +999,24 @@ export default async function decorate(block) {
     const status = element('div', '', 'kiosk-graph-video-status');
     status.setAttribute('role', 'status');
     media.append(video, status);
+    const images = [...grid.querySelectorAll('img')];
+    images.forEach((image) => { image.loading = 'eager'; });
+    const alignVideo = () => {
+      if (images.length !== 4) return;
+      const bounds = media.getBoundingClientRect();
+      const first = images[0].getBoundingClientRect();
+      const last = images[3].getBoundingClientRect();
+      if (!bounds.width || !first.width) return;
+      // Final-frame outer edges are 46-954/1000; fit image content, not padded cards.
+      const scale = (last.right - first.left) / (bounds.width * 0.908);
+      const x = (first.left + last.right - bounds.left - bounds.right) / 2;
+      const y = (first.top + last.bottom - bounds.top - bounds.bottom) / 2;
+      video.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    };
+    const resize = new ResizeObserver(alignVideo);
+    resize.observe(mediaArea);
+    images.forEach((image) => resize.observe(image));
+    alignVideo();
     let finished = false;
     const reveal = () => {
       if (finished || signal.aborted) return;
@@ -925,10 +1032,10 @@ export default async function decorate(block) {
         const timing = { duration: 1000, easing: 'cubic-bezier(0.2, 0, 0, 1)' };
         introCopy.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(-100%)', opacity: 0 }], timing);
         selectionCopy.animate([{ transform: 'translateY(100%)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }], timing);
-        grid.animate([{ opacity: 0 }, { opacity: 1 }], timing);
         const exit = media.animate([{ opacity: 1 }, { opacity: 0 }], timing);
-        exit.onfinish = () => { media.remove(); introCopy.remove(); };
+        exit.onfinish = () => { resize.disconnect(); media.remove(); introCopy.remove(); };
       } else {
+        resize.disconnect();
         media.remove();
         introCopy.remove();
       }
@@ -957,6 +1064,7 @@ export default async function decorate(block) {
     video.addEventListener('error', failed, { signal });
     signal.addEventListener('abort', () => {
       finished = true;
+      resize.disconnect();
       video.pause();
       video.removeAttribute('src');
       video.load();
