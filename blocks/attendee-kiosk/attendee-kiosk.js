@@ -752,7 +752,7 @@ export default async function decorate(block) {
     if (manifest.status !== 'ready') {
       copyPane.append(
         element('p', text()[manifest.status]),
-        button(text().refresh, () => render()),
+        button(text().refreshShort, () => render()),
       );
       cards(manifest.ads, null, null, 'kiosk-ad-grid');
       return;
