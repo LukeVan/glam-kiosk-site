@@ -708,8 +708,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   height: 100%;
   object-fit: contain;
 
-  /* final frame's 2x2 ads span px 73-924 of 1000; scale so they land on the live ad grid */
-  transform: scale(1.174);
+  /* v2 final-frame ads span px 46-954 of 1000; align their outer edges to the grid */
+  transform: scale(1.1013);
 }
 
 .attendee-kiosk .kiosk-graph-video-status {

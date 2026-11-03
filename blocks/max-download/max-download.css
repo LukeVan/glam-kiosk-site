@@ -1,244 +1,208 @@
 @font-face {
-  font-family: 'Adobe Clean';
-  src: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/fonts/AdobeClean-Black.woff2')
-    format('woff2');
-  font-weight: 900;
-  font-style: normal;
+  font-family: 'MAX Download';
+  src: url('../attendee-kiosk/assets/AdobeClean-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
 }
 
-/* Hide boilerplate header and footer; prevent scrollbars from 100vw breakout */
-body:has(.max-download-wrap) header,
-body:has(.max-download-wrap) footer {
+@font-face {
+  font-family: 'MAX Download';
+  src: url('../attendee-kiosk/assets/AdobeClean-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MAX Download Display';
+  src: url('../attendee-kiosk/assets/AdobeCleanDisplay-ExtraBold.otf') format('opentype');
+  font-weight: 800;
+  font-display: swap;
+}
+
+body:has(.max-download) {
+  margin: 0;
+  overflow-x: hidden;
+  background: #000;
+}
+
+body:has(.max-download) > header,
+body:has(.max-download) > footer {
   display: none;
 }
 
-body:has(.max-download-wrap) {
-  overflow-x: hidden;
-  background-color: #000;
-}
-
-/* Break out of EDS section container to go full viewport width */
 .max-download {
-  margin: 0 calc(50% - 50vw);
   width: 100vw;
+  margin: 0 calc(50% - 50vw);
+  font-family: 'MAX Download', sans-serif;
+  color: #fff;
 }
 
-.max-download-wrap {
-  font-family: 'Adobe Clean', sans-serif;
-  font-weight: 900;
-  color: #fff;
-  background-color: #000;
-  background-image: url('https://noonahcloud.s3.eu-central-1.amazonaws.com/users/lEgQsEG89/hlEg-QOYw/assets/marketing-microsite/639166111874360722_page_back_image.jpg');
-  background-repeat: no-repeat;
-  background-position: top center;
-  background-size: cover;
+.max-download .max-download-wrap {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-sizing: border-box;
+  min-height: 100svh;
+  padding: 62px 0 calc(244px + env(safe-area-inset-bottom));
+  background: #000 url('./assets/max-background.png') no-repeat top center / 100% auto;
   text-align: center;
-  padding-bottom: 3rem;
 }
 
-.max-download-banner {
-  width: 100%;
-  margin-bottom: 1rem;
+.max-download .max-download-banner {
+  height: 32px;
 }
 
-.max-download-banner-desk {
-  display: none;
-  width: 100%;
-}
-
-.max-download-banner-mobile {
+.max-download .max-download-banner img {
   display: block;
-  width: 100%;
+  width: 269px;
+  height: 32px;
 }
 
-@media (width < 768px) {
-  .max-download-wrap {
-    padding-bottom: 1.5rem;
-  }
-
-  .max-download-banner {
-    margin-bottom: 0.5rem;
-  }
-
-  .max-download-heading {
-    font-size: 1.5rem;
-    margin-bottom: 0.1rem;
-  }
-
-  .max-download-sub {
-    margin: 0 0 1rem;
-    font-size: 0.9rem;
-  }
-
-  .max-download-preview {
-    width: 88%;
-    margin-bottom: 0.75rem;
-  }
-
-  .max-download-cta {
-    margin: 0 1rem 0.5rem;
-    font-size: 0.9rem;
-  }
-
-  .max-download-links {
-    margin-top: 1rem;
-  }
-}
-
-@media (width >= 768px) {
-  .max-download-banner-desk { display: block; }
-  .max-download-banner-mobile { display: none; }
-}
-
-.max-download-heading {
-  font-size: 2rem;
-  font-weight: 900;
-  margin: 0 0 0.25rem;
+.max-download .max-download-heading {
+  margin: 48px 16px 0;
   color: #fff;
+  font-family: 'MAX Download Display', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 42px;
 }
 
-.max-download-sub {
-  margin: 0 0 1.5rem;
-  font-size: 1rem;
-  color: #fff;
+.max-download .max-download-sub {
+  margin: 0 16px 20px;
+  color: #afafaf;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 21px;
 }
 
-.max-download-preview {
-  width: 70%;
-  margin: 0 auto 1rem;
-}
-
-.max-download-preview img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.max-download-cta {
-  font-size: 1rem;
-  color: #fff;
-  margin: 0 1.5rem 1rem;
-}
-
-.max-download-btn {
-  display: inline-block;
-  margin-top: 0.5rem;
-}
-
-.max-download-btn img {
-  width: 200px;
-  height: 50px;
-  object-fit: contain;
-}
-
-.max-download-links {
-  margin-top: 2rem;
-  padding: 0 1.5rem;
-}
-
-.max-download-links-heading {
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.7;
-  margin-bottom: 0.5rem;
-}
-
-.max-download-links ul {
-  list-style: none;
-  padding: 0;
+.max-download .max-download-gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  width: calc(100% - 64px);
+  max-width: 303px;
   margin: 0;
 }
 
-.max-download-links ul li {
-  margin-bottom: 0.4rem;
+.max-download .max-download-gallery-item {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 10px;
 }
 
-.max-download-links a {
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 400;
-  text-decoration: underline;
-  opacity: 0.85;
-}
-
-.max-download-links a:hover {
-  opacity: 1;
-}
-
-.max-download-error {
-  text-align: center;
-  padding: 80px 24px;
-  color: #fff;
-}
-
-/* Multi-image session gallery */
-.max-download-gallery {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 24px;
-  width: 90%;
-  max-width: 900px;
-  margin: 0 auto 1.5rem;
-}
-
-.max-download-gallery-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: calc(50% - 12px);
-  max-width: 400px;
-}
-
-.max-download-gallery-item img {
+.max-download .max-download-gallery-item > img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 12px;
 }
 
 .max-download a.max-download-gallery-btn {
-  display: inline-flex;
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 180px;
-  min-height: 45px;
-  padding: 8px 24px;
-  border-radius: 999px;
-  background: #1473e6;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  background: #4b63ff;
   color: #fff;
-  font-size: 18px;
-  font-weight: 900;
   text-decoration: none;
+}
+
+.max-download .max-download-icon {
+  width: 20px;
+  height: 20px;
+  background: url('./assets/download.svg') no-repeat center;
+  filter: brightness(0) invert(1);
 }
 
 .max-download a.max-download-gallery-btn:hover {
-  background: #0d66d0;
-  color: #fff;
-  text-decoration: none;
+  background: #3249df;
 }
 
-.max-download a.max-download-gallery-btn:focus-visible {
+.max-download .max-download-links {
+  position: fixed;
+  z-index: 10;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  padding: 16px 16px calc(26px + env(safe-area-inset-bottom));
+  background: #111;
+}
+
+.max-download .max-download-links-heading {
+  margin: 0 0 10px;
+  color: #f2f2f2;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.max-download .max-download-links ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 338px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.max-download .max-download-links a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #afafaf;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 19px;
+  text-decoration: underline;
+}
+
+.max-download .max-download-links img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 106 / 78;
+  border-radius: 8px;
+}
+
+.max-download a:focus-visible {
   outline: 3px solid #fff;
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
-@media (width < 600px) {
-  .max-download-gallery {
-    gap: 16px;
-    width: 92%;
-  }
+.max-download .max-download-links a:hover {
+  color: #fff;
+}
 
-  .max-download-gallery-item {
-    width: 100%;
-  }
+.max-download .max-download-gallery p,
+.max-download .max-download-error {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 400;
+}
 
-  .max-download a.max-download-gallery-btn {
-    min-width: 160px;
+.max-download .max-download-error {
+  padding: 80px 24px;
+  text-align: center;
+}
+
+@media (width >= 600px) {
+  .max-download .max-download-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 900px;
+    gap: 24px;
   }
 }

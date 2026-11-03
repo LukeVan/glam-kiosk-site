@@ -2,6 +2,22 @@ import { readOfflineDemoCatalog } from '../attendee-kiosk/demo-catalog.js';
 import { DEMO_PEOPLE } from '../attendee-kiosk/demo-print.js';
 import { BANNER_BRANDS } from '../attendee-kiosk/banner-assets.js';
 
+function downloadLink(url, filename, label) {
+  const link = document.createElement('a');
+  link.className = 'max-download-gallery-btn';
+  link.href = url;
+  link.download = filename;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.referrerPolicy = 'no-referrer';
+  link.setAttribute('aria-label', label);
+  const icon = document.createElement('span');
+  icon.className = 'max-download-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  link.append(icon);
+  return link;
+}
+
 async function renderDemo(block, slug, banner, links) {
   const person = DEMO_PEOPLE.find((item) => item.slug === slug);
   if (!person) {
@@ -33,11 +49,7 @@ async function renderDemo(block, slug, banner, links) {
       image.src = entry.profile.ads[brand].url;
       image.alt = `${person.name} demo ad ${index + 1}`;
       image.loading = index === 0 ? 'eager' : 'lazy';
-      const download = document.createElement('a');
-      download.className = 'max-download-gallery-btn';
-      download.href = image.src;
-      download.download = `${person.slug}-${brand}.jpg`;
-      download.textContent = 'Download';
+      const download = downloadLink(image.src, `${person.slug}-${brand}.jpg`, `Download ad ${index + 1}`);
       card.append(image, download);
       gallery.append(card);
     });
@@ -51,26 +63,28 @@ function buildBanner() {
   const banner = document.createElement('div');
   banner.className = 'max-download-banner';
   banner.innerHTML = `
-    <img src="/blocks/download/banner-desktop.png"
-      alt="Adobe x L'Oréal Groupe" class="max-download-banner-desk">
-    <img src="/blocks/download/banner-mobile.png"
-      alt="Adobe x L'Oréal Groupe" class="max-download-banner-mobile">
+    <img src="/blocks/max-download/assets/adobe-loreal.png"
+      alt="Adobe x L'Oréal Groupe" width="269" height="32">
   `;
   return banner;
 }
 
 function buildLinks() {
-  const links = document.createElement('div');
+  const links = document.createElement('nav');
   links.className = 'max-download-links';
+  links.setAttribute('aria-label', 'Learn more about Adobe solutions');
   links.innerHTML = `
     <p class="max-download-links-heading">Learn more about Adobe solutions</p>
     <ul>
       <li><a href="https://business.adobe.com/solutions/content-supply-chain.html"
-        target="_blank" rel="noopener">Content Supply Chain</a></li>
+        target="_blank" rel="noopener"><img src="/blocks/max-download/assets/content-supply-chain.png"
+          alt="" width="106" height="78"><span>Content<br>Supply Chain</span></a></li>
       <li><a href="https://business.adobe.com/products/firefly-business.html"
-        target="_blank" rel="noopener">Adobe Firefly for Business</a></li>
+        target="_blank" rel="noopener"><img src="/blocks/max-download/assets/firefly-business.png"
+          alt="" width="106" height="78"><span>Adobe Firefly<br>for Business</span></a></li>
       <li><a href="https://business.adobe.com/blog/enterprise-creatives-work-smarter-with-cx-enterprise-coworker"
-        target="_blank" rel="noopener">Work smarter with CX Enterprise Coworker</a></li>
+        target="_blank" rel="noopener"><img src="/blocks/max-download/assets/cx-coworker.png"
+          alt="" width="106" height="78"><span>CX Enterprise<br>Coworker</span></a></li>
     </ul>
   `;
   return links;
@@ -112,14 +126,7 @@ async function renderSession(block, sessionUrl, name) {
     img.loading = i === 0 ? 'eager' : 'lazy';
     img.referrerPolicy = 'no-referrer';
 
-    const btn = document.createElement('a');
-    btn.className = 'max-download-gallery-btn';
-    btn.href = item.url;
-    btn.download = item.filename || `ad-${i + 1}.jpg`;
-    btn.target = '_blank';
-    btn.rel = 'noopener';
-    btn.referrerPolicy = 'no-referrer';
-    btn.textContent = 'Download';
+    const btn = downloadLink(item.url, item.filename || `ad-${i + 1}.jpg`, `Download ad ${i + 1}`);
 
     card.append(img, btn);
     gallery.append(card);

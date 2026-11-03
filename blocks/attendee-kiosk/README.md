@@ -667,6 +667,10 @@ absolute image URLs; `adIndex` is 1-based, with `brand` keys `roche`, `keratin`,
 the configured iframe's `contentWindow`, exact origin and expected stage:
 `view-select` requests ad selection directly from initial or continued story;
 `view-graph-return` enters the video interstitial from either story stage.
+The interstitial uses `Loreal Interstitial_Max26_v2`, optimized to a muted
+1000×1000 H.264 MP4 with fast-start metadata (about 2.8 MB, 20 seconds).
+Its poster is regenerated from the opening frame, and the video scale aligns the
+final frame's ad-grid outer edges (pixels 46–954) with the live selection grid.
 Packaged Coworker watches only its tracked Graph popup's `closed` property and
 shares an idempotent completion handler with validated `ADOBE_GRAPH_DONE`;
 neither duplicate completion nor a blocked popup starts a second return.
@@ -880,6 +884,19 @@ New MAX attendee URLs use `/max-download.html?session=<encoded manifest URL>`.
 The static `max-download.html` shell loads the dedicated `max-download` block;
 no DA.live content publication is required. It has isolated MAX classes/styles
 and owns pending/partial/ready processing and strict manifest validation.
+The QR page follows Figma Sandbox frame `27:3361`: four dynamic ad images with
+individually labelled, top-left download controls, plus a fixed bottom navigation
+panel. The ads scroll behind that panel; bottom spacing lets the last ad scroll
+fully clear of it. Mobile uses one column; screens from 600px use two columns.
+The Adobe/L'Oréal lockup, Spectrum download icon and three resource thumbnails
+are local Figma assets in `blocks/max-download/assets/`. The background uses the
+supplied 402×1509 `QR Code Page Background.png`, scaled proportionally to the page
+width and scrolling with the ads (about 123 KB total for all page assets).
+Existing local Adobe Clean fonts are reused. The resource
+destinations remain the existing Content Supply Chain, Firefly for Business and
+CX Enterprise Coworker links. Demo downloads use the same presentation.
+Run `node tests/max-download-browser.cjs /path/to/playwright/cli.js` against the
+local fixture server on port 3017 for layout, download-link and status coverage.
 The original `/download` keeps its legacy image/session rendering and fetch
 behavior. Already-issued MAX `/download` links are recognized by schema version 1
 and the `/7-Share-Output/` manifest path and handed to the MAX block, without

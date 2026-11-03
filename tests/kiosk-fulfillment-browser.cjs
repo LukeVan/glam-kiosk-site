@@ -338,11 +338,11 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const videoBox = await page.locator('.kiosk-graph-video').boundingBox();
     const hiddenAdsBox = await page.locator('.kiosk-ad-grid').boundingBox();
     assert(Math.abs(videoBox.width - videoBox.height) < 1);
-    // The video's final-frame 2x2 ads occupy px 73-925 of its 1000px frame.
+    // The v2 video's final-frame 2x2 ads occupy px 46-954 of its 1000px frame.
     const frameAds = {
-      x: videoBox.x + (videoBox.width * 73) / 1000,
-      y: videoBox.y + (videoBox.height * 73) / 1000,
-      size: (videoBox.width * 852) / 1000,
+      x: videoBox.x + (videoBox.width * 46) / 1000,
+      y: videoBox.y + (videoBox.height * 46) / 1000,
+      size: (videoBox.width * 908) / 1000,
     };
     assert(Math.abs(frameAds.x - hiddenAdsBox.x) < 3 && Math.abs(frameAds.y - hiddenAdsBox.y) < 3);
     assert(Math.abs(frameAds.size - hiddenAdsBox.width) < 3);
@@ -353,7 +353,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     if (process.env.KIOSK_SCREENSHOT_DIR) {
       await page.screenshot({ path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'graph-return-video.png') });
     }
-    await page.locator('.kiosk-graph-video').waitFor({ state: 'detached', timeout: 20000 });
+    await page.locator('.kiosk-graph-video').waitFor({ state: 'detached', timeout: 30000 });
     assert.equal(await page.locator('.kiosk-ad-grid').evaluate((node) => node.inert), false);
     assert.equal(await page.evaluate(() => window.graphReturns), 1);
     assert.deepEqual(await page.locator('.kiosk-ad-grid').boundingBox(), hiddenAdsBox);
@@ -845,11 +845,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     shareStatus = 'ready';
     await download.reload();
     await download.waitForFunction(() => document.querySelectorAll('.max-download-gallery-item').length === 4);
-    assert.deepEqual(await download.locator('.max-download-gallery-btn').allTextContents(),
-      ['Download', 'Download', 'Download', 'Download']);
+    assert.deepEqual(await download.locator('.max-download-gallery-btn').evaluateAll((buttons) => (
+      buttons.map((button) => button.getAttribute('aria-label'))
+    )), ['Download ad 1', 'Download ad 2', 'Download ad 3', 'Download ad 4']);
     assert.equal(await download.locator('.max-download-gallery-btn img').count(), 0);
     assert.equal(await download.locator('.max-download-links a').count(), 3);
-    assert.equal(await download.getByRole('link', { name: 'Work smarter with CX Enterprise Coworker', exact: true }).getAttribute('href'),
+    assert.equal(await download.getByRole('link', { name: 'CX Enterprise Coworker', exact: true }).getAttribute('href'),
       'https://business.adobe.com/blog/enterprise-creatives-work-smarter-with-cx-enterprise-coworker');
     assert.equal(await download.locator('.max-download-gallery img').first().getAttribute('referrerpolicy'), 'no-referrer');
     shareOverride = { ...share(), expiresAt: new Date(Date.now() - 1000).toISOString() };
@@ -1014,7 +1015,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const mobileVideoBox = await demo.locator('.kiosk-graph-video').boundingBox();
     const mobileHiddenGrid = await demo.locator('.kiosk-ad-grid').boundingBox();
     assert(Math.abs(mobileVideoBox.width - mobileVideoBox.height) < 1);
-    assert(Math.abs(mobileVideoBox.y + (mobileVideoBox.height * 73) / 1000 - mobileHiddenGrid.y) < 3);
+    assert(Math.abs(mobileVideoBox.y + (mobileVideoBox.height * 46) / 1000 - mobileHiddenGrid.y) < 3);
     await demo.locator('.kiosk-graph-video').evaluate((video) => {
       video.pause();
       video.dispatchEvent(new Event('error'));
