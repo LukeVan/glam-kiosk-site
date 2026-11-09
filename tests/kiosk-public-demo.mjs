@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { readPublicDemo, validatePublicDemo, PUBLIC_DEMO_ORIGINS } from '../blocks/attendee-kiosk/public-demo.js';
 import { readConfig } from '../blocks/attendee-kiosk/config.js';
 
@@ -31,6 +32,11 @@ for (const update of [
   { url: `${origin}/${path.replace('demo_Test', 'demo_Other')}` },
 ]) assert.throws(() => validatePublicDemo({ ...result, ...update }));
 assert.equal(readConfig('demo', {}, origin).publicDemoOrigin, origin);
+PUBLIC_DEMO_ORIGINS.forEach((hostedOrigin) => {
+  assert.equal(readConfig('demo', {}, hostedOrigin).publicDemoOrigin, hostedOrigin);
+});
+const hostedPage = await readFile(new URL('../max2026.html', import.meta.url), 'utf8');
+assert(!hostedPage.includes('publicDemoOrigin:'), 'Hosted kiosk must use its own approved origin');
 assert.equal(readConfig('demo', {}, 'http://localhost:3017').publicDemoOrigin, '');
 assert.throws(() => readConfig('demo', { publicDemoOrigin: 'https://example.invalid' }, origin));
 console.log('Public demo: hosted-origin index discovery, exact catalog version/brand/path binding, absence/error and strict provenance checks passed.');
