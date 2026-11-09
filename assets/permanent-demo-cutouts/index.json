@@ -96,6 +96,38 @@
       "brand": "4-lorealparis",
       "path": "assets/permanent-demo-cutouts/demo_e1b7c9151a34433a83e32b3657afc011/max_square/e451a2ef83144c86a3bae78861dba979/4-lorealparis.png",
       "sha256": "58b82adbcc98c01454d1c505963262847958e10c5cd8c10185db5bb6bec9c308"
+    },
+    {
+      "personId": "demo_e1b7c9151a34433a83e32b3657afc011",
+      "templateSetId": "max_square",
+      "version": "a2d7dfbb04dd4e2780fe4a6f71b1d649",
+      "brand": "1-larocheposay",
+      "path": "assets/permanent-demo-cutouts/demo_e1b7c9151a34433a83e32b3657afc011/max_square/a2d7dfbb04dd4e2780fe4a6f71b1d649/1-larocheposay.png",
+      "sha256": "185cd0dbff1a12a798937845ec08f877a39f540ba46815645b4e31396f13a18e"
+    },
+    {
+      "personId": "demo_e1b7c9151a34433a83e32b3657afc011",
+      "templateSetId": "max_square",
+      "version": "a2d7dfbb04dd4e2780fe4a6f71b1d649",
+      "brand": "2-lorealprofessionnel",
+      "path": "assets/permanent-demo-cutouts/demo_e1b7c9151a34433a83e32b3657afc011/max_square/a2d7dfbb04dd4e2780fe4a6f71b1d649/2-lorealprofessionnel.png",
+      "sha256": "84acd331149ff064a7f307c741783a03827e3870e501dad79601a89dad198f0d"
+    },
+    {
+      "personId": "demo_e1b7c9151a34433a83e32b3657afc011",
+      "templateSetId": "max_square",
+      "version": "a2d7dfbb04dd4e2780fe4a6f71b1d649",
+      "brand": "3-YSLbeauty",
+      "path": "assets/permanent-demo-cutouts/demo_e1b7c9151a34433a83e32b3657afc011/max_square/a2d7dfbb04dd4e2780fe4a6f71b1d649/3-YSLbeauty.png",
+      "sha256": "54964dc71d4cdc0342ce8c01c03e8e27ba641b8da531a3aa45f1dca832de8a86"
+    },
+    {
+      "personId": "demo_e1b7c9151a34433a83e32b3657afc011",
+      "templateSetId": "max_square",
+      "version": "a2d7dfbb04dd4e2780fe4a6f71b1d649",
+      "brand": "4-lorealparis",
+      "path": "assets/permanent-demo-cutouts/demo_e1b7c9151a34433a83e32b3657afc011/max_square/a2d7dfbb04dd4e2780fe4a6f71b1d649/4-lorealparis.png",
+      "sha256": "53262b88831440fdfaed8b6f69afa17fc2b9083906c38961ea330c3e5649ae8a"
     }
   ]
 }
