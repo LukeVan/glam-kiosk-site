@@ -144,6 +144,14 @@ export default async function decorate(block) {
   }
   if (api.source === 'azure') config.intakeEnabled = api.intakeEnabled;
   if (api.source === 'offline-demo') config.intakeEnabled = false;
+  let telemetry = {};
+  if (api.source === 'azure') {
+    import('../../scripts/kiosk-telemetry.js').then(({ default: createTelemetry }) => {
+      telemetry = createTelemetry({ eventId: api.eventId });
+    }).catch(() => {
+      // Optional telemetry cannot prevent the kiosk from starting.
+    });
+  }
   let key = storageKey(config);
   if (api.source === 'azure') key = `glam-attendee-v1:azure:${api.eventId}`;
   if (api.source === 'offline-demo') key = 'glam-attendee-v1:offline-demo';
@@ -211,6 +219,7 @@ export default async function decorate(block) {
   function move(stage, fields = {}) {
     try {
       persist({ ...state, ...fields, stage });
+      if (stage === 'ads') telemetry.graphExit?.();
       render();
     } catch (error) {
       fail(error);
@@ -219,6 +228,10 @@ export default async function decorate(block) {
   // While Graph is open in its own tab, show only the background and the
   // iframe's reopen control so closing the tab doesn't flash Coworker.
   function setGraphHold(active) {
+    if (active) {
+      telemetry.graphEnter?.();
+      telemetry.graphOpen?.();
+    }
     graphHoldStage = active ? state.stage : null;
     block.classList.toggle('kiosk-graph-hold', active);
   }
@@ -437,6 +450,7 @@ export default async function decorate(block) {
       portrait = null;
       storageError = null;
       state = initialState();
+      telemetry.reset?.();
       confirmRestart = false;
       render();
     } catch (error) {
@@ -811,6 +825,7 @@ export default async function decorate(block) {
     }
   }
   function graph() {
+    telemetry.graphEnter?.();
     title(text().graph);
     if (config.mode === 'demo') panel.append(element('p', text().demoGraph));
     else if (!config.graph.enabled) {
@@ -820,6 +835,10 @@ export default async function decorate(block) {
       link.href = config.graph.url;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
+      link.addEventListener('click', () => {
+        telemetry.graphEnter?.();
+        telemetry.graphOpen?.();
+      }, { signal: controller.signal });
       panel.append(link);
     }
     panel.append(button(text().returnGraph, () => move('ads')));
@@ -860,6 +879,8 @@ export default async function decorate(block) {
         }
         await api.select(state, signal);
         if (!signal.aborted) {
+          const brandIndex = manifest.ads.findIndex((ad) => ad.id === state.selectedAdId);
+          telemetry.brand?.(['larocheposay', 'lorealprofessionnel', 'yslbeauty', 'lorealparis'][brandIndex]);
           currentContinuedBeat = 'simulate';
           persist({ ...state, stage: 'continued' });
           notifyCoworker();
@@ -965,6 +986,7 @@ export default async function decorate(block) {
     updateDock();
   }
   function graphInterstitial() {
+    telemetry.graphEnter?.();
     panel.className = 'kiosk-panel kiosk-panel-ads kiosk-graph-interstitial';
     ads();
     const { signal } = controller;
@@ -1022,6 +1044,7 @@ export default async function decorate(block) {
       if (finished || signal.aborted) return;
       try { persist({ ...state, stage: 'ads' }); } catch (error) { fail(error); return; }
       finished = true;
+      telemetry.graphExit?.();
       video.pause();
       selectionCopy.hidden = false;
       grid.style.visibility = '';
@@ -1114,6 +1137,16 @@ export default async function decorate(block) {
         fill: 'backwards',
         easing: 'cubic-bezier(0.22, 0.75, 0.2, 1)',
       });
+      let displayed = false;
+      const usable = () => {
+        if (displayed && !signal.aborted && preview.isConnected && !document.hidden
+          && preview.naturalWidth > 0) telemetry.usable?.();
+      };
+      document.addEventListener('visibilitychange', usable, { signal });
+      animation.finished.then(() => {
+        displayed = true;
+        usable();
+      }, () => {});
       signal.addEventListener('abort', () => animation.cancel(), { once: true });
     };
     preview.addEventListener('load', reveal, { once: true, signal });
@@ -1363,6 +1396,7 @@ export default async function decorate(block) {
                 prepareRequest: null,
                 prepareSubmitted: false,
               });
+              telemetry.selected?.(item.demo === true);
               panel.querySelectorAll('.kiosk-portrait-grid .kiosk-card').forEach((card) => {
                 card.setAttribute('aria-pressed', String(card.dataset.assetId === item.id));
               });
@@ -1493,8 +1527,9 @@ export default async function decorate(block) {
         const sample = demo && !manifest.demoCatalog
           && !manifest.banners.length;
         let onFinish = null;
-        if (demo) onFinish = () => move('ending');
-        else if (state.printRequest) onFinish = () => move('ending');
+        if (demo || state.printRequest) {
+          onFinish = () => { telemetry.finish?.(); move('ending'); };
+        }
         let variationAssets = sample ? sampleVariations() : manifest.banners;
         if (initialResults) {
           variationAssets = initialResults.assets.filter((asset) => (

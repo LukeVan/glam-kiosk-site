@@ -45,6 +45,21 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const save = page.getByRole('button', { name: 'Save booth settings', exact: true });
     const test = page.getByRole('button', { name: 'Test connection', exact: true });
     const status = page.locator('.kiosk-settings-status');
+    await test.waitFor();
+    assert.equal(await page.locator('.kiosk-settings-actions').first()
+      .getByRole('button', { name: 'Test connection', exact: true }).count(), 1);
+    assert.equal(await page.locator('.kiosk-settings-actions').first()
+      .getByRole('button', { name: 'Save booth settings', exact: true }).count(), 1);
+    const telemetryActions = page.locator('.kiosk-settings-telemetry-actions');
+    assert.equal(await telemetryActions.getByRole('button', { name: 'Test', exact: true }).count(), 1);
+    assert.equal(await telemetryActions.getByRole('button', { name: 'Refresh', exact: true }).count(), 1);
+    assert.equal(await telemetryActions.getByRole('link', {
+      name: 'Open Event Analytics', exact: true,
+    }).count(), 1);
+    assert.equal(await page.getByRole('button', {
+      name: 'Save telemetry station preferences', exact: true,
+    }).count(), 0);
+    await page.getByRole('heading', { name: 'Telemetry settings', exact: true }).waitFor();
     const upload = (data, name = 'access.txt') => file.setInputFiles({
       name, mimeType: 'text/plain', buffer: Buffer.from(JSON.stringify(data)),
     });
@@ -65,10 +80,28 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await test.click();
     await status.filter({ hasText: 'Connected.' }).waitFor();
     assert.equal(await event.inputValue(), 'TestEvent');
+    await page.getByLabel('Telemetry station ID', { exact: true }).selectOption('MAX-03');
+    await page.getByLabel('Event timezone (IANA)', { exact: true }).fill('America/New_York');
+    await page.getByLabel('Telemetry journeys', { exact: true }).selectOption('test');
     await save.click();
     await status.filter({ hasText: 'Booth settings saved' }).waitFor();
     const saved = (await values()).saved;
     assert.equal(JSON.parse(saved).requestSAS, fixture.requestContainerSasUrl);
+    const telemetryPrefs = () => page.evaluate(
+      () => localStorage.getItem('glam-kiosk-telemetry-prefs-v1'),
+    );
+    const preferences = await telemetryPrefs();
+    assert.deepEqual(JSON.parse(preferences), {
+      stationId: 'MAX-03', timeZone: 'America/New_York', isTest: true,
+    });
+    await page.getByLabel('Event timezone (IANA)', { exact: true }).fill('invalid/timezone');
+    await save.click();
+    await page.getByText('Booth settings saved, but telemetry preferences were not saved.', {
+      exact: false,
+    }).waitFor();
+    assert.equal(await telemetryPrefs(), preferences, 'Invalid telemetry preserves prior preferences');
+    assert.equal((await values()).saved, saved, 'Optional preference errors preserve valid core settings');
+    await page.getByLabel('Event timezone (IANA)', { exact: true }).fill('America/New_York');
 
     for (const invalid of [
       { ...fixture, requestContainerSasUrl: sas('mock-assets', 'c') },
@@ -131,6 +164,28 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await status.filter({ hasText: 'SAS changed' }).waitFor();
     await page.waitForTimeout(500);
     assert.equal(await asset.inputValue(), 'manual edit');
+    failConnection = false;
+    events = ['TestEvent'];
+    await upload({
+      ...fixture, telemetryUploadContainerSasUrl: 'expired telemetry',
+      telemetryReadContainerSasUrl: 'invalid telemetry',
+    });
+    await status.filter({ hasText: 'Nothing saved yet' }).waitFor();
+    await test.click();
+    await status.filter({ hasText: 'Connected.' }).waitFor();
+    await page.getByRole('button', { name: 'Test', exact: true }).click();
+    await page.getByText('Telemetry access test failed or timed out.', { exact: false }).waitFor();
+    assert.equal(await save.isDisabled(), false, 'Telemetry failure must not block core setup save');
+    await save.click();
+    await status.filter({ hasText: 'Booth settings saved' }).waitFor();
+    await page.getByLabel('Telemetry station ID', { exact: true }).selectOption('');
+    await save.click();
+    await page.getByText('Telemetry station is not configured; collection is disabled.', {
+      exact: false,
+    }).waitFor();
+    assert.equal(await telemetryPrefs(), null, 'Not configured disables collection');
+    await page.getByRole('link', { name: 'Open kiosk', exact: true }).click();
+    await page.locator('.kiosk-consent input').waitFor();
     assert.deepEqual(errors, []);
     console.log('Access importer browser: picker/drop, atomic rejection, no import writes/network, explicit test/save, event verification, connection failure and stale-read guard passed.');
   } finally {

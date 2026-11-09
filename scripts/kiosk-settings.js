@@ -35,6 +35,9 @@ export function parseContainerSAS(value, now = Date.now(), access = 'read') {
   try {
     url = new URL(value);
   } catch {
+    if (typeof value === 'string' && value.trimStart().startsWith('{')) {
+      throw new Error('This field accepts one SAS URL, not the complete access file. Use Import kiosk access file to choose the Glam Creator .txt file.');
+    }
     throw new Error('Paste a complete Azure Blob container SAS URL.');
   }
   if (url.protocol !== 'https:' || url.username || url.password || url.hash
@@ -52,16 +55,20 @@ export function parseContainerSAS(value, now = Date.now(), access = 'read') {
     ].includes(key))) {
     throw new Error('The SAS contains duplicate or unsupported parameters.');
   }
-  const permissions = access === 'create' ? ['c'] : ['rl', 'lr'];
+  const create = ['create', 'telemetry-create'].includes(access);
+  const permissions = create ? ['c'] : ['rl', 'lr'];
   if (params.get('sr') !== 'c' || !permissions.includes(params.get('sp'))
     || !params.get('sig') || !params.get('sv')
     || (params.has('spr') && params.get('spr') !== 'https')) {
-    throw new Error(access === 'create'
+    throw new Error(create
       ? 'Request access must be a container SAS with create only.'
       : 'Kiosk access must be a container SAS with read + list only.');
   }
   if (access === 'create' && url.pathname !== '/glam-kiosk-requests') {
     throw new Error('Request access must use the dedicated glam-kiosk-requests container.');
+  }
+  if (access === 'telemetry-create' && url.pathname !== '/meow-glam-telemetry') {
+    throw new Error('Telemetry access must use the dedicated meow-glam-telemetry container.');
   }
   const expiresAt = Date.parse(params.get('se'));
   if (!Number.isFinite(expiresAt)) throw new Error('The SAS must have an explicit expiry.');
@@ -105,6 +112,10 @@ export function validateSettings(value) {
     showFinalQR: value.showFinalQR ?? value.adEnding !== 'print',
     showCompletedPortraits: value.showCompletedPortraits ?? false,
     expiresAt,
+    ...Object.fromEntries(['telemetryUploadContainerSasUrl', 'telemetryReadContainerSasUrl']
+      .filter((key) => value[key] !== undefined)
+      .map((key) => [key, typeof value[key] === 'string' && value[key].length <= 8192
+        ? value[key] : 'invalid'])),
   };
 }
 

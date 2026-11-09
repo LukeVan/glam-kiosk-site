@@ -25,6 +25,21 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const page = await context.newPage();
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
     await page.waitForFunction(() => document.querySelector('.attendee-kiosk')?.dataset.appearance === 'dark');
+    for (const viewport of [
+      { width: 2560, height: 1440 },
+      { width: 1920, height: 1200 },
+      { width: 1920, height: 1080 },
+      { width: 1366, height: 768 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(viewport);
+      assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+        'rgb(0, 0, 0)', `Kiosk backdrop must be black at ${viewport.width}x${viewport.height}`);
+      assert((await page.locator('.attendee-kiosk').evaluate(
+        (node) => getComputedStyle(node, '::before').backgroundImage,
+      )).includes('/dark-background.png'), 'Existing dark background artwork must remain');
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
     const freshSettings = await context.newPage();
     await freshSettings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({
       contentType: 'text/html',
@@ -53,6 +68,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const activation = page.locator('.attendee-kiosk');
     await activation.locator('.kiosk-name input').waitFor();
     assert.equal(await activation.getAttribute('data-appearance'), 'light');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+      'rgb(0, 0, 0)', 'The surrounding backdrop remains black in light appearance');
     const lightCopy = await page.locator('.kiosk-name-copy').innerText();
     const lightHeadingFont = await page.locator('.kiosk-panel-name h2')
       .evaluate((node) => getComputedStyle(node).fontFamily);

@@ -21,6 +21,17 @@
   font-size: 28px;
 }
 
+.kiosk-settings .kiosk-settings-section-heading {
+  margin-top: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #aaa;
+}
+
+.kiosk-settings .kiosk-settings-section-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
 .kiosk-settings p {
   margin: 12px 0;
   font-size: 15px;
@@ -94,6 +105,38 @@
   background: #ddd;
   color: #555;
   cursor: not-allowed;
+}
+
+.kiosk-settings .kiosk-settings-telemetry-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.kiosk-settings .kiosk-settings-telemetry-actions button,
+.kiosk-settings .kiosk-settings-telemetry-actions a {
+  display: inline;
+  min-height: 0;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #1466cc;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.kiosk-settings .kiosk-settings-telemetry-actions button:hover,
+.kiosk-settings .kiosk-settings-telemetry-actions a:hover {
+  text-decoration: underline;
+}
+
+.kiosk-settings .kiosk-settings-telemetry-actions button:disabled {
+  color: #555;
 }
 
 .kiosk-settings .kiosk-settings-clear {

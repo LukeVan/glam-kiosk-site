@@ -1,0 +1,573 @@
+.kiosk-telemetry {
+  --telemetry-ink: #222;
+  --telemetry-muted: #626262;
+  --telemetry-border: #dedede;
+  --telemetry-track: #ebebeb;
+  --telemetry-blue: #0469e3;
+  --telemetry-lorealprofessionnel: #5263df;
+  --telemetry-lorealparis: #a049b8;
+  --telemetry-yslbeauty: #027d89;
+  --telemetry-larocheposay: #d35a10;
+  --telemetry-unknown: #747474;
+
+  box-sizing: border-box;
+  padding: 24px 16px;
+  border: 1px solid var(--telemetry-border);
+  border-radius: 24px;
+  background: #f5f5f5;
+  color: var(--telemetry-ink);
+  font-family: "Adobe Clean", adobe-clean, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color-scheme: light;
+}
+
+.kiosk-telemetry *,
+.kiosk-telemetry *::before,
+.kiosk-telemetry *::after {
+  box-sizing: border-box;
+}
+
+.kiosk-telemetry h1,
+.kiosk-telemetry h2,
+.kiosk-telemetry p {
+  margin: 0;
+  font-family: inherit;
+}
+
+.kiosk-telemetry h1 {
+  margin: 8px 0;
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.kiosk-telemetry h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.kiosk-telemetry .telemetry-eyebrow {
+  color: var(--telemetry-blue);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+
+.kiosk-telemetry .telemetry-subtitle {
+  color: var(--telemetry-muted);
+  font-size: 16px;
+}
+
+.kiosk-telemetry .telemetry-header,
+.kiosk-telemetry .telemetry-tools,
+.kiosk-telemetry .telemetry-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kiosk-telemetry .telemetry-tools {
+  align-items: start;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.kiosk-telemetry a {
+  color: #075dc2;
+  text-underline-offset: 3px;
+}
+
+.kiosk-telemetry .telemetry-badge {
+  padding: 5px 10px;
+  border: 1px solid #d5e5f8;
+  border-radius: 8px;
+  background: #e9f2ff;
+  color: #174b93;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kiosk-telemetry .telemetry-privacy {
+  max-width: 860px;
+  margin: 18px 0 24px;
+  color: var(--telemetry-muted);
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-filters,
+.kiosk-telemetry .telemetry-card,
+.kiosk-telemetry .telemetry-kpi,
+.kiosk-telemetry .telemetry-detail {
+  min-width: 0;
+  border: 1px solid var(--telemetry-border);
+  border-radius: 16px;
+  background: white;
+}
+
+.kiosk-telemetry .telemetry-filters {
+  margin: 0;
+  padding: 20px;
+}
+
+.kiosk-telemetry .telemetry-filter-grid {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.kiosk-telemetry label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: #4b4b4b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kiosk-telemetry input,
+.kiosk-telemetry select {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 7px 10px;
+  border: 1px solid #b1b1b1;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--telemetry-ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.kiosk-telemetry .telemetry-checkbox {
+  flex-direction: row;
+  align-items: center;
+  align-self: end;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.kiosk-telemetry input[type="checkbox"] {
+  order: -1;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--telemetry-blue);
+}
+
+.kiosk-telemetry .telemetry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--telemetry-track);
+}
+
+.kiosk-telemetry button {
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 18px;
+  border: 1px solid #b1b1b1;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--telemetry-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.kiosk-telemetry button:hover {
+  border-color: #747474;
+  background: #f5f5f5;
+}
+
+.kiosk-telemetry button.telemetry-primary {
+  border-color: var(--telemetry-blue);
+  background: var(--telemetry-blue);
+  color: #fff;
+}
+
+.kiosk-telemetry button.telemetry-primary:hover {
+  background: #0054b6;
+}
+
+.kiosk-telemetry button:disabled {
+  border-color: var(--telemetry-track);
+  background: var(--telemetry-track);
+  color: #696969;
+  cursor: default;
+}
+
+.kiosk-telemetry :focus-visible {
+  outline: 2px solid var(--telemetry-blue);
+  outline-offset: 3px;
+}
+
+.kiosk-telemetry .telemetry-status {
+  margin: 20px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--telemetry-border);
+  border-inline-start: 4px solid #8a8a8a;
+  border-radius: 10px;
+  background: #fff;
+  color: #4b4b4b;
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-status[data-state="success"] {
+  border-inline-start-color: #14834a;
+}
+
+.kiosk-telemetry .telemetry-status[data-state="loading"] {
+  border-inline-start-color: var(--telemetry-blue);
+}
+
+.kiosk-telemetry .telemetry-status[data-state="warning"] {
+  border-color: #e7b35c;
+  border-inline-start-color: #a15a00;
+  background: #fff7e8;
+  color: #713f00;
+}
+
+.kiosk-telemetry .telemetry-status[data-state="error"] {
+  border-inline-start-color: #c92929;
+  background: #fff1f1;
+  color: #9c2020;
+}
+
+.kiosk-telemetry .telemetry-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  color: var(--telemetry-muted);
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-scope span {
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid var(--telemetry-border);
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.kiosk-telemetry .telemetry-scope .telemetry-event {
+  border-color: transparent;
+  background: #e6e9fa;
+  color: #343e8f;
+  font-weight: 700;
+}
+
+.kiosk-telemetry .telemetry-kpis,
+.kiosk-telemetry .telemetry-charts {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.kiosk-telemetry .telemetry-kpi {
+  padding: 22px;
+}
+
+.kiosk-telemetry .telemetry-kpi h2 {
+  color: #515151;
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.kiosk-telemetry .telemetry-kpi-value {
+  margin: 12px 0 8px;
+  font-size: clamp(28px, 3vw, 38px);
+  font-weight: 750;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-telemetry .telemetry-kpi-featured {
+  border-color: #cdd9f6;
+  background: #edf3ff;
+}
+
+.kiosk-telemetry .telemetry-kpi-featured .telemetry-kpi-value {
+  color: #2351b6;
+}
+
+.kiosk-telemetry .telemetry-card {
+  padding: 24px;
+}
+
+.kiosk-telemetry .telemetry-description,
+.kiosk-telemetry .telemetry-footnote {
+  color: var(--telemetry-muted);
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-card > .telemetry-description {
+  margin: 5px 0 24px;
+}
+
+.kiosk-telemetry .telemetry-card > .telemetry-footnote {
+  margin-top: 20px;
+}
+
+.kiosk-telemetry .telemetry-bars {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kiosk-telemetry .telemetry-bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-bar-label strong {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-telemetry .telemetry-bar-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--telemetry-track);
+}
+
+.kiosk-telemetry .telemetry-bar-track[data-missing="true"] {
+  border-bottom: 1px dashed #b1b1b1;
+  border-radius: 0;
+  background: transparent;
+}
+
+.kiosk-telemetry .telemetry-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--telemetry-lorealprofessionnel);
+}
+
+.kiosk-telemetry [data-brand="lorealprofessionnel"] {
+  background: var(--telemetry-lorealprofessionnel);
+}
+
+.kiosk-telemetry [data-brand="lorealparis"] {
+  background: var(--telemetry-lorealparis);
+}
+
+.kiosk-telemetry [data-brand="yslbeauty"] {
+  background: var(--telemetry-yslbeauty);
+}
+
+.kiosk-telemetry [data-brand="larocheposay"] {
+  background: var(--telemetry-larocheposay);
+}
+
+.kiosk-telemetry [data-brand="unknown"] {
+  background: var(--telemetry-unknown);
+}
+
+.kiosk-telemetry .telemetry-brand-layout {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+}
+
+.kiosk-telemetry .telemetry-donut {
+  display: grid;
+  width: 180px;
+  height: 180px;
+  place-items: center;
+  justify-self: center;
+  border-radius: 50%;
+}
+
+.kiosk-telemetry .telemetry-donut-total {
+  display: flex;
+  width: 138px;
+  height: 138px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: white;
+}
+
+.kiosk-telemetry .telemetry-donut-total strong {
+  font-size: 36px;
+  letter-spacing: -0.04em;
+}
+
+.kiosk-telemetry .telemetry-donut-total span {
+  color: var(--telemetry-muted);
+  font-size: 12px;
+}
+
+.kiosk-telemetry .telemetry-detail {
+  margin-top: 12px;
+}
+
+.kiosk-telemetry summary {
+  padding: 16px 20px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.kiosk-telemetry .telemetry-brands .telemetry-detail {
+  margin-top: 20px;
+  border-radius: 8px;
+}
+
+.kiosk-telemetry .telemetry-table-scroll {
+  max-height: 520px;
+  overflow: auto;
+  border-radius: 0 0 16px 16px;
+}
+
+.kiosk-telemetry table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-telemetry caption {
+  padding: 8px 20px;
+  color: var(--telemetry-muted);
+  text-align: left;
+}
+
+.kiosk-telemetry th,
+.kiosk-telemetry td {
+  padding: 12px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--telemetry-track);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.kiosk-telemetry th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: #f5f5f5;
+  font-weight: 650;
+}
+
+.kiosk-telemetry tbody tr:hover {
+  background: #f6f8fd;
+}
+
+.kiosk-telemetry .telemetry-empty {
+  padding: 64px 24px;
+  border: 1px dashed #c9c9c9;
+  border-radius: 16px;
+  background: #fafafa;
+  text-align: center;
+}
+
+.kiosk-telemetry .telemetry-empty p {
+  max-width: 480px;
+  margin: 12px auto 0;
+  color: var(--telemetry-muted);
+}
+
+.kiosk-telemetry .telemetry-empty-chart {
+  display: flex;
+  height: 64px;
+  justify-content: center;
+  align-items: end;
+  gap: 7px;
+  margin-bottom: 24px;
+}
+
+.kiosk-telemetry .telemetry-empty-chart span {
+  width: 14px;
+  height: 40%;
+  border-radius: 4px;
+  background: #d5def7;
+}
+
+.kiosk-telemetry .telemetry-empty-chart span:nth-child(2) {
+  height: 70%;
+  background: #a6b8ee;
+}
+
+.kiosk-telemetry .telemetry-empty-chart span:nth-child(3) {
+  height: 100%;
+  background: #5263df;
+}
+
+.kiosk-telemetry .telemetry-empty-chart span:nth-child(4) {
+  height: 60%;
+}
+
+@media (width >= 600px) {
+  .kiosk-telemetry {
+    padding: 32px;
+  }
+
+  .kiosk-telemetry .telemetry-filter-grid,
+  .kiosk-telemetry .telemetry-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kiosk-telemetry .telemetry-brand-layout {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+}
+
+@media (width >= 900px) {
+  .kiosk-telemetry .telemetry-charts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kiosk-telemetry .telemetry-brands {
+    grid-column: 1 / -1;
+  }
+
+  .kiosk-telemetry .telemetry-kpis,
+  .kiosk-telemetry .telemetry-filter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (width >= 1200px) {
+  .kiosk-telemetry .telemetry-brands {
+    grid-column: auto;
+  }
+
+  .kiosk-telemetry .telemetry-brand-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .kiosk-telemetry .telemetry-donut {
+    width: 150px;
+    height: 150px;
+  }
+
+  .kiosk-telemetry .telemetry-donut-total {
+    width: 116px;
+    height: 116px;
+  }
+}

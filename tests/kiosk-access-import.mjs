@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { parseAccessFile, readAccessFile } from '../scripts/kiosk-access-import.js';
+import { parseContainerSAS } from '../scripts/kiosk-settings.js';
 
 const expiresAt = new Date(Date.now() + 86400000).toISOString().replace(/\.\d{3}Z$/, 'Z');
 const sas = (container, permissions, expiry = expiresAt) => (
@@ -18,6 +19,20 @@ assert.equal(parseAccessFile(text).eventId, 'TestEvent');
 assert.equal(parseAccessFile(text).containerSAS, fixture.assetContainerSasUrl);
 assert.equal(parseAccessFile(text).requestSAS, fixture.requestContainerSasUrl);
 assert.equal((await readAccessFile(new File([text], 'access.txt'))).eventId, 'TestEvent');
+const telemetry = {
+  telemetryUploadContainerSasUrl: sas('meow-glam-telemetry', 'c'),
+  telemetryReadContainerSasUrl: sas('meow-glam-telemetry', 'rl'),
+};
+const withTelemetry = JSON.stringify({ ...fixture, ...telemetry });
+assert.equal(parseAccessFile(withTelemetry).containerSAS, fixture.assetContainerSasUrl);
+assert.equal((await readAccessFile(new File([withTelemetry], 'access.txt')))
+  .telemetryReadContainerSasUrl, telemetry.telemetryReadContainerSasUrl);
+assert.equal(parseAccessFile(JSON.stringify({
+  ...fixture, telemetryUploadContainerSasUrl: 'invalid',
+})).containerSAS, fixture.assetContainerSasUrl);
+assert.throws(() => parseContainerSAS(withTelemetry), (error) => (
+  error.message.includes('Use Import kiosk access file') && !error.message.includes('MOCK_ONLY')
+));
 for (const update of [
   { schemaVersion: 2 },
   { type: 'unknown' },
@@ -53,4 +68,4 @@ await assert.rejects(
   () => readAccessFile({ name: 'access.txt', size: 20, text: async () => { throw new Error('MOCK_ONLY'); } }),
   (error) => !error.message.includes('MOCK_ONLY'),
 );
-console.log('Access importer: six-key contract, permissions, host, expiry, event, file limits and credential-free errors passed.');
+console.log('Access importer: six/eight-key contracts, optional telemetry isolation, whole-file paste guidance, permissions, host, expiry, event, file limits and credential-free errors passed.');

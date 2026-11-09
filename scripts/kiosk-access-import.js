@@ -1,4 +1,5 @@
 import { validateSettings, parseContainerSAS } from './kiosk-settings.js';
+import { TELEMETRY_FIELDS } from './kiosk-telemetry-config.js';
 
 export const MAX_ACCESS_FILE_BYTES = 16384;
 
@@ -15,7 +16,7 @@ export function parseAccessFile(text) {
   ];
   if (!data || Array.isArray(data) || data.schemaVersion !== 1
     || data.type !== 'glam-kiosk-access'
-    || Object.keys(data).length !== keys.length
+    || Object.keys(data).some((key) => ![...keys, ...TELEMETRY_FIELDS].includes(key))
     || !keys.every((key) => Object.hasOwn(data, key))
     || !['eventPrefix', 'assetContainerSasUrl', 'requestContainerSasUrl', 'expiresAt']
       .every((key) => typeof data[key] === 'string' && data[key].length > 0)
@@ -30,6 +31,8 @@ export function parseAccessFile(text) {
     eventId: data.eventPrefix,
     activationProfile: 'max',
     formType: 'none',
+    ...Object.fromEntries(TELEMETRY_FIELDS.filter((key) => Object.hasOwn(data, key))
+      .map((key) => [key, data[key]])),
   });
   const request = parseContainerSAS(settings.requestSAS, Date.now(), 'create');
   if (Date.parse(data.expiresAt) !== Date.parse(settings.expiresAt)

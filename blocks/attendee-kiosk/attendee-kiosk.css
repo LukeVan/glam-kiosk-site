@@ -139,7 +139,9 @@
 }
 
 body:has(> main > .section:only-child .attendee-kiosk) {
+  min-height: 100vh;
   overflow: hidden;
+  background-color: #000;
 }
 
 body:has(> main > .section:only-child .attendee-kiosk) > header,

@@ -446,6 +446,105 @@ port.
 
 ## Booth Azure settings
 
+### Optional journey telemetry and staff reporting
+
+Telemetry is separate from attendee access. New Creator access exports may add
+`telemetryUploadContainerSasUrl` and `telemetryReadContainerSasUrl`; old six-field
+files still work. Missing, malformed, inactive, or expired telemetry credentials
+do not invalidate core credentials, prevent saving, or show attendee errors.
+Import preserves valid core access independently. A telemetry connection test
+checks read access only and never creates a test blob; failure is staff-only.
+
+Provision a **private** `meow-glam-telemetry` container in the approved storage account.
+Upload access is container SAS `sr=c&sp=c&spr=https`; reports use `sp=rl` (or `lr`),
+with matching expiry, also matching the exported core access expiry. These tokens
+are container-wide, not event/device-scoped. Azure CORS must allow exact booth
+origins, `PUT` and `GET`, and `Content-Type`, `If-None-Match`, `x-ms-blob-type`,
+`x-ms-version`; do not grant overwrite/delete permissions or make the container
+public. This code does not create resources, set CORS, or contact live Azure in
+tests. Use **Test** in Telemetry settings and operator diagnostics after provisioning.
+
+In booth settings, choose one persistent **MAX-01** through **MAX-12** station ID,
+an IANA **event timezone**, and attendee/setup-test mode, then **Save booth
+settings** to save credentials and telemetry preferences together. Invalid telemetry
+preferences are reported to staff without preventing valid core settings from
+being saved; previously saved telemetry preferences are retained on that failure.
+Selecting **Not configured** disables collection by removing the station preferences.
+Reload the kiosk before the next attendee. Without a valid
+pair and station configuration, collection is off. Demo portrait journeys on
+configured kiosks are automatically test-marked. Offline unconfigured demos do
+not collect telemetry. These preferences are independent of appearance/Graph
+preferences and contain no credentials.
+
+The kiosk starts a random, portrait-independent journey on actual photo
+selection, records Finish when the variations Finish action occurs, and records
+completion only after the postcard image loads and its entrance animation
+finishes while the document is visible. Finish or backend request success alone
+is not completion. Final `selectedBrand` is one bounded enum
+(`larocheposay`, `lorealprofessionnel`, `yslbeauty`, `lorealparis`) or null, set after
+successful ad selection. Brand choice is not proof of physical printing.
+Reselection, attendee reset and page departure are separate from completion.
+
+Immutable JSON snapshots use schema version 1 and
+`{event}/telemetry/{stationId}/{randomJourneyId}/{revision}.json`.
+They contain UTC start/update/end and milestone timestamps, elapsed milestone
+times, outcome (`active`, `completed`, `reset`, `interrupted`), test flag, brand,
+and bounded Graph timing fields. They never contain attendee names, portrait/blob
+IDs, image URLs, session IDs, or credentials. Highest revision wins per
+event/station/journey. Lower delayed revisions cannot replace newer local data;
+409/412 uploads are acknowledged only after exact readback of that snapshot.
+
+Graph metrics are **proxies**, not Firefly processing measurements: interstitial
+entry to leaving for ads is cumulative; `hiddenMs` adds observed hidden periods;
+`returnMs` adds observed open/return round trips and `returnCount` counts them.
+Repeated visibility trips accumulate. Unobserved returns remain null, not zero;
+skipping Graph is explicit. Same-document timings use the monotonic clock.
+Reload/bfcache resume preserves the journey and flags timing as `resumed`;
+clock jumps are flagged. Those durations are excluded from summaries rather than
+inventing timings across a restart. UTC milestones remain available. A browser
+crash can leave an active/unclosed journey if no departure event was delivered.
+
+All collection calls are synchronous, exception-contained notifications, never
+awaited by navigation. Loading the optional module, IndexedDB, quota, crypto,
+storage, network, expiry and upload failures cannot block the kiosk or change its
+UI. The durable IndexedDB outbox keeps the latest pending revision per journey,
+up to 500 journeys (8 KiB per snapshot); at most 32 pending persistence operations
+are queued. Capacity/persistence failures are counted, **not claimed lossless**.
+Uploads run serially in batches of four every 30 seconds, after completion/reset
+and on reconnect, with five-second header/body deadlines. Outbox data survives
+reload/offline; credentials are read from current browser settings, never IDB.
+Other-event outbox entries wait until that event is configured again.
+Pagehide writes are best effort; server delivery is never awaited during teardown.
+**Refresh** in Telemetry settings shows pending, persistence/upload failure and
+dropped-snapshot counts. No telemetry errors appear in attendee screens.
+
+Open `/telemetry.html` for the public staff dashboard; data remains Azure-private
+and requires valid same-origin browser-local access. Refresh is manual only.
+Reports deduplicate before applying event/day/station/test/outcome and journey
+start/end filters. Start/end inputs are explicitly UTC; display and day grouping
+use the chosen event timezone. Completed non-test journeys are the default.
+The Spectrum-inspired dashboard uses local vanilla CSS/DOM components, not the
+React Spectrum runtime. KPI cards summarize the current filtered snapshot; a
+brand-share donut and labeled bars show exact counts/percentages, independent
+median-duration bars show observed sample counts, and station/day charts show
+journey volume. Charts do not add unlike timing measures or invent zero samples.
+Expandable data tables retain detailed accessible values and CSV stays available.
+Window/day/station summaries show count, mean, median and nearest-rank p90.
+Brand ranking counts each latest filtered journey once, including unknown choices
+in the percentage denominator. Reset/interrupted journeys are separate filters.
+CSV exports include report scope, incomplete status, UTC milestones and null
+observations. Duration rows exclude resumed/clock-anomalous journeys.
+Each refresh lists at most 20 pages/10,000 snapshot blobs and downloads at most
+500 latest journeys with four bounded requests in parallel; errors/caps are
+prominently **INCOMPLETE / CAPPED**, never described as event-wide statistics.
+
+Offline checks: `node --experimental-default-type=module tests/kiosk-telemetry.mjs`;
+`tests/kiosk-telemetry-browser.cjs`, `tests/kiosk-telemetry-failures-browser.cjs`,
+`tests/kiosk-telemetry-restart-browser.cjs`,
+`tests/kiosk-telemetry-dashboard-browser.cjs` use the same Playwright CLI argument
+as other browser tests. `KIOSK_TELEMETRY=1 node tests/kiosk-ending-browser.cjs <playwright-cli>`
+checks postcard display integration with telemetry uploads failing.
+
 Open `/drafts/kiosk-settings.html` for staff setup (EDS block name:
 `kiosk-settings`). Glam Creator's Kiosk/EDS Access button must generate an HTTPS
 container SAS with exactly read + list permissions and an explicit expiry.

@@ -29,8 +29,12 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     let statusFailed = false;
     const methods = [];
     await page.route('https://ffservices24.blob.core.windows.net/**', async (route) => {
-      methods.push(route.request().method());
       const url = new URL(route.request().url());
+      if (url.pathname.startsWith('/meow-glam-telemetry/')) {
+        await route.fulfill({ status: 503 });
+        return;
+      }
+      methods.push(route.request().method());
       if (url.pathname.includes('/requests-status/')) {
         if (statusFailed) {
           await route.fulfill({ status: 503 });
@@ -83,10 +87,20 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       } else await route.fulfill({ status: 404 });
     });
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
-    await page.evaluate(async ({ settings, printRequest }) => {
+    await page.evaluate(async ({ settings, printRequest, withTelemetry }) => {
       const { saveSettings } = await import('/scripts/kiosk-settings.js');
       const { initialState } = await import('/blocks/attendee-kiosk/state.js');
       saveSettings(localStorage, settings);
+      if (withTelemetry) {
+        localStorage.setItem('glam-kiosk-telemetry-prefs-v1', JSON.stringify({
+          stationId: 'MAX-01', timeZone: 'UTC', isTest: true,
+        }));
+        const { default: createTelemetry } = await import('/scripts/kiosk-telemetry.js');
+        const telemetry = createTelemetry({ eventId: settings.eventId });
+        telemetry.selected();
+        telemetry.brand('lorealprofessionnel');
+        telemetry.finish();
+      }
       sessionStorage.setItem(`glam-attendee-v1:azure:${settings.eventId}`, JSON.stringify({
         ...initialState(),
         stage: 'ending',
@@ -101,8 +115,13 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       settings: {
         version: 1, containerSAS, eventId: 'TestEvent', activationProfile: 'max',
         formType: 'none', appearance: process.env.KIOSK_APPEARANCE || 'light',
+        ...(process.env.KIOSK_TELEMETRY ? {
+          telemetryUploadContainerSasUrl: `https://ffservices24.blob.core.windows.net/meow-glam-telemetry?sv=2023-11-03&sr=c&sp=c&spr=https&se=${encodeURIComponent(expiresAt)}&sig=MOCK_ONLY`,
+          telemetryReadContainerSasUrl: `https://ffservices24.blob.core.windows.net/meow-glam-telemetry?sv=2023-11-03&sr=c&sp=rl&spr=https&se=${encodeURIComponent(expiresAt)}&sig=MOCK_ONLY`,
+        } : {}),
       },
       printRequest: request,
+      withTelemetry: Boolean(process.env.KIOSK_TELEMETRY),
     });
     await page.reload();
     const image = page.locator('.kiosk-print-preview');
@@ -112,6 +131,18 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     await image.evaluate(async (node) => Promise.all(
       node.getAnimations().map((animation) => animation.finished),
     ));
+    if (process.env.KIOSK_TELEMETRY) {
+      await page.evaluate(async () => {
+        const { pendingSnapshots } = await import('/scripts/kiosk-telemetry-store.js');
+        for (let attempt = 0; attempt < 100; attempt += 1) {
+          const records = (await pendingSnapshots()).map((item) => JSON.parse(item.body));
+          if (records.some((item) => item.outcome === 'completed'
+            && item.milestones.postcardUsable && item.isTest)) return;
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        throw new Error('Postcard display did not complete telemetry journey');
+      });
+    }
     assert.equal(await page.locator('.kiosk-ending-media img').count(), 1);
     assert.equal(await page.locator('.kiosk-share-qr, .kiosk-qr-link').count(), 0);
     const imageBox = await image.boundingBox();
