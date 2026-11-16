@@ -66,7 +66,7 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
       assert.equal(await page.locator('.kiosk-ad-grid img').count(), 4);
       await stage('variations', person, index);
       await page.locator('.kiosk-variation img').first().waitFor();
-      const count = index === 1 ? 23 : 9;
+      const count = 1;
       assert.equal(await page.locator('.kiosk-variation img').evaluateAll(
         (images) => new Set(images.map((image) => image.src)).size,
       ), count);

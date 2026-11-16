@@ -157,9 +157,10 @@ container SAS access to Graph or bypass the live signed-portrait validator.
 The workflow example uses the selected demo brand's cutout and first rendition.
 Without booth settings, demo-mode kiosks use the packaged Sarah, Tina and Greg
 snapshot at `assets/offline-demos/catalog.json`, not the old Person2/3/5 fixtures.
-All 189 media files are same-origin static assets (about 45.8 MiB total):
-each person has a portrait, four ads, four cutouts, 50 variations and four static
-print previews. The snapshot contains the approved AI people only and requires
+All 51 current media files are same-origin static assets (about 36.9 MiB total):
+each person has a portrait, four ads, four cutouts, four single-page variation
+renders (one per brand) and four static print previews.
+The snapshot contains the approved AI people only and requires
 no Azure credentials, calls, generation or fulfillment. Both offline activation
 mappings intentionally use their available MAX square versions.
 The picker, story thumbnails, ads, variations, workflow popout and static endings
@@ -167,6 +168,19 @@ read this package. Start over on the ending clears its isolated
 `glam-attendee-v1:offline-demo` session. Missing/invalid packages show an error rather
 than silently substituting the old people. Refresh keeps a journey on the loaded
 catalog snapshot; restarting the page reads an updated package.
+
+Creator's **Generate new version** and **Publish catalog** update Azure, not this
+bundled package. To refresh the credential-free demo, copy the approved completed
+versions into new `assets/offline-demos/{person}/{set}/{version}/` paths and update
+`assets/offline-demos/catalog.json` to those exact versions. Each brand must reference
+its new single-page `variations/{brand}/page_1.jpg`, not the previous individual
+renditions. Export the version-matched cutouts and hashes to
+`assets/permanent-demo-cutouts/` and its index as well, so Graph handoffs remain
+compatible. Run `python3 tools/build-demo-print.py` to refresh the public-QR print
+previews from the new package. Keep credentials and signed URLs out of all exports.
+Run `node --experimental-default-type=module tests/kiosk-offline-demos.mjs` and the
+single-page browser check before deploying. Website deployment is still required;
+publishing only the Azure catalog cannot update a browser using the bundled demo.
 
 This is an Azure-independent demo package, not a browser offline cache/PWA.
 It runs from a local static server with external network access blocked.
