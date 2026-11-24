@@ -707,6 +707,21 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   font: inherit;
 }
 
+.attendee-kiosk .kiosk-marketo-form .mktoField:focus-visible {
+  outline-offset: -3px;
+}
+
+.attendee-kiosk .kiosk-marketo-form select.mktoField {
+  padding-right: 32px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #333 50%),
+    linear-gradient(135deg, #333 50%, transparent 50%);
+  background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px;
+}
+
 .attendee-kiosk .kiosk-marketo-form .mktoFormCol,
 .attendee-kiosk .kiosk-marketo-form .mktoFieldWrap {
   float: none !important;
@@ -2398,7 +2413,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo h2 {
   max-width: none;
   margin-bottom: 12px;
-  font-size: clamp(48px, 5vw, 72px);
+  font-size: clamp(54px, 5.2vw, 78px);
 }
 
 .attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo > p {

@@ -132,6 +132,17 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
           await field.scrollIntoViewIfNeeded();
           await field.click({ trial: true });
         }
+        await wrapper.locator('[name="FirstName"]').focus();
+        const focusStyle = await wrapper.locator('[name="FirstName"]').evaluate((field) => ({
+          width: parseFloat(getComputedStyle(field).outlineWidth),
+          offset: parseFloat(getComputedStyle(field).outlineOffset),
+        }));
+        assert(focusStyle.width >= 3 && focusStyle.offset <= -focusStyle.width, 'Focus outline must remain visible inside the field');
+        if (process.env.KIOSK_SCREENSHOT_DIR && viewport.width === 834 && appearance === 'light') {
+          await page.screenshot({
+            path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'marketo-focused-field.png'),
+          });
+        }
         const submit = page.getByRole('button', { name: 'Submit', exact: true });
         assert(await submit.isDisabled(), 'Consent must gate native submission');
         await page.locator('.kiosk-consent input').check();
