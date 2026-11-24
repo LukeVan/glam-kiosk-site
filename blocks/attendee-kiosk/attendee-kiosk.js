@@ -23,6 +23,7 @@ import { readPublicDemo } from './public-demo.js';
 import { BANNER_BRANDS } from './banner-assets.js';
 import { markCompleted } from './completed.js';
 import renderVariations, { sampleVariations } from './variations.js';
+import requestKioskAccess from './access-gate.js';
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -55,11 +56,7 @@ function appendLinkedText(container, value, urlText) {
   });
 }
 
-export default async function decorate(block) {
-  const authoredMode = [...block.children].find((row) => (
-    row.children[0]?.textContent.trim().toLowerCase() === 'mode'
-  ))?.children[1]?.textContent.trim();
-  block.replaceChildren();
+async function startKiosk(block, authoredMode) {
   let config;
   try {
     config = readConfig(authoredMode, window.GLAM_KIOSK_CONFIG);
@@ -1649,4 +1646,24 @@ export default async function decorate(block) {
     }
   });
   await render();
+}
+
+export default function decorate(block) {
+  const authoredMode = [...block.children].find((row) => (
+    row.children[0]?.textContent.trim().toLowerCase() === 'mode'
+  ))?.children[1]?.textContent.trim();
+  block.replaceChildren();
+  function showAccessError(error) {
+    const message = element('p', `Kiosk could not start: ${error.message}`, 'kiosk-startup-error');
+    message.setAttribute('role', 'alert');
+    block.append(message);
+  }
+  try {
+    const access = requestKioskAccess(block);
+    if (!access) return startKiosk(block, authoredMode);
+    access.then(() => startKiosk(block, authoredMode)).catch(showAccessError);
+  } catch (error) {
+    showAccessError(error);
+  }
+  return undefined;
 }

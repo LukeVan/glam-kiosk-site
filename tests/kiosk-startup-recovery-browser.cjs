@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -39,6 +40,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
         .replace('</body>', '<footer></footer></body>'),
     }));
     await page.goto('http://localhost:3017/max2026.html');
+    await grantTestAccess(page);
     const seed = async (settings) => {
       await page.evaluate(async (value) => {
         const { initialState } = await import('/blocks/attendee-kiosk/state.js');

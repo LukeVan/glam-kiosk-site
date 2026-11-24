@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 'utf8'));
 
 (async () => {
@@ -32,6 +33,7 @@ const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 
     });
     const page = await context.newPage();
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await grantTestAccess(page);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-booth-v1')), null);
     async function stage(value, person, brandIndex = 0) {
       await page.evaluate(async ({ value, id, brandIndex }) => {

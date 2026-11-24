@@ -3,6 +3,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -52,6 +53,7 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
       }
     });
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await grantTestAccess(page);
     await page.evaluate(async ({ assetSAS, portraitId }) => {
       const { saveSettings } = await import('/scripts/kiosk-settings.js');
       const { initialState } = await import('/blocks/attendee-kiosk/state.js');

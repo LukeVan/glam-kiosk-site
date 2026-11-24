@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -938,6 +939,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     const demo = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     await demo.emulateMedia({ reducedMotion: 'reduce' });
     await demo.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await grantTestAccess(demo);
+    await demo.reload();
     await demo.locator('.kiosk-consent input').check();
     await demo.locator('.kiosk-print').click();
     await demo.locator('.kiosk-demo-card').first().waitFor();

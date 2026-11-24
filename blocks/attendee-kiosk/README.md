@@ -14,6 +14,18 @@ It uses the same kiosk configuration and origin-scoped booth settings as
 `/drafts/attendee-kiosk.html`, which remains available for existing bookmarks.
 The settings page's **Open kiosk** link uses the clean entry page.
 
+### Kiosk access prompt
+
+The kiosk asks for a shared password when no locally valid booth access is
+saved. Successful entry lasts for the browser tab session and survives refresh
+and attendee restart. A saved booth configuration whose SAS values pass local
+validation and have not expired skips the prompt; this does not verify whether
+Azure has revoked access. The settings and download pages remain available.
+
+This is a casual browser-side deterrent, not security: the verifier and kiosk
+assets are public and the prompt can be bypassed. Do not rely on it to protect
+private content. Real access control requires server-side authentication.
+
 ### Importing booth access from Glam Creator
 
 In `/drafts/kiosk-settings.html`, drop the exported access `.txt` file into

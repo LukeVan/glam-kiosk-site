@@ -2,12 +2,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
     await page.goto('http://localhost:3017/max2026.html');
+    await grantTestAccess(page);
     await page.evaluate(async () => {
       const { initialState } = await import('/blocks/attendee-kiosk/state.js');
       localStorage.removeItem('glam-kiosk-booth-v1');

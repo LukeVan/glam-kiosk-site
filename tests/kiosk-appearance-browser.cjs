@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -24,6 +25,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     });
     const page = await context.newPage();
     await page.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await grantTestAccess(page);
+    await page.reload();
     await page.waitForFunction(() => document.querySelector('.attendee-kiosk')?.dataset.appearance === 'dark');
     for (const viewport of [
       { width: 2560, height: 1440 },
@@ -256,6 +259,8 @@ const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv
     });
     const offline = await offlineContext.newPage();
     await offline.goto('http://localhost:3017/drafts/attendee-kiosk.html');
+    await grantTestAccess(offline);
+    await offline.reload();
     await offline.locator('.attendee-kiosk[data-appearance="dark"]').waitFor();
     const offlineSettings = await offlineContext.newPage();
     await offlineSettings.route('**/drafts/kiosk-settings.html', (route) => route.fulfill({

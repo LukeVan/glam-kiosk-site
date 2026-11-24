@@ -297,6 +297,49 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   font-size: 20px;
 }
 
+.attendee-kiosk .kiosk-access-gate {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-self: center;
+  gap: 16px;
+  width: min(520px, calc(100% - 48px));
+  margin: auto;
+  padding: 32px;
+  border-radius: 20px;
+  background: #fff;
+  color: #1a1a1a;
+}
+
+.attendee-kiosk .kiosk-access-gate h2,
+.attendee-kiosk .kiosk-access-gate p {
+  margin: 0;
+}
+
+.attendee-kiosk .kiosk-access-gate label {
+  display: grid;
+  gap: 8px;
+}
+
+.attendee-kiosk .kiosk-access-gate input {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid #767676;
+  border-radius: 6px;
+  color: #1a1a1a;
+  font: inherit;
+}
+
+.attendee-kiosk .kiosk-access-gate [role="alert"]:empty {
+  display: none;
+}
+
+.attendee-kiosk .kiosk-access-gate a {
+  color: #054ada;
+}
+
 .attendee-kiosk .kiosk-tools .kiosk-language {
   display: flex;
   align-items: center;

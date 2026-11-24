@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { chromium } = require(path.join(path.dirname(fs.realpathSync(process.argv[2])), 'index.js'));
+const grantTestAccess = require('./kiosk-test-access.cjs');
 
 const catalog = JSON.parse(fs.readFileSync('assets/offline-demos/catalog.json', 'utf8'));
 const baseURL = process.env.KIOSK_BASE_URL || 'http://localhost:3017';
@@ -39,6 +40,7 @@ const baseURL = process.env.KIOSK_BASE_URL || 'http://localhost:3017';
       assert(Math.abs(bounds.offset - (bounds.available - bounds.width) / 2) < 1);
     }
     await page.goto(`${baseURL}/drafts/attendee-kiosk.html`);
+    await grantTestAccess(page);
     assert.equal(await page.evaluate(() => localStorage.getItem('glam-kiosk-booth-v1')), null);
     let checked = 0;
     for (const person of catalog.people) {
