@@ -80,7 +80,7 @@ function formSpec(id, signal) {
 function cleanFields(formElement) {
   formElement.querySelectorAll('.mktoFormRow').forEach((row) => {
     const fields = [...row.querySelectorAll('input:not([type="hidden"]), select, textarea')];
-    if (!fields.length || fields.some((field) => FIELDS.has(field.name))) return;
+    if (fields.some((field) => FIELDS.has(field.name))) return;
     row.style.setProperty('display', 'none', 'important');
     row.classList.remove('mktoRequiredField');
     fields.forEach((field) => {

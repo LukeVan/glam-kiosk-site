@@ -664,6 +664,9 @@ event ID and `LOREAL` activation. With no Azure event configured, the event ID i
 blank. Existing native Marketo validation and success confirmation apply.
 Real CRM delivery and the hosted-browser success callback require owner
 validation; no synthetic browser test submits a lead.
+The current public form supplies first name, last name, email and country; its
+original kiosk template hides company, and neither current public form spec
+provides a company field.
 Total block assets are about 8 MB.
 
 The kiosk author must publish corresponding DA.live content at the agreed page

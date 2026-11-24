@@ -665,6 +665,19 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 /* stylelint-disable selector-class-pattern */
 .attendee-kiosk .kiosk-marketo-form .mktoForm {
   width: 100% !important;
+  opacity: 1 !important;
+  color: inherit !important;
+}
+
+.attendee-kiosk .kiosk-marketo-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0 !important;
+  border: 0;
+}
+
+.attendee-kiosk .kiosk-marketo-form fieldset legend {
+  display: none;
 }
 
 .attendee-kiosk .kiosk-marketo-form .mktoFormRow {
@@ -673,14 +686,17 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 
 .attendee-kiosk .kiosk-marketo-form .mktoLabel {
   display: block;
+  float: none !important;
   width: auto !important;
   margin-bottom: 3px;
+  color: inherit !important;
   font-size: 14px;
   font-weight: 700;
 }
 
 .attendee-kiosk .kiosk-marketo-form .mktoField {
   box-sizing: border-box;
+  float: none !important;
   width: 100% !important;
   min-height: 40px;
   padding: 8px;
@@ -694,7 +710,8 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 .attendee-kiosk .kiosk-marketo-form .mktoFormCol,
 .attendee-kiosk .kiosk-marketo-form .mktoFieldWrap {
   float: none !important;
-  width: 100%;
+  width: 100% !important;
+  max-width: 100%;
 }
 
 .attendee-kiosk .kiosk-marketo-form .mktoButtonRow,
@@ -704,6 +721,14 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   display: none;
 }
 /* stylelint-enable selector-class-pattern */
+
+@media (800px < width < 1920px) {
+  .attendee-kiosk:has(.kiosk-welcome-with-marketo) {
+    width: 100vw;
+    height: min(1080px, 100vh);
+    margin-inline: calc(50% - 50vw);
+  }
+}
 
 .attendee-kiosk .kiosk-panel-portraits {
   display: grid;
