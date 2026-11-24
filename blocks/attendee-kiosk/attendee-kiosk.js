@@ -12,8 +12,8 @@ import {
 import copy from './copy.js';
 import { createPrintRequest, createPreparation } from './fulfillment.js';
 import {
-  APPEARANCE_KEY, GRAPH_VIEW_KEY, SETTINGS_KEY, blobURL, loadAppearance, loadGraphView,
-  loadSettings,
+  APPEARANCE_KEY, GRAPH_VIEW_KEY, LEAD_CAPTURE_KEY, SETTINGS_KEY, blobURL,
+  loadAppearance, loadGraphView, loadLeadCapture, loadSettings,
 } from '../../scripts/kiosk-settings.js';
 import { loadCSS } from '../../scripts/aem.js';
 import { darkLockup, darkNameLens } from './dark-artwork.js';
@@ -78,6 +78,8 @@ export default async function decorate(block) {
     api = createAzureAPI(createAPI({ ...config, mode: 'demo' }), window.localStorage)
       || (config.mode === 'demo' ? createOfflineDemoAPI() : createAPI(config));
     if (api.source === 'azure') boothSettings = api.settings();
+    const defaultIntake = boothSettings?.formType || (config.intakeEnabled ? 'marketo' : 'none');
+    config.intakeEnabled = loadLeadCapture(window.localStorage, defaultIntake) === 'marketo';
     appearance = loadAppearance(window.localStorage, boothSettings?.appearance || 'dark');
     graphView = loadGraphView(window.localStorage);
   } catch (error) {
@@ -142,8 +144,6 @@ export default async function decorate(block) {
     });
     return;
   }
-  if (api.source === 'azure') config.intakeEnabled = api.intakeEnabled;
-  if (api.source === 'offline-demo') config.intakeEnabled = false;
   let telemetry = {};
   if (api.source === 'azure') {
     import('../../scripts/kiosk-telemetry.js').then(({ default: createTelemetry }) => {
@@ -633,30 +633,77 @@ export default async function decorate(block) {
     checkbox.type = 'checkbox';
     checkbox.checked = state.consent;
     checkbox.required = true;
-    const print = button(text().startWorkflow, () => {
-      if (!checkbox.reportValidity() || config.intakeEnabled) return;
-      move('portraits');
+    let marketo;
+    let intakeStatus;
+    let submitting = false;
+    const print = button(config.intakeEnabled ? text().intakeSubmit : text().startWorkflow, () => {
+      if (!checkbox.reportValidity()) return;
+      if (!config.intakeEnabled) { move('portraits'); return; }
+      if (!marketo || submitting) return;
+      try { marketo.submit(); } catch {
+        intakeStatus.textContent = text().intakeBlocked;
+        intakeStatus.setAttribute('role', 'alert');
+        print.disabled = true;
+      }
     }, !state.consent || config.intakeEnabled);
     print.className = 'kiosk-print';
     checkbox.addEventListener('change', () => {
       try {
         persist({ ...state, consent: checkbox.checked });
-        print.disabled = !checkbox.checked || config.intakeEnabled;
+        print.disabled = !checkbox.checked || (config.intakeEnabled && (!marketo || submitting));
         if (!print.disabled) print.focus();
       } catch (error) { fail(error); }
     });
     label.append(checkbox, element('span', text().consent));
     const actions = element('div', '', 'kiosk-intro-actions');
     actions.append(print);
-    content.append(
-      consentItems,
-      legal,
-      label,
-      actions,
-    );
+    content.append(consentItems, legal);
     if (config.intakeEnabled) {
-      content.append(element('p', text().intakeBlocked, 'kiosk-intake-note'));
+      content.classList.add('kiosk-welcome-with-marketo');
+      const { signal } = controller;
+      const wrapper = element('div', '', 'kiosk-marketo-form');
+      wrapper.setAttribute('aria-busy', 'true');
+      intakeStatus = element('p', text().intakeLoading, 'kiosk-intake-note');
+      intakeStatus.setAttribute('role', 'status');
+      content.append(wrapper, intakeStatus);
+      import('./marketo.js').then(({ default: mountMarketo }) => mountMarketo(wrapper, {
+        eventId: api.eventId || '',
+        signal,
+        consent: () => checkbox.checked,
+        onSubmitting: () => {
+          submitting = true;
+          print.disabled = true;
+          checkbox.disabled = true;
+          intakeStatus.textContent = text().intakeSubmitting;
+          const submissionTimer = setTimeout(() => {
+            intakeStatus.textContent = text().intakeUnconfirmed;
+            intakeStatus.setAttribute('role', 'alert');
+          }, 30000);
+          signal.addEventListener('abort', () => clearTimeout(submissionTimer), { once: true });
+        },
+        onSuccess: (values) => {
+          const first = typeof values?.FirstName === 'string' ? values.FirstName.trim() : '';
+          const last = typeof values?.LastName === 'string' ? values.LastName.trim() : '';
+          const email = typeof values?.Email === 'string' ? values.Email : '';
+          const name = (`${first} ${last}`.trim() || email.split('@')[0] || 'Guest').slice(0, 80);
+          move('portraits', { name });
+        },
+      })).then((instance) => {
+        if (signal.aborted) return;
+        marketo = instance;
+        wrapper.removeAttribute('aria-busy');
+        intakeStatus.textContent = '';
+        print.disabled = !checkbox.checked;
+      }).catch((error) => {
+        if (error.name === 'AbortError') return;
+        if (signal.aborted) return;
+        wrapper.replaceChildren();
+        wrapper.removeAttribute('aria-busy');
+        intakeStatus.textContent = text().intakeBlocked;
+        intakeStatus.setAttribute('role', 'alert');
+      });
     }
+    content.append(label, actions);
     panel.append(hero, content);
   }
   async function confirmName(signal) {
@@ -1370,7 +1417,7 @@ export default async function decorate(block) {
         const next = button(
           text().next,
           () => move('name', {
-            name: '',
+            name: config.intakeEnabled ? state.name : '',
             selectedAdId: null,
             sessionId: null,
             printRequest: null,
@@ -1389,7 +1436,7 @@ export default async function decorate(block) {
               persist({
                 ...state,
                 portraitId: item.id,
-                name: '',
+                name: config.intakeEnabled ? state.name : '',
                 selectedAdId: null,
                 sessionId: null,
                 printRequest: null,
@@ -1598,6 +1645,12 @@ export default async function decorate(block) {
     if (stage) move(stage === 'banners' && state.printRequest ? 'ending' : stage);
   });
   window.addEventListener('storage', (event) => {
+    if (event.key === LEAD_CAPTURE_KEY) {
+      controller?.abort();
+      clearTimeout(timer);
+      fail(new Error(text().boothChanged));
+      return;
+    }
     if (event.key === GRAPH_VIEW_KEY || event.key === null) {
       try {
         graphView = loadGraphView(window.localStorage);

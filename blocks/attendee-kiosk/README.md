@@ -637,16 +637,33 @@ The footer identifies the configured event; demo portrait badges are hidden in t
 Demo samples can run without Azure connectivity, but a selected real portrait
 requires its own assets. Azure banners remain unavailable. Print and QR require
 the new request container and running Glam Creator worker described below. Saved
-Marketo preference explicitly blocks intake until the approved integration is
-available; it does not fake success. Changing or clearing booth settings in
+Marketo preference enables the registration form on the welcome screen. Changing
+or clearing booth settings in
 another tab interrupts the shell and asks for a reload.
 Kiosk shell images cannot be dragged; this prevents accidental dragging, not
 screenshots or retrieving images already delivered to a browser.
 
 The welcome button is disabled until the attendee checks consent, then turns blue.
-Clicking it advances to portrait selection; it does not create a print job or
-file. An enabled intake integration continues to block progression until its
-approved adapter is available.
+With lead capture off, clicking it advances to portrait selection; it does not
+create a print job or file. With Marketo enabled, the welcome form requires
+consent and advances only on Marketo's native success callback. A form loading
+failure or unconfirmed submission blocks advancement and asks staff for help;
+an unconfirmed submission may already have been received, so do not blindly retry.
+Successful registration carries the attendee's name into name entry; email and
+company are not saved in kiosk session state. The form clears personal prefills
+for each new attendee.
+
+The **Lead capture** selector in booth settings saves independently on this
+browser, even when Azure access has not been configured. It defaults to off for
+offline demos; an existing Azure `formType` remains the fallback until an
+independent preference is set. Changing the setting requires reloading the kiosk
+before the next attendee. Clearing booth settings also clears this preference.
+When enabled, the form loads Adobe's Marketo library and base form 2277, submits
+as program 4040 using munchkin ID 360-KCI-804, and attributes the configured booth
+event ID and `LOREAL` activation. With no Azure event configured, the event ID is
+blank. Existing native Marketo validation and success confirmation apply.
+Real CRM delivery and the hosted-browser success callback require owner
+validation; no synthetic browser test submits a lead.
 Total block assets are about 8 MB.
 
 The kiosk author must publish corresponding DA.live content at the agreed page
@@ -671,8 +688,8 @@ to demo. Supported fields:
   `/coworker/index.html#/loreal/home` instead of Awesome hosting.
   Local HTTP is permitted only for `localhost` and `127.0.0.1`.
 - `graph`: explicit `enabled` flag and supplied HTTPS `url`.
-- `intake.enabled`: optional; when true, welcome progression is blocked because
-  no verified Marketo adapter exists yet.
+- `intake.enabled`: optional fallback for enabling Marketo when no saved booth
+  or independent lead-capture setting exists; defaults to false.
 
 Provision runtime config through an owner-approved mechanism; do not store JWTs
 or other credentials in Git, DA.live content, local fixtures or sessionStorage.

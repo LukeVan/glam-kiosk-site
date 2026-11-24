@@ -1,6 +1,18 @@
 export const SETTINGS_KEY = 'glam-kiosk-booth-v1';
 export const APPEARANCE_KEY = 'glam-kiosk-appearance-v1';
 export const GRAPH_VIEW_KEY = 'glam-kiosk-graph-view-v1';
+export const LEAD_CAPTURE_KEY = 'glam-kiosk-lead-capture-v1';
+
+export function loadLeadCapture(storage, fallback = 'none') {
+  const value = storage.getItem(LEAD_CAPTURE_KEY) ?? fallback;
+  if (!['none', 'marketo'].includes(value)) throw new Error('Saved lead capture setting is invalid. Choose None or Marketo in booth settings.');
+  return value;
+}
+
+export function saveLeadCapture(storage, value) {
+  if (!['none', 'marketo'].includes(value)) throw new Error('Choose None or Marketo for lead capture.');
+  storage.setItem(LEAD_CAPTURE_KEY, value);
+}
 
 export function loadGraphView(storage) {
   const value = storage.getItem(GRAPH_VIEW_KEY) ?? 'capsule';
@@ -142,6 +154,7 @@ export function clearSettings(storage) {
   storage.removeItem(SETTINGS_KEY);
   storage.removeItem(APPEARANCE_KEY);
   storage.removeItem(GRAPH_VIEW_KEY);
+  storage.removeItem(LEAD_CAPTURE_KEY);
 }
 
 export async function listBlobs(containerSAS, {

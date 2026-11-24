@@ -1,6 +1,7 @@
 import {
   SETTINGS_KEY, parseContainerSAS, listEvents, loadSettings, saveSettings, clearSettings,
   loadAppearance, saveAppearance, loadGraphView, saveGraphView,
+  LEAD_CAPTURE_KEY, loadLeadCapture, saveLeadCapture,
 } from '../../scripts/kiosk-settings.js';
 import { readAccessFile } from '../../scripts/kiosk-access-import.js';
 import {
@@ -92,7 +93,7 @@ export default function decorate(block) {
   graphView.append(new Option('New capsule', 'capsule'));
   const intake = field('Lead capture', node('select'));
   intake.append(new Option('None / separate handheld scanners', 'none'));
-  intake.append(new Option('Marketo (integration requires owner validation)', 'marketo'));
+  intake.append(new Option('Marketo registration', 'marketo'));
   const requests = field('Request container SAS URL (create only)', node('input'));
   requests.type = 'password';
   requests.autocomplete = 'off';
@@ -175,7 +176,7 @@ export default function decorate(block) {
   details.append(
     node('summary', 'Access and processing notes'),
     warning,
-    node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo still requires its approved integration. Open kiosk uses saved settings, not unsaved edits.'),
+    node('p', 'Glam Creator always renders all four personalized templates for download. Only the chosen print files enter fulfillment. Request access permits creation anywhere in its dedicated container; keep it private. Saving validates its format, not live write permissions. Leave it empty to disable submission. Marketo registration requires a confirmed submission. Open kiosk uses saved settings, not unsaved edits.'),
   );
   form.append(details);
   const actions = node('div', '', 'kiosk-settings-actions');
@@ -208,6 +209,12 @@ export default function decorate(block) {
     try {
       saveGraphView(window.localStorage, graphView.value);
       report('Graph view saved. Open kiosk tabs update immediately. Reopen Graph from Coworker to use the selected view.');
+    } catch (error) { report(error.message, true); }
+  });
+  intake.addEventListener('change', () => {
+    try {
+      saveLeadCapture(window.localStorage, intake.value);
+      report('Lead capture setting saved on this browser. Reload the kiosk before the next attendee.');
     } catch (error) { report(error.message, true); }
   });
   function invalidate() {
@@ -366,6 +373,13 @@ export default function decorate(block) {
     }
   });
   window.addEventListener('storage', (change) => {
+    if (change.key === LEAD_CAPTURE_KEY) {
+      try {
+        intake.value = loadLeadCapture(window.localStorage);
+        report('Lead capture changed in another tab. Reload the kiosk before the next attendee.');
+      } catch (error) { report(error.message, true); }
+      return;
+    }
     if (change.key !== SETTINGS_KEY && change.key !== null) return;
     invalidate();
     form.reset();
@@ -404,5 +418,6 @@ export default function decorate(block) {
   try {
     appearance.value = loadAppearance(window.localStorage, appearance.value);
     graphView.value = loadGraphView(window.localStorage);
+    intake.value = loadLeadCapture(window.localStorage, intake.value);
   } catch (error) { report(error.message, true); }
 }
