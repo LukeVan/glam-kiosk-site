@@ -13,8 +13,10 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
   try {
     for (const viewport of [
       { width: 390, height: 844 },
+      { width: 600, height: 1000 },
       { width: 763, height: 1053 },
       { width: 834, height: 1038 },
+      { width: 1280, height: 900 },
       { width: 1920, height: 1080 },
     ]) {
       for (const appearance of ['light', 'dark']) {
@@ -84,6 +86,13 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
             contentClientWidth: content.clientWidth,
             pageScrollWidth: document.documentElement.scrollWidth,
             pageClientWidth: document.documentElement.clientWidth,
+            contentScrollHeight: content.scrollHeight,
+            contentClientHeight: content.clientHeight,
+            heading: rect(content.querySelector('h2')),
+            headingLineHeight: parseFloat(getComputedStyle(content.querySelector('h2')).lineHeight),
+            intro: rect(content.querySelector(':scope > p')),
+            disclosures: rect(content.querySelector('.kiosk-consent-items')),
+            submit: rect(content.querySelector('.kiosk-intro-actions button')),
             controls,
             consent: rect(document.querySelector('.kiosk-consent')),
           };
@@ -94,25 +103,34 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
         assert(dimensions.contentScrollWidth <= dimensions.contentClientWidth + 1, 'Content must not scroll horizontally');
         assert(dimensions.pageScrollWidth <= dimensions.pageClientWidth + 1, 'Page must not scroll horizontally');
         assert(dimensions.controls[0].top - dimensions.form.top < 80, 'First field must start near top of form');
-        assert(dimensions.consent.top - dimensions.controls.at(-1).bottom >= 0, 'Consent must not overlap the last field');
-        assert(dimensions.consent.top - dimensions.controls.at(-1).bottom < 100, 'No large gap before consent');
+        assert(dimensions.intro.bottom <= dimensions.form.top, 'Form must follow the introduction');
+        assert(dimensions.form.bottom <= dimensions.disclosures.top, 'Disclosures must follow the form');
+        assert(dimensions.disclosures.bottom <= dimensions.consent.top, 'Consent must follow the disclosures');
+        if (viewport.width >= 600) {
+          assert(Math.abs(dimensions.controls[0].top - dimensions.controls[1].top) < 1, 'Name fields must share a row');
+          assert(dimensions.controls[0].right < dimensions.controls[1].left, 'Name fields must not overlap');
+          assert(dimensions.heading.height <= dimensions.headingLineHeight * 2 + 1, 'Headline must fit on two lines');
+          assert(dimensions.contentScrollHeight <= dimensions.contentClientHeight + 1, `Welcome content must fit without scrolling: ${dimensions.contentScrollHeight}/${dimensions.contentClientHeight}`);
+          assert(dimensions.heading.top >= 0 && dimensions.submit.bottom <= viewport.height, 'Welcome content must fit the viewport');
+          if (viewport.width <= 800) assert(dimensions.heading.top >= 170, 'Headline must clear the dark header notch');
+        }
+        if (process.env.KIOSK_SCREENSHOT_DIR) {
+          await page.screenshot({
+            path: path.join(process.env.KIOSK_SCREENSHOT_DIR, `marketo-layout-${viewport.width}-${appearance}.png`),
+          });
+        }
         for (const [index, control] of dimensions.controls.entries()) {
           assert(control.width >= 180 && control.height >= 40, `${control.name} must be usable`);
           assert(control.left >= 0 && control.right <= viewport.width + 1, `${control.name} must fit the viewport`);
           assert.equal(control.opacity, '1');
           assert.equal(control.labelColor, appearance === 'dark' ? 'rgb(255, 255, 255)' : 'rgb(26, 26, 26)');
-          if (index) {
+          if (index && !(index === 1 && viewport.width >= 600)) {
             const gap = control.top - dimensions.controls[index - 1].bottom;
             assert(gap >= 0 && gap < 80, `Unexpected gap before ${control.name}`);
           }
           const field = wrapper.locator(`[name="${control.name}"]`);
           await field.scrollIntoViewIfNeeded();
           await field.click({ trial: true });
-        }
-        if (process.env.KIOSK_SCREENSHOT_DIR) {
-          await page.screenshot({
-            path: path.join(process.env.KIOSK_SCREENSHOT_DIR, `marketo-layout-${viewport.width}-${appearance}.png`),
-          });
         }
         const submit = page.getByRole('button', { name: 'Submit', exact: true });
         assert(await submit.isDisabled(), 'Consent must gate native submission');
@@ -131,6 +149,27 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
         assert.deepEqual(submissions, [], 'No real lead may be submitted');
         assert.deepEqual(errors, []);
         console.log(`Real Marketo layout passed: ${viewport.width}x${viewport.height} ${appearance}`);
+        if (viewport.width >= 600 && appearance === 'light') {
+          await page.locator('.kiosk-language-option[aria-label="Passer en français"]')
+            .evaluate((toggle) => toggle.click());
+          await page.waitForFunction(() => {
+            const node = document.querySelector('.kiosk-marketo-form');
+            return node && !node.hasAttribute('aria-busy')
+              && document.querySelector('.kiosk-welcome-content h2')?.textContent.includes('beauté');
+          }, null, { timeout: 40000 });
+          const french = await page.locator('.kiosk-welcome-content').evaluate((node) => ({
+            scrollHeight: node.scrollHeight,
+            clientHeight: node.clientHeight,
+            submitBottom: node.querySelector('.kiosk-intro-actions button').getBoundingClientRect().bottom,
+          }));
+          assert(french.scrollHeight <= french.clientHeight + 1, `French content must fit without scrolling: ${french.scrollHeight}/${french.clientHeight}`);
+          assert(french.submitBottom <= viewport.height, 'French submit must fit the viewport');
+          if (process.env.KIOSK_SCREENSHOT_DIR) {
+            await page.screenshot({
+              path: path.join(process.env.KIOSK_SCREENSHOT_DIR, `marketo-layout-${viewport.width}-fr.png`),
+            });
+          }
+        }
         await context.close();
       }
     }

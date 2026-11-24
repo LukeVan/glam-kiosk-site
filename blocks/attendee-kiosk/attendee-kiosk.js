@@ -657,7 +657,6 @@ export default async function decorate(block) {
     label.append(checkbox, element('span', text().consent));
     const actions = element('div', '', 'kiosk-intro-actions');
     actions.append(print);
-    content.append(consentItems, legal);
     if (config.intakeEnabled) {
       content.classList.add('kiosk-welcome-with-marketo');
       const { signal } = controller;
@@ -703,7 +702,7 @@ export default async function decorate(block) {
         intakeStatus.setAttribute('role', 'alert');
       });
     }
-    content.append(label, actions);
+    content.append(consentItems, legal, label, actions);
     panel.append(hero, content);
   }
   async function confirmName(signal) {

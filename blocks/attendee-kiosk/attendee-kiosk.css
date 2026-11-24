@@ -681,7 +681,7 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 }
 
 .attendee-kiosk .kiosk-marketo-form .mktoFormRow {
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .attendee-kiosk .kiosk-marketo-form .mktoLabel {
@@ -2393,4 +2393,117 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
 /* A color-scheme mismatch with the embedded document paints an opaque backdrop. */
 .attendee-kiosk.kiosk-graph-hold .kiosk-frame-slot iframe {
   color-scheme: light;
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo h2 {
+  max-width: none;
+  margin-bottom: 12px;
+  font-size: clamp(48px, 5vw, 72px);
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo > p {
+  margin-bottom: 14px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo > .kiosk-intake-note {
+  margin: 4px 0 10px;
+  font-size: 14px;
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo > .kiosk-intake-note:empty {
+  display: none;
+}
+
+.attendee-kiosk .kiosk-welcome-with-marketo .kiosk-consent-items {
+  margin: 8px 0 10px;
+  padding-left: 18px;
+}
+
+.attendee-kiosk .kiosk-welcome-with-marketo .kiosk-consent-items li {
+  padding: 1px 0;
+  line-height: 1.3;
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo .kiosk-consent {
+  min-height: 44px;
+  margin-bottom: 10px;
+  padding: 6px 12px;
+}
+
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo .kiosk-intro-actions button {
+  min-height: 48px;
+}
+
+/* stylelint-disable selector-class-pattern */
+.attendee-kiosk .kiosk-marketo-form .mktoFormCol {
+  margin-bottom: 0 !important;
+}
+
+@media (width >= 600px) {
+  .attendee-kiosk .kiosk-marketo-form fieldset:has([name="FirstName"]):has([name="LastName"]) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+  }
+
+  .attendee-kiosk .kiosk-welcome-with-marketo {
+    width: min(720px, 90%);
+  }
+}
+/* stylelint-enable selector-class-pattern */
+
+@media (600px <= width < 1200px) {
+  .attendee-kiosk .kiosk-panel-welcome:has(.kiosk-welcome-with-marketo) .kiosk-hero {
+    display: none;
+  }
+}
+
+@media (800px < width < 1600px) {
+  .attendee-kiosk:has(.kiosk-welcome-with-marketo) .kiosk-header img {
+    width: min(420px, calc(28vw - 76px));
+  }
+
+  .attendee-kiosk .kiosk-welcome-with-marketo {
+    top: 175px;
+    max-height: calc(100% - 190px);
+    transform: none;
+  }
+}
+
+@media (1200px <= width < 1600px) {
+  .attendee-kiosk .kiosk-panel-welcome:has(.kiosk-welcome-with-marketo) .kiosk-hero {
+    top: 25%;
+    bottom: auto;
+    width: calc(100% - 810px);
+    max-width: 32%;
+  }
+}
+
+@media (width > 800px) and (height <= 950px) {
+  .attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo h2 {
+    font-size: 56px;
+  }
+
+  .attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo > p {
+    font-size: 18px;
+    line-height: 1.25;
+  }
+}
+
+@media (600px <= width <= 800px) {
+  .attendee-kiosk:has(.kiosk-welcome-with-marketo) .kiosk-header img {
+    width: min(230px, 24vw);
+  }
+
+  .attendee-kiosk .kiosk-welcome-with-marketo {
+    position: absolute;
+    top: 175px;
+    left: 7%;
+    width: 86%;
+    max-height: calc(100vh - 210px);
+    margin: 0;
+    overflow-y: auto;
+  }
 }
