@@ -1,7 +1,7 @@
 import { loadSettings, SETTINGS_KEY } from '../../scripts/kiosk-settings.js';
 
 // This public verifier is a casual access deterrent, not an authorization boundary.
-export const ACCESS_VERIFIER = '94651277464f8974983a146e1aa40cf8c9d21a1bb31c674efce978398aa812d5';
+export const ACCESS_VERIFIER = '199d0cd15309bb5804b0a2a6c3bbb19ff4d72f2e8036f7fe57a4034f4e12bef8';
 const SESSION_KEY = 'glam-kiosk-access-v1';
 
 export default function requestKioskAccess(block) {
