@@ -2451,6 +2451,10 @@ body:has(> main > .section:only-child .attendee-kiosk) main > .section {
   min-height: 48px;
 }
 
+.attendee-kiosk .kiosk-panel-welcome .kiosk-welcome-with-marketo .kiosk-intro-actions button:focus-visible {
+  outline-offset: -3px;
+}
+
 /* stylelint-disable selector-class-pattern */
 .attendee-kiosk .kiosk-marketo-form .mktoFormCol {
   margin-bottom: 0 !important;

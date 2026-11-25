@@ -145,8 +145,21 @@ const fields = ['FirstName', 'LastName', 'Email', 'Country'];
         }
         const submit = page.getByRole('button', { name: 'Submit', exact: true });
         assert(await submit.isDisabled(), 'Consent must gate native submission');
-        await page.locator('.kiosk-consent input').check();
+        await page.locator('.kiosk-consent input').focus();
+        await page.keyboard.press('Space');
         assert(await submit.isEnabled());
+        const submitFocus = await submit.evaluate((button) => ({
+          focused: document.activeElement === button,
+          width: parseFloat(getComputedStyle(button).outlineWidth),
+          offset: parseFloat(getComputedStyle(button).outlineOffset),
+        }));
+        assert(submitFocus.focused && submitFocus.width >= 3
+          && submitFocus.offset <= -submitFocus.width, 'Submit focus outline must remain visible inside the button');
+        if (process.env.KIOSK_SCREENSHOT_DIR && viewport.width === 834 && appearance === 'light') {
+          await page.screenshot({
+            path: path.join(process.env.KIOSK_SCREENSHOT_DIR, 'marketo-focused-submit.png'),
+          });
+        }
         await wrapper.locator('[name="FirstName"]').fill('Test');
         await wrapper.locator('[name="LastName"]').fill('Visitor');
         await wrapper.locator('[name="Email"]').fill('visitor@example.invalid');
